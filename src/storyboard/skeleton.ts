@@ -235,8 +235,12 @@ export interface BuildSkeletonOptions {
 
 export function buildSkeleton(options: BuildSkeletonOptions): StoryboardState {
   const { courseId, allocation, templateVersion } = options;
-  const strategy = options.timingStrategy ?? 'part_a_verbatim';
   const course = getCourseConfig(courseId);
+  // CDR courses treat Parts B and C as consuming 30 minutes of the module's
+  // curriculum time, so the default carves that budget from Part A.
+  // Qualification courses keep Part A verbatim by default.
+  const defaultStrategy: TimingStrategy = course.kind === 'cdr' ? 'part_a_minus_30' : 'part_a_verbatim';
+  const strategy = options.timingStrategy ?? defaultStrategy;
 
   const wanted = options.modules;
   const timingModules = wanted

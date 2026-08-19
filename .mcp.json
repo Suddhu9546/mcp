@@ -3,7 +3,7 @@
     "storyboard": {
       "command": "npx",
       "args": ["tsx", "src/mcp/server.ts"],
-      "cwd": "C:\\cvc-mcp"
+      "cwd": "C:\\MCP\\cvc-mcp"
     }
   }
 }
