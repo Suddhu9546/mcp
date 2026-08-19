@@ -1,0 +1,38 @@
+{
+  "name": "cvc-storyboard-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Deterministic tool layer for controlled educational storyboard construction: source retrieval, timing parsing, template analysis, validation and DOCX generation. Contains no AI model and requires no API key; the connected client (Antigravity/Gemini) supplies all reasoning and content.",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/src/mcp/server.js",
+    "dev": "tsx src/mcp/server.ts",
+    "ingest": "tsx scripts/ingest.ts",
+    "flow": "tsx scripts/try-flow.mjs",
+    "analyze-template": "tsx scripts/analyze-template.ts",
+    "parse-timing": "tsx scripts/parse-timing.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "verify-pptx": "powershell -ExecutionPolicy Bypass -File scripts/verify-pptx.ps1"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@xmldom/xmldom": "^0.9.6",
+    "dotenv": "^16.4.7",
+    "jszip": "^3.10.1",
+    "pdfjs-dist": "^4.9.155",
+    "pino": "^9.6.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "pino-pretty": "^13.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}

@@ -1,0 +1,916 @@
+{
+  "modules": [
+    {
+      "module_number": 1,
+      "title": "Introduction to Solar PV Sector in India",
+      "nos": "SGJ/N0111",
+      "units": [
+        {
+          "unit_code": "1.1",
+          "title": "Overview of Solar PV Technology",
+          "sub_topics": [
+            {
+              "printed_ref": "1.1.1",
+              "title": "Introduction"
+            },
+            {
+              "printed_ref": "1.1.2",
+              "title": "Solar Photovoltaic (PV) System"
+            },
+            {
+              "printed_ref": "1.1.3",
+              "title": "Solar PV Technology"
+            },
+            {
+              "printed_ref": "1.1.4",
+              "title": "Overview of Solar PV technology, Rooftop and Ground Mounted Solar, Grid Interactive and Off- Grid Solar Sector in India"
+            }
+          ]
+        },
+        {
+          "unit_code": "1.2",
+          "title": "Broader Business, Finance, Technology and Regulatory Landscape of Solar Energy in the Country",
+          "sub_topics": [
+            {
+              "printed_ref": "1.2.1",
+              "title": "Market Research"
+            },
+            {
+              "printed_ref": "1.2.2",
+              "title": "Business Landscape"
+            },
+            {
+              "printed_ref": "1.2.3",
+              "title": "Finance Landscape"
+            },
+            {
+              "printed_ref": "1.2.3",
+              "title": "Technology Landscape"
+            },
+            {
+              "printed_ref": "1.2.4",
+              "title": "Regulatory Landscape"
+            },
+            {
+              "printed_ref": "1.2.5",
+              "title": "Benefits of Solar Energy Over Conventional Sources of Energy"
+            }
+          ]
+        },
+        {
+          "unit_code": "1.3",
+          "title": "Overview of Grid Interactive and Off-Grid Solar Sector in India",
+          "sub_topics": [
+            {
+              "printed_ref": "1.3.1",
+              "title": "Overview of Grid Interactive and Off- Grid Solar Sector in India"
+            },
+            {
+              "printed_ref": "1.3.2",
+              "title": "Types of off-grid solar PV power devices and their working principles"
+            }
+          ]
+        },
+        {
+          "unit_code": "1.4",
+          "title": "Basics of Electrical Concepts",
+          "sub_topics": [
+            {
+              "printed_ref": "1.4.1",
+              "title": "Current"
+            },
+            {
+              "printed_ref": "1.4.2",
+              "title": "Direct Current (DC) and Alternating Current (AC)"
+            }
+          ]
+        },
+        {
+          "unit_code": "1.5",
+          "title": "Financial Institutions and Banks Involved in Financing Solar Power Projects",
+          "sub_topics": [
+            {
+              "printed_ref": "1.5.1",
+              "title": "Financial Institutions and Banks Involved in Lending"
+            },
+            {
+              "printed_ref": "1.5.2",
+              "title": "Terms and Conditions Associated with Loans"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "module_number": 2,
+      "title": "Set up new venture for Solar Photovoltaic System",
+      "nos": "SGJ/N0111",
+      "units": [
+        {
+          "unit_code": "2.1",
+          "title": "Setting Up a New Venture",
+          "sub_topics": [
+            {
+              "printed_ref": "2.1.1",
+              "title": "Entrepreneurship"
+            },
+            {
+              "printed_ref": "2.1.2",
+              "title": "Process of Setting Up a New Venture"
+            },
+            {
+              "printed_ref": "2.1.3",
+              "title": "Evolving opportunities across solar solutions, services and market ecosystem"
+            },
+            {
+              "printed_ref": "2.1.4",
+              "title": "Key Ingredients of a Business Plan"
+            },
+            {
+              "printed_ref": "2.1.5",
+              "title": "Components of Loan Application"
+            }
+          ]
+        },
+        {
+          "unit_code": "2.2",
+          "title": "Workplace Etiquette",
+          "sub_topics": [
+            {
+              "printed_ref": "2.2.1",
+              "title": "Forwarding Accurate Information"
+            },
+            {
+              "printed_ref": "2.2.2",
+              "title": "Assisting Others"
+            },
+            {
+              "printed_ref": "2.2.3",
+              "title": "Interact with Others without Any Bias"
+            },
+            {
+              "printed_ref": "2.2.4",
+              "title": "Communicating Effectively"
+            },
+            {
+              "printed_ref": "2.2.5",
+              "title": "Interacting Effectively with Clients & Colleagues"
+            }
+          ]
+        },
+        {
+          "unit_code": "2.3",
+          "title": "Time Management, Leadership Skills and Resource Management",
+          "sub_topics": [
+            {
+              "printed_ref": "2.3.1",
+              "title": "Time Management"
+            },
+            {
+              "printed_ref": "2.3.2",
+              "title": "Effective Time Management Techniques"
+            },
+            {
+              "printed_ref": "2.3.3",
+              "title": "Leadership Qualities That All Entrepreneurs Need"
+            },
+            {
+              "printed_ref": "2.3.4",
+              "title": "Resource Management"
+            }
+          ]
+        },
+        {
+          "unit_code": "2.4",
+          "title": "Productivity Tools: MS Word, MS Excel, PowerPoint and Presentations",
+          "sub_topics": [
+            {
+              "printed_ref": "—",
+              "title": "MS Word"
+            },
+            {
+              "printed_ref": "2.4.2",
+              "title": "MS Excel"
+            },
+            {
+              "printed_ref": "2.4.3",
+              "title": "MS PowerPoint"
+            }
+          ]
+        },
+        {
+          "unit_code": "2.5",
+          "title": "Challenges and Risks for New Entrepreneurs",
+          "sub_topics": [
+            {
+              "printed_ref": "2.5.1",
+              "title": "Challenges and Risk for New Entrepreneurs"
+            },
+            {
+              "printed_ref": "2.5.2",
+              "title": "Choose the Right Buyer"
+            }
+          ]
+        },
+        {
+          "unit_code": "2.6",
+          "title": "Taxes and Compliances",
+          "sub_topics": [
+            {
+              "printed_ref": "2.6.1",
+              "title": "Tax and Related Compliances"
+            }
+          ]
+        },
+        {
+          "unit_code": "2.7",
+          "title": "Aspects of Successful Solar Business",
+          "sub_topics": [
+            {
+              "printed_ref": "2.7.1",
+              "title": "Key Aspects to Successfully Run a Solar Business"
+            }
+          ]
+        },
+        {
+          "unit_code": "2.8",
+          "title": "Respecting Gender and Disability Concerns",
+          "sub_topics": [
+            {
+              "printed_ref": "2.8.1",
+              "title": "Respecting Diversity and Gender"
+            },
+            {
+              "printed_ref": "2.8.2",
+              "title": "Working in a Diverse Environment"
+            },
+            {
+              "printed_ref": "2.8.3",
+              "title": "Gender Sensitivity and PwD (Person with Disability)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "module_number": 3,
+      "title": "Business Model in Solar Photovoltaic",
+      "nos": "SGJ/N4125",
+      "units": [
+        {
+          "unit_code": "3.1",
+          "title": "Indian Solar Industry Overview",
+          "sub_topics": [
+            {
+              "printed_ref": "—",
+              "title": "Solar Industry Overview"
+            },
+            {
+              "printed_ref": "—",
+              "title": "Key Stakeholders"
+            },
+            {
+              "printed_ref": "—",
+              "title": "Stakeholder Roles"
+            },
+            {
+              "printed_ref": "—",
+              "title": "Market Drivers"
+            }
+          ]
+        },
+        {
+          "unit_code": "3.2",
+          "title": "Solar Business Models",
+          "sub_topics": [
+            {
+              "printed_ref": "—",
+              "title": "Solar Business Models"
+            },
+            {
+              "printed_ref": "—",
+              "title": "Comparison of Solar Business Models"
+            },
+            {
+              "printed_ref": "A.",
+              "title": "CAPEX Model"
+            },
+            {
+              "printed_ref": "B.",
+              "title": "OPEX / RESCO Model"
+            },
+            {
+              "printed_ref": "C.",
+              "title": "Lease Model"
+            },
+            {
+              "printed_ref": "D.",
+              "title": "BOOT Model"
+            },
+            {
+              "printed_ref": "E.",
+              "title": "Hybrid Model"
+            },
+            {
+              "printed_ref": "3.",
+              "title": "Community Solar and Shared Solar"
+            }
+          ]
+        },
+        {
+          "unit_code": "3.3",
+          "title": "Financial Performance Indicators",
+          "sub_topics": [
+            {
+              "printed_ref": "A.",
+              "title": "Payback Period"
+            },
+            {
+              "printed_ref": "B.",
+              "title": "Internal Rate of Return (IRR)"
+            },
+            {
+              "printed_ref": "C.",
+              "title": "Net Savings"
+            },
+            {
+              "printed_ref": "—",
+              "title": "Practical Activity — Excel IRR() function and simple payback period"
+            }
+          ]
+        },
+        {
+          "unit_code": "3.4",
+          "title": "Policy and Regulatory Framework",
+          "sub_topics": [
+            {
+              "printed_ref": "—",
+              "title": "Role of MNRE"
+            },
+            {
+              "printed_ref": "—",
+              "title": "State Nodal Agencies"
+            },
+            {
+              "printed_ref": "—",
+              "title": "DISCOM Regulations — Net Metering; Grid Connectivity; Billing and Energy Accounting; Safety Compliance"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "module_number": 4,
+      "title": "Site Feasibility Study for Rooftop Solar power plant",
+      "nos": "SGJ/N0111 - SGJ/N4125",
+      "units": [
+        {
+          "unit_code": "4.1",
+          "title": "Site Assessment and System Sizing",
+          "sub_topics": [
+            {
+              "printed_ref": "—",
+              "title": "Identifying the Optimum Rooftop Location"
+            },
+            {
+              "printed_ref": "—",
+              "title": "Factors Affecting Site Selection"
+            },
+            {
+              "printed_ref": "1.2",
+              "title": "Site-Level Pre-Requisites"
+            },
+            {
+              "printed_ref": "1.3",
+              "title": "Selection of Mounting Structure"
+            },
+            {
+              "printed_ref": "1.4",
+              "title": "Shading Assessment"
+            },
+            {
+              "printed_ref": "—",
+              "title": "Basic Site Mapping"
+            },
+            {
+              "printed_ref": "1.5",
+              "title": "Load Assessment and Load Profile"
+            },
+            {
+              "printed_ref": "—",
+              "title": "Estimating Solar Plant Capacity"
+            }
+          ]
+        },
+        {
+          "unit_code": "4.2",
+          "title": "Solar Resource Assessment, Energy Yield and Feasibility Report",
+          "sub_topics": [
+            {
+              "printed_ref": "4.2.1",
+              "title": "Battery Backup Assessment"
+            },
+            {
+              "printed_ref": "2.2",
+              "title": "Solar Resource Assessment"
+            },
+            {
+              "printed_ref": "2.3",
+              "title": "Energy Generation Estimation"
+            },
+            {
+              "printed_ref": "2.4",
+              "title": "Risk Assessment"
+            },
+            {
+              "printed_ref": "2.5",
+              "title": "Site Feasibility Study Report"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "module_number": 5,
+      "title": "Site Feasibility Study for Ground Mount Solar power plant",
+      "nos": "SGJ/N4125",
+      "units": [
+        {
+          "unit_code": "5.1",
+          "title": "Site Feasibility",
+          "sub_topics": [
+            {
+              "printed_ref": "—",
+              "title": "Assess Irradiation and Other Geological Data"
+            },
+            {
+              "printed_ref": "—",
+              "title": "Albedo"
+            },
+            {
+              "printed_ref": "—",
+              "title": "Collecting data on local weather conditions"
+            }
+          ]
+        },
+        {
+          "unit_code": "4.2",
+          "title": "Soil Testing",
+          "sub_topics": [
+            {
+              "printed_ref": "—",
+              "title": "Tests to evaluate the soil at the site — Soil Composition; Soil Bearing Capacity; Soil Resistivity; Soil pH"
+            },
+            {
+              "printed_ref": "—",
+              "title": "Some Common Methods for Soil Testing"
+            },
+            {
+              "printed_ref": "—",
+              "title": "Note / reference video: \"How to conduct SPT\""
+            }
+          ]
+        },
+        {
+          "unit_code": "5.3",
+          "title": "Topography, Contour Mapping and Its Importance in Solar Plant Design",
+          "sub_topics": [
+            {
+              "printed_ref": "—",
+              "title": "Importance of Topography in Solar Design"
+            },
+            {
+              "printed_ref": "—",
+              "title": "Contour Mapping and its Importance in Solar Design"
+            }
+          ]
+        },
+        {
+          "unit_code": "5.4",
+          "title": "Electrical Feasibility Report for Ground Mount Solar Power Plant",
+          "sub_topics": [
+            {
+              "printed_ref": "5.4.1",
+              "title": "Electrical Feasibility"
+            },
+            {
+              "printed_ref": "5.1.2",
+              "title": "Assessing Site Electrical Feasibility"
+            },
+            {
+              "printed_ref": "5.1.3",
+              "title": "Assessing Cable Root"
+            },
+            {
+              "printed_ref": "5.1.4",
+              "title": "Identifying Inverter Location"
+            },
+            {
+              "printed_ref": "5.4.5",
+              "title": "Identifying Transformer and Other HT equipment location"
+            }
+          ]
+        },
+        {
+          "unit_code": "5.2",
+          "title": "Estimate Energy Generation from the Solar PV Power Plant",
+          "sub_topics": [
+            {
+              "printed_ref": "5.2.1",
+              "title": "Estimate Energy Generation"
+            },
+            {
+              "printed_ref": "5.2.2",
+              "title": "Assess Grid Availability"
+            },
+            {
+              "printed_ref": "5.2.3",
+              "title": "Assess the Evacuation Voltage Level"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "module_number": 6,
+      "title": "Installation of Solar Rooftop PV Plant",
+      "nos": "SGJ/N4125",
+      "units": [
+        {
+          "unit_code": "6.1",
+          "title": "Civil, Mechanical and Electrical Installation",
+          "sub_topics": [
+            {
+              "printed_ref": "—",
+              "title": "Civil, Mechanical and Electrical Installation"
+            },
+            {
+              "printed_ref": "—",
+              "title": "Table 6.1.1: Major Components Installed in a Rooftop Solar PV Plant"
+            },
+            {
+              "printed_ref": "—",
+              "title": "Table 6.1.2: Common Tools Used During Installation"
+            }
+          ]
+        },
+        {
+          "unit_code": "6.2",
+          "title": "Installation Supervision, Testing and Commissioning",
+          "sub_topics": [
+            {
+              "printed_ref": "—",
+              "title": "Installation Supervision, Testing and Commissioning"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "module_number": 7,
+      "title": "Installation of Solar Ground Mounted PV Plant",
+      "nos": null,
+      "units": [
+        {
+          "unit_code": "7.1",
+          "title": "Interpret and prepare Civil foundation, layout, mounting structure and allied civil work in ground mount solar plant",
+          "sub_topics": [
+            {
+              "printed_ref": "7.1.1",
+              "title": "Project Development Plan"
+            },
+            {
+              "printed_ref": "7.1.2",
+              "title": "Assess Soil Characteristics"
+            },
+            {
+              "printed_ref": "7.1.3",
+              "title": "Type of Foundations"
+            },
+            {
+              "printed_ref": "7.1.4",
+              "title": "How to Prepare Structural Design Report"
+            },
+            {
+              "printed_ref": "7.1.5",
+              "title": "Preparing the Layout for Cable Trenching, Electrical Control Panel, Transformer, and VCB"
+            },
+            {
+              "printed_ref": "7.1.6",
+              "title": "Preparing Pile Foundation, Column Post and Other Civil Foundation"
+            },
+            {
+              "printed_ref": "7.1.7",
+              "title": "Assess Design of the Civil/ Structural Allied Works of the Solar PV Power Plant"
+            },
+            {
+              "printed_ref": "7.1.8",
+              "title": "Civil/ Structural Drawings for the Ground Mount Solar Power Plant"
+            },
+            {
+              "printed_ref": "7.1.9",
+              "title": "Discuss the Reinforcement Material for Civil Construction of Various Foundation"
+            }
+          ]
+        },
+        {
+          "unit_code": "7.2",
+          "title": "Manage Ground Mounted Solar Civil Construction work",
+          "sub_topics": [
+            {
+              "printed_ref": "7.2.1",
+              "title": "Project Development Plan for Ground-Mounted Solar Civil Work Construction"
+            },
+            {
+              "printed_ref": "7.2.2",
+              "title": "Construction of Compounds Wall/Fencing, Access of Internal Road, Drainage"
+            },
+            {
+              "printed_ref": "7.2.3",
+              "title": "Overall Project Constructability Approach for Cost Effective Implementation"
+            },
+            {
+              "printed_ref": "7.2.4",
+              "title": "Plan, Schedule, and Monitor All Material Deliveries to Avoid Project Delays"
+            },
+            {
+              "printed_ref": "7.2.5",
+              "title": "Supervise and Manage"
+            },
+            {
+              "printed_ref": "7.2.6",
+              "title": "Maximize Profit"
+            },
+            {
+              "printed_ref": "7.2.7",
+              "title": "Manage Project Billing Cycle"
+            },
+            {
+              "printed_ref": "7.2.8",
+              "title": "Analysing Bids"
+            },
+            {
+              "printed_ref": "7.2.9",
+              "title": "Negotiation Skills"
+            },
+            {
+              "printed_ref": "7.2.10",
+              "title": "Communicating with Customers and Team Members"
+            },
+            {
+              "printed_ref": "7.2.11",
+              "title": "Periodic Site Visits"
+            }
+          ]
+        },
+        {
+          "unit_code": "7.3",
+          "title": "Interpret drawings of DC and AC side of electrical Component of Ground Mount Solar Power Plant",
+          "sub_topics": [
+            {
+              "printed_ref": "7.3.1",
+              "title": "Interpretation of SLD and interconnections"
+            },
+            {
+              "printed_ref": "7.3.2",
+              "title": "Electrical line diagram of ACDB, LT Panel, earthing layout"
+            }
+          ]
+        },
+        {
+          "unit_code": "7.4",
+          "title": "Manage Electrical installation in Ground Mount Solar Plant",
+          "sub_topics": [
+            {
+              "printed_ref": "7.4.1",
+              "title": "Identify manufacturers and suppliers through various sources"
+            },
+            {
+              "printed_ref": "7.4.2",
+              "title": "How to manage vendor or supplier for material procurement"
+            },
+            {
+              "printed_ref": "7.4.3",
+              "title": "Know-how of all electrical tools utilised for system installation"
+            },
+            {
+              "printed_ref": "7.4.4",
+              "title": "Testing and commissioning of equipment in DC and AC side of the plant"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "module_number": 8,
+      "title": "Operation and maintenance of Solar Rooftop PV Plant",
+      "nos": "SGJ/N4126",
+      "units": [
+        {
+          "unit_code": "8.1",
+          "title": "Tools Required for PV System Maintenance",
+          "sub_topics": [
+            {
+              "printed_ref": "8.1.1",
+              "title": "List of Tools for Maintenance Activities"
+            },
+            {
+              "printed_ref": "8.1.2",
+              "title": "Maintenance Schedule and Logbook"
+            },
+            {
+              "printed_ref": "8.1.3",
+              "title": "Important to Note"
+            }
+          ]
+        },
+        {
+          "unit_code": "8.2",
+          "title": "Preventive Maintenance of PV System",
+          "sub_topics": [
+            {
+              "printed_ref": "8.2.1",
+              "title": "What is a Maintenance Schedule?"
+            },
+            {
+              "printed_ref": "8.2.2",
+              "title": "PV Module Maintenance"
+            },
+            {
+              "printed_ref": "8.2.2",
+              "title": "Monitor Power Generation"
+            },
+            {
+              "printed_ref": "8.2.3",
+              "title": "Maintenance of Batteries"
+            },
+            {
+              "printed_ref": "8.2.4",
+              "title": "Maintenance of Inverter"
+            },
+            {
+              "printed_ref": "8.2.5",
+              "title": "Maintenance of Cables, Connectors and Switches"
+            }
+          ]
+        },
+        {
+          "unit_code": "8.3",
+          "title": "Troubleshooting and Maintenance",
+          "sub_topics": [
+            {
+              "printed_ref": "8.3.2",
+              "title": "Troubleshooting with Batteries"
+            },
+            {
+              "printed_ref": "8.3.3",
+              "title": "Troubleshooting with Charge Controllers"
+            },
+            {
+              "printed_ref": "8.3.4",
+              "title": "Troubleshooting with Inverters"
+            },
+            {
+              "printed_ref": "8.3.5",
+              "title": "Troubleshooting with Solar PV Arrays"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "module_number": 9,
+      "title": "Operation and maintenance of Solar Ground Mounted PV Plant",
+      "nos": "SGJ/N4126",
+      "units": [
+        {
+          "unit_code": "9.1",
+          "title": "Operation and Maintenance of Solar Ground Mounted PV Plants",
+          "sub_topics": [
+            {
+              "printed_ref": "9.0.0",
+              "title": "List of Tools for Maintenance Activities"
+            },
+            {
+              "printed_ref": "7.1.2",
+              "title": "Maintenance Schedule and Logbook"
+            },
+            {
+              "printed_ref": "—",
+              "title": "Table 9.1 Types of Maintenance in Solar Ground Mounted PV Plants"
+            }
+          ]
+        },
+        {
+          "unit_code": "9.2",
+          "title": "Inspection, Troubleshooting and Performance Optimization",
+          "sub_topics": [
+            {
+              "printed_ref": "—",
+              "title": "Inspection, Troubleshooting and Performance Optimization"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "module_number": 10,
+      "title": "Maintain Personal Health & Safety at Project Site",
+      "nos": "SGJ/N0106",
+      "units": [
+        {
+          "unit_code": "10.1",
+          "title": "Workplace Safety",
+          "sub_topics": [
+            {
+              "printed_ref": "10.1.1",
+              "title": "Potential Sources of Accidents"
+            },
+            {
+              "printed_ref": "10.1.2",
+              "title": "Safety Policies"
+            },
+            {
+              "printed_ref": "10.1.3",
+              "title": "General Safety Guidelines"
+            },
+            {
+              "printed_ref": "10.1.4",
+              "title": "Safety Measures and Precautions"
+            },
+            {
+              "printed_ref": "3.1.7",
+              "title": "Reporting Incidents"
+            },
+            {
+              "printed_ref": "10.1.8",
+              "title": "Precautions for Fire Hazards"
+            },
+            {
+              "printed_ref": "10.1.9",
+              "title": "Fire Drill"
+            },
+            {
+              "printed_ref": "10.1.10",
+              "title": "Using Fire Extinguisher"
+            }
+          ]
+        },
+        {
+          "unit_code": "10.2",
+          "title": "Workplace Hazards",
+          "sub_topics": [
+            {
+              "printed_ref": "10.2.1",
+              "title": "Workplace Hazards"
+            },
+            {
+              "printed_ref": "10.2.2",
+              "title": "Health and Sanitation Requirements at Workplace"
+            }
+          ]
+        },
+        {
+          "unit_code": "10.3",
+          "title": "Standard Safety Practices",
+          "sub_topics": [
+            {
+              "printed_ref": "10.3.1",
+              "title": "Personal Protection Practices"
+            },
+            {
+              "printed_ref": "3.3.2",
+              "title": "Standard Safety Operations at Worksite"
+            },
+            {
+              "printed_ref": "10.3.3",
+              "title": "Improvements in Health and Safety at Workplace"
+            }
+          ]
+        },
+        {
+          "unit_code": "10.4",
+          "title": "Safety Actions",
+          "sub_topics": [
+            {
+              "printed_ref": "10.4.1",
+              "title": "Administer First Aid"
+            },
+            {
+              "printed_ref": "10.4.2",
+              "title": "Report of Periodic Checks"
+            },
+            {
+              "printed_ref": "10.4.3",
+              "title": "Documented Safety Protocols at Workplace"
+            },
+            {
+              "printed_ref": "10.4.4",
+              "title": "Housekeeping"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
