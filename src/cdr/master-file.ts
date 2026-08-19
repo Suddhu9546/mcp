@@ -235,20 +235,13 @@ export function parseMasterText(lines: readonly string[]): MasterFile {
       .replace(/[.,;\s]+$/, '')
       .trim();
     const hoursRaw = TRAILING_HOURS_RE.exec(rest)?.[1];
-    if (!hoursRaw) {
-      throw new MasterFileError(
-        `Unit ${code} in the master file states no duration. Expected a trailing "- <n> hour(s)". ` +
-          'Refusing to divide the module duration by judgement.',
-        { line },
-      );
-    }
-    const hours = Number(hoursRaw);
+    const hours = hoursRaw ? Number(hoursRaw) : 0;
     current.units.push({
       code,
       title,
       minutes: hoursToMinutes(hours),
       stated_hours: hours,
-      raw_duration: `${hoursRaw} Hours`,
+      raw_duration: hoursRaw ? `${hoursRaw} Hours` : '(not stated)',
       references: parseReferences(referPhrase),
     });
   }
@@ -269,7 +262,8 @@ export function parseMasterText(lines: readonly string[]): MasterFile {
       );
     }
     const unitMinutes = module.units.reduce((a, u) => a + u.minutes, 0);
-    if (module.units.length > 0 && unitMinutes !== module.minutes) {
+    const allUnstated = module.units.length > 0 && module.units.every((u) => u.stated_hours === 0);
+    if (module.units.length > 0 && !allUnstated && unitMinutes !== module.minutes) {
       throw new MasterFileError(
         `Module ${module.number} states ${module.minutes} minutes but its units sum to ` +
           `${unitMinutes}. The master file's arithmetic must be exact.`,
@@ -328,9 +322,22 @@ export function masterAsTimingAllocation(
   });
 
   const modules: TimingModule[] = master.modules.map((m) => {
-    const units: TimingUnit[] = (
+    // When no unit states its own duration, distribute the module's total
+    // equally. The module total is still the master file's stated figure,
+    // so the invariant holds; what changes is the granularity at which
+    // the storyboard allocates time.
+    const allUnstated = m.units.length > 0 && m.units.every((u) => u.stated_hours === 0);
+    const distributeMinutes = allUnstated ? Math.floor(m.minutes / m.units.length) : 0;
+    const distributeHours = allUnstated ? m.stated_hours / m.units.length : 0;
+
+    const rawUnits =
       m.units.length > 0
-        ? m.units
+        ? m.units.map((u) => ({
+            ...u,
+            minutes: allUnstated ? distributeMinutes : u.minutes,
+            stated_hours: allUnstated ? distributeHours : u.stated_hours,
+            raw_duration: allUnstated ? `${distributeHours} Hours (distributed)` : u.raw_duration,
+          }))
         : [
             {
               code: `${m.number}.1`,
@@ -340,8 +347,9 @@ export function masterAsTimingAllocation(
               raw_duration: m.raw_duration,
               references: m.references,
             },
-          ]
-    ).map((u) => ({
+          ];
+
+    const units: TimingUnit[] = rawUnits.map((u) => ({
       code: u.code,
       title: u.title,
       minutes: u.minutes,
