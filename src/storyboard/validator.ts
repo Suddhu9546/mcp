@@ -18,7 +18,6 @@ import type { InsufficientSource } from '../types/source.js';
 import { isInsufficientSource } from '../types/source.js';
 import type { StoryboardState, StoryboardModule } from '../types/storyboard.js';
 import type { TimingAllocation } from '../types/timing.js';
-import { getCrosswalkEntry } from '../courses/course-config.js';
 import { describeScope, moduleScope, scopeAllows } from '../courses/module-scope.js';
 import { getChunk } from '../documents/retriever.js';
 import { validateTimingArithmetic } from '../timing/timing-validator.js';
@@ -164,7 +163,7 @@ function validateContent(state: StoryboardState): Finding[] {
           severity: 'error',
           code: 'empty_field',
           path: field.path,
-          message: 'Field is empty. Populate it via set_storyboard_content before rendering.',
+          message: 'Field is empty. Populate it via the build loop before rendering.',
         });
         continue;
       }

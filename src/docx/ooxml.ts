@@ -73,6 +73,27 @@ export function paragraphStyle(p: Element): string {
   return pStyle?.getAttributeNS(W, 'val') ?? pStyle?.getAttribute('w:val') ?? '';
 }
 
+/**
+ * Retargets a paragraph's existing style, e.g. from TOC2 to TOC1.
+ *
+ * Only rewrites a style that is already there; it never adds one. A paragraph
+ * with no pStyle is inheriting from the document defaults, and giving it one
+ * would be authoring formatting rather than reusing the template's. Returns
+ * whether the style was changed, so a caller can tell the difference between
+ * "done" and "there was nothing to retarget".
+ */
+export function setParagraphStyle(p: Element, styleId: string): boolean {
+  const pPr = firstChild(p, 'pPr');
+  if (!pPr) return false;
+  const pStyle = firstChild(pPr, 'pStyle');
+  if (!pStyle) return false;
+  // The template writes the prefixed form; keep whichever form is already there
+  // so the serialized attribute is byte-comparable with its neighbours.
+  if (pStyle.getAttributeNS(W, 'val') !== null) pStyle.setAttributeNS(W, 'w:val', styleId);
+  else pStyle.setAttribute('w:val', styleId);
+  return true;
+}
+
 /** Number of grid columns a cell spans (w:gridSpan), defaulting to 1. */
 export function gridSpan(tc: Element): number {
   const tcPr = firstChild(tc, 'tcPr');
@@ -112,6 +133,15 @@ export function setParagraphText(p: Element, text: string): void {
   // Preserve the first run's properties, if any, then discard every run.
   const keptRPr = runs[0] ? firstChild(runs[0], 'rPr') : undefined;
   const keptRPrClone = keptRPr ? (keptRPr.cloneNode(true) as Element) : undefined;
+
+  // A run holding a page break is layout, not text, and has to survive the
+  // rewrite. The template's cover ends with one, in the same paragraph as the
+  // strapline: discarding it with the rest of the runs pulled the table of
+  // contents up onto the cover page.
+  const pageBreaks = runs
+    .filter((r) => descendants(r, 'br').some((br) => br.getAttribute('w:type') === 'page'))
+    .map((r) => r.cloneNode(true) as Element);
+
   for (const r of runs) p.removeChild(r);
 
   // Hyperlinks and bookmarks would otherwise keep stale text visible.
@@ -132,6 +162,7 @@ export function setParagraphText(p: Element, text: string): void {
   });
 
   p.appendChild(run);
+  for (const brk of pageBreaks) p.appendChild(brk);
 }
 
 /**

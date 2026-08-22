@@ -30,6 +30,23 @@ import { coursesRoot } from '../util/config.js';
 import { CDR_COURSES, type CdrCourseDefinition } from './cdr-generated.js';
 import type { DocumentType } from '../types/source.js';
 
+/**
+ * The three programme tracks.
+ *
+ * A track is the unit at which everything above the course varies: the storyboard
+ * template, the menu branch, and the folder the documents arrive in. Defined here
+ * rather than in the subject catalogue because course-config is the leaf every
+ * other module already depends on, and the alternative is an import cycle.
+ */
+export const COURSE_TRACKS = ['entrepreneur', 'orientation', 'cdr'] as const;
+export type CourseTrack = (typeof COURSE_TRACKS)[number];
+
+export const TRACK_LABELS: Record<CourseTrack, string> = {
+  entrepreneur: 'Entrepreneur',
+  orientation: 'Orientation',
+  cdr: 'CDR',
+};
+
 export interface ModuleCrosswalkEntry {
   /** Module number in the Timing Allocation Document. Drives the output. */
   timing_module: number;
@@ -91,6 +108,24 @@ export interface CourseConfig {
    */
   kind?: 'qualification' | 'cdr';
   /**
+   * Which programme track this course belongs to.
+   *
+   * The track decides two things that are otherwise unknowable from a course_id:
+   * which storyboard template the course renders to (`templates/<track>/`), and
+   * which menu branch offers it. Every course declares one.
+   */
+  track: CourseTrack;
+  /**
+   * Where this course's documents live, relative to the courses root.
+   *
+   * Documents are filed by track -- `entrepreneur/solar`, `orientation/biogas` --
+   * because that is how they arrive and how they are reviewed. Stating the path
+   * here rather than deriving it from `track` + `course_id` keeps the one case
+   * where the folder is named for the subject (`solar`) rather than the course
+   * (`solar-pv`) as data instead of a special case in the resolver.
+   */
+  directory: string;
+  /**
    * Set while the course is registered but its approved documents have not been
    * supplied yet. Such a course exists so that dropping its PDFs into
    * courses/<course_id>/ and ingesting is the whole onboarding procedure; until
@@ -149,6 +184,8 @@ export interface CourseConfig {
 const BIOFUELS: CourseConfig = {
   course_id: 'biofuels',
   name: 'Bio-Energy Micro Entrepreneur',
+  track: 'entrepreneur',
+  directory: 'entrepreneur/biofuels',
   qp_code: 'SGJ/Q4102',
   nsqf_level: '4',
   sector: 'Green Jobs',
@@ -274,13 +311,15 @@ const BIOFUELS: CourseConfig = {
 function pendingCourse(
   courseId: string,
   name: string,
+  track: CourseTrack,
   occupation: string,
-  directoryAliases: string[] = [],
+  directoryName = courseId,
 ): CourseConfig {
   return {
     course_id: courseId,
     name,
-    ...(directoryAliases.length > 0 ? { directory_aliases: directoryAliases } : {}),
+    track,
+    directory: `${track}/${directoryName}`,
     documents_pending: true,
     qp_code: '(pending)',
     nsqf_level: '(pending)',
@@ -323,6 +362,9 @@ function pendingCourse(
 const SOLAR_PV: CourseConfig = {
   course_id: 'solar-pv',
   name: 'Solar Photovoltaic Entrepreneur',
+  track: 'entrepreneur',
+  // The documents arrive in a folder named for the subject, not the course_id.
+  directory: 'entrepreneur/solar',
   directory_aliases: ['solar'],
   qp_code: 'SGJ/Q0901',
   nsqf_level: '4',
@@ -421,13 +463,214 @@ const SOLAR_PV: CourseConfig = {
   ],
 };
 
+/**
+ * Green Hydrogen Plant Entrepreneur.
+ *
+ * The crosswalk is 1:1. Its Timing Allocation Document was authored from this
+ * handbook's own module and unit structure (see scripts/timing/README.md), so
+ * timing module N is handbook chapter N by construction and the two cannot
+ * disagree the way the Biofuels pair does.
+ *
+ * NOS codes are read off each module's cover page in the handbook, where exactly
+ * one is printed per module. The Qualification Pack also lists SGJ/N4101 and
+ * DGT/VSQ/N0103; the latter appears on no module cover and is not assigned here.
+ *
+ * `chapter_titles` is not optional for this course. Its contents page wraps the
+ * titles of chapters 3, 4 and 6 across two lines, so the chapter number and its
+ * title never share a line and the ingest-time derivation finds only chapters 1,
+ * 2 and 5. The titles below are taken verbatim from the module cover pages.
+ */
+const GREEN_HYDROGEN: CourseConfig = {
+  course_id: 'green-hydrogen',
+  name: 'Green Hydrogen Plant Entrepreneur',
+  track: 'entrepreneur',
+  directory: 'entrepreneur/green-hydrogen',
+  qp_code: 'SGJ/Q0121',
+  nsqf_level: '5',
+  sector: 'Green Jobs',
+  sub_sector: 'Renewable Energy',
+  occupation: 'Entrepreneur',
+  reference_id: 'SGJ/Q0121, Version 1.0',
+  subtitle: 'Complete Curriculum Storyboard and Assessment Blueprint',
+  documents: [
+    { document_type: 'QP', file: 'qp.pdf' },
+    { document_type: 'PH', file: 'ph.pdf' },
+    { document_type: 'FG', file: 'fg.pdf' },
+    { document_type: 'TIMING', file: 'timing.pdf' },
+  ],
+  crosswalk: [
+    {
+      timing_module: 1,
+      timing_title: 'Introduction to Green Hydrogen',
+      source_chapter: 1,
+      nos_code: 'SGJ/N1817',
+    },
+    {
+      timing_module: 2,
+      timing_title: 'Components of Green Hydrogen Plant and its Layout',
+      source_chapter: 2,
+      nos_code: 'SGJ/N4101',
+    },
+    {
+      timing_module: 3,
+      timing_title:
+        'Key Technical and Entrepreneurial Aspects for Supporting Growth and Business ' +
+        'Development in Green Hydrogen Production',
+      source_chapter: 3,
+      nos_code: 'SGJ/N1818',
+    },
+    {
+      timing_module: 4,
+      timing_title:
+        'Oversee the Assembly, Storage and O&M of Electrolyzer for Green Hydrogen Production',
+      source_chapter: 4,
+      nos_code: 'SGJ/N1820',
+    },
+    {
+      timing_module: 5,
+      timing_title: 'Micro-Entrepreneurship Opportunities in Green Hydrogen',
+      source_chapter: 5,
+      nos_code: 'SGJ/N1819',
+    },
+    {
+      timing_module: 6,
+      timing_title:
+        'Perform Health and Safety Measures for Installing and Operating Green Hydrogen Systems',
+      source_chapter: 6,
+      nos_code: 'SGJ/N0802',
+    },
+  ],
+  chapter_titles: {
+    1: 'Introduction to Green Hydrogen',
+    2: 'Components of Green Hydrogen Plant and its Layout',
+    3:
+      'Key technical and entrepreneurial aspects for supporting growth and business ' +
+      'development green hydrogen production',
+    4: 'Oversee the Assembly, storage and O&M of Electrolyzer for Green Hydrogen Production',
+    5: 'Micro-entrepreneurship opportunities in Green Hydrogen',
+    6: 'Perform Health and safety measures for installing and operating green hydrogen systems',
+  },
+  chunk_noise_patterns: [
+    '^Participant Handbook$',
+    '^Facilitator Guide$',
+    '^Qualification Pack$',
+    '^Green Hydrogen Plant$',
+    '^Entrepreneur$',
+    '^NSQC Approved \\|\\| Skill Council for Green Jobs \\d+$',
+  ],
+};
+
+/**
+ * Agri-Residue Aggregator.
+ *
+ * 1:1 crosswalk, for the same reason as Green Hydrogen: the timing document was
+ * built from this handbook's structure.
+ *
+ * Modules 1, 2 and 3 all print SGJ/N6201 on their cover pages, so all three carry
+ * it. The Qualification Pack also lists SGJ/N6202, which appears on no cover page;
+ * assigning it to a module would be a guess, so it is left unassigned.
+ *
+ * Module 7 is Employability Skills, and this handbook covers it exactly as the
+ * Biofuels one covers its own: with a link to the common DGT workbook and nothing
+ * else. It is flagged so the task queue skips it rather than offering work the
+ * sources cannot support.
+ */
+const AGRI_RESIDUE_AGGREGATOR: CourseConfig = {
+  course_id: 'agri-residue-aggregator',
+  name: 'Agri-Residue Aggregator',
+  track: 'entrepreneur',
+  directory: 'entrepreneur/agri-residue-aggregator',
+  qp_code: 'SGJ/Q6201',
+  nsqf_level: '3',
+  sector: 'Green Jobs',
+  sub_sector: 'Renewable Energy',
+  occupation: 'Entrepreneur',
+  reference_id: 'SGJ/Q6201, Version 1.0',
+  subtitle: 'Complete Curriculum Storyboard and Assessment Blueprint',
+  documents: [
+    { document_type: 'QP', file: 'qp.pdf' },
+    { document_type: 'PH', file: 'ph.pdf' },
+    { document_type: 'FG', file: 'fg.pdf' },
+    { document_type: 'TIMING', file: 'timing.pdf' },
+  ],
+  crosswalk: [
+    { timing_module: 1, timing_title: 'Introduction', source_chapter: 1, nos_code: 'SGJ/N6201' },
+    {
+      timing_module: 2,
+      timing_title: 'Assessing Demand and Supply of Agricultural Residue',
+      source_chapter: 2,
+      nos_code: 'SGJ/N6201',
+    },
+    {
+      timing_module: 3,
+      timing_title: 'Purchase of Agricultural Residue Stock from Nodal Point',
+      source_chapter: 3,
+      nos_code: 'SGJ/N6201',
+    },
+    {
+      timing_module: 4,
+      timing_title: 'Packing and Storing Compacted Agricultural Residues',
+      source_chapter: 4,
+      nos_code: 'SGJ/N6203',
+    },
+    {
+      timing_module: 5,
+      timing_title: 'Sales and Transportation of Agricultural Residues',
+      source_chapter: 5,
+      nos_code: 'SGJ/N6204',
+    },
+    {
+      timing_module: 6,
+      timing_title: 'Maintaining Basic Health and Workplace Safety',
+      source_chapter: 6,
+      nos_code: 'SGJ/N6205',
+    },
+    {
+      timing_module: 7,
+      timing_title: 'Employability Skills',
+      source_chapter: 7,
+      nos_code: 'DGT/VSQ/N0101',
+      no_source_content: {
+        reason:
+          'The Participant Handbook does not contain Employability Skills content. Chapter 7 ' +
+          'is a single page that links to the common DGT workbook, and the contents page ' +
+          'carries the same note in place of unit entries.',
+        source_statement:
+          'It is recommended that all trainings include the appropriate Employability skills ' +
+          'Module. Content for the same can be accessed: Employability skills workbook',
+        required_document: 'DGT/VSQ/N0101 Employability Skills workbook',
+      },
+    },
+  ],
+  chapter_titles: {
+    1: 'Introduction',
+    2: 'Assessing Demand and Supply of Agricultural Residue',
+    3: 'Purchase of Agricultural Residue Stock from Nodal Point',
+    4: 'Packing and Storing Compacted Agricultural Residues',
+    5: 'Sales and transportation of agricultural residues',
+    6: 'Maintaining basic health and workplace safety',
+    7: 'Employability Skills',
+  },
+  chunk_noise_patterns: [
+    '^Participant Handbook$',
+    '^Facilitator Guide$',
+    '^Qualification Pack$',
+    '^Agricultural Residue Aggregator$',
+    '^NSQC Approved \\|\\| Skill Council for Green Jobs \\d+$',
+  ],
+};
+
 const PENDING: CourseConfig[] = [
-  pendingCourse('esg', 'Environmental, Social and Governance', 'Orientation'),
-  pendingCourse('ghg', 'Greenhouse Gas', 'Orientation'),
-  pendingCourse('green-logistics', 'Green Logistics', 'Orientation'),
-  pendingCourse('biogas', 'Biogas', 'Orientation'),
-  pendingCourse('agri-residue-aggregator', 'Agri-Residue Aggregator', 'Entrepreneur'),
-  pendingCourse('green-hydrogen', 'Green Hydrogen', 'Entrepreneur'),
+  pendingCourse('esg', 'Environmental, Social and Governance', 'orientation', 'Orientation', 'esg-fundamentals'),
+  pendingCourse(
+    'ghg',
+    'Greenhouse Gas',
+    'orientation',
+    'Orientation',
+    'ghg-accounting-and-sustainability',
+  ),
+  pendingCourse('green-logistics', 'Green Logistics', 'orientation', 'Orientation'),
+  pendingCourse('biogas', 'Biogas', 'orientation', 'Orientation'),
 ];
 
 /**
@@ -444,6 +687,8 @@ function cdrCourse(definition: CdrCourseDefinition): CourseConfig {
     course_id: definition.course_id,
     name: definition.name,
     kind: 'cdr',
+    track: 'cdr',
+    directory: definition.course_id,
     qp_code: '(none)',
     nsqf_level: '(none)',
     sector: 'Green Jobs',
@@ -472,14 +717,29 @@ function cdrCourse(definition: CdrCourseDefinition): CourseConfig {
 }
 
 const REGISTRY: Record<string, CourseConfig> = {
-  [BIOFUELS.course_id]: BIOFUELS,
+  // The four Entrepreneur subjects, all with reviewed crosswalks.
   [SOLAR_PV.course_id]: SOLAR_PV,
+  [BIOFUELS.course_id]: BIOFUELS,
+  [GREEN_HYDROGEN.course_id]: GREEN_HYDROGEN,
+  [AGRI_RESIDUE_AGGREGATOR.course_id]: AGRI_RESIDUE_AGGREGATOR,
   ...Object.fromEntries(CDR_COURSES.map((c) => [c.course_id, cdrCourse(c)])),
-  // The remaining six subjects of the Orientation and Entrepreneur tracks are
-  // registered as placeholders. Each becomes fully usable by supplying its PDFs
-  // and, for storyboards, a reviewed crosswalk and chapter title table.
+  // The four Orientation subjects are registered as placeholders. Each becomes
+  // fully usable by supplying a reviewed crosswalk and chapter title table; their
+  // documents are already on disk.
   ...Object.fromEntries(PENDING.map((c) => [c.course_id, c])),
 };
+
+/** Every course of one track, in registration order. */
+export function listCoursesInTrack(track: CourseTrack): CourseConfig[] {
+  return listCourses().filter((c) => c.track === track);
+}
+
+/** True when the course has the reviewed data a storyboard needs. */
+export function hasReviewedCrosswalk(courseId: string): boolean {
+  const course = REGISTRY[courseId];
+  if (!course) return false;
+  return course.kind === 'cdr' ? course.module_sources !== undefined : course.crosswalk.length > 0;
+}
 
 export function listCourseIds(): string[] {
   return Object.keys(REGISTRY);
@@ -499,10 +759,15 @@ export function listCourses(): CourseConfig[] {
  * here" message names the canonical location rather than an alias.
  */
 export function courseDir(courseId: string): string {
-  const canonical = path.join(coursesRoot(), courseId);
+  const course = REGISTRY[courseId];
+  const root = coursesRoot();
+  const canonical = path.join(root, course?.directory ?? courseId);
   if (existsSync(canonical)) return canonical;
-  for (const alias of REGISTRY[courseId]?.directory_aliases ?? []) {
-    const candidate = path.join(coursesRoot(), alias);
+  // Legacy flat layouts, and folders named for the subject rather than the
+  // course. Tried only when the declared directory is absent, so the declared
+  // one always wins and the "supply the documents here" message names it.
+  for (const alias of [courseId, ...(course?.directory_aliases ?? [])]) {
+    const candidate = path.join(root, alias);
     if (existsSync(candidate)) return candidate;
   }
   return canonical;

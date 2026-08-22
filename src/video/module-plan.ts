@@ -28,7 +28,6 @@ import {
   MIN_SLIDE_COUNT,
   PART_1_SEGMENTS,
   PART_2_SEGMENTS,
-  PART_3_SEGMENTS,
   SEGMENT_SECONDS,
   SLIDE_DECK_SECONDS,
   VIDEO_PART_SPEC,
@@ -257,17 +256,6 @@ function teachingSlots(units: readonly PhUnitReading[], slots: number): Teaching
   }));
 }
 
-const SLIDE_PURPOSE: Record<'title' | 'body' | 'summary', string> = {
-  title:
-    'Open the deck: the module title, and what the learner will be able to do by the end. Frame ' +
-    'the session; do not teach yet.',
-  body:
-    'Teach the portion of the module allocated to this slide. Bullets are short cues on screen, ' +
-    'never sentences of the narration; the teaching lives in the speaker notes.',
-  summary:
-    'Close the deck: consolidate what was covered across the module and give the next step. ' +
-    'Introduce no new fact.',
-};
 
 export interface BuildModulePlanOptions {
   reading: PhModuleReading;

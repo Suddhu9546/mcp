@@ -30,13 +30,34 @@ if (!input || !output) {
   process.exit(1);
 }
 
-const COURSE_NAME = 'Solar Photovoltaic Entrepreneur';
-const QP_CODE = 'SGJ/Q0901';
-const NSQF_LEVEL = '4';
-const MODULE_HOURS = 3.0;
 const BLOCK_MINS = 15;
 
-const { modules } = JSON.parse(readFileSync(input, 'utf8'));
+// Course constants live in the structure file so one script builds every course.
+// Solar Photovoltaic Entrepreneur was the first and its file predates the fields,
+// so its values stay here as the defaults and its document regenerates unchanged.
+const DEFAULTS = {
+  course_name: 'Solar Photovoltaic Entrepreneur',
+  qp_code: 'SGJ/Q0901',
+  nsqf_level: '4',
+  module_hours: 3.0,
+};
+
+const structure = JSON.parse(readFileSync(input, 'utf8'));
+const { modules } = structure;
+
+const COURSE_NAME = structure.course_name ?? DEFAULTS.course_name;
+const QP_CODE = structure.qp_code ?? DEFAULTS.qp_code;
+const NSQF_LEVEL = structure.nsqf_level ?? DEFAULTS.nsqf_level;
+
+/**
+ * A module's duration. Courses whose modules are not all the same length state
+ * each one's hours in the structure file; where none is stated the course-wide
+ * default applies. Nothing here derives a duration from the content -- an
+ * unstated module falls back to a stated constant, never to a computed guess.
+ */
+function moduleHours(m) {
+  return m.hours ?? structure.module_hours ?? DEFAULTS.module_hours;
+}
 
 // ---------------------------------------------------------------------------
 // Duration allocation
@@ -92,7 +113,7 @@ function hoursLabel(mins) {
 // Document body
 // ---------------------------------------------------------------------------
 
-const totalMinutes = modules.length * MODULE_HOURS * 60;
+const totalMinutes = modules.reduce((a, m) => a + moduleHours(m) * 60, 0);
 const lines = [
   { text: COURSE_NAME, bold: true, size: 16, gap: 6 },
   {
@@ -107,9 +128,10 @@ const lines = [
 const summary = [];
 
 for (const m of modules) {
-  const minutes = allocate(m.units, MODULE_HOURS * 60);
+  const moduleMinutes = moduleHours(m) * 60;
+  const minutes = allocate(m.units, moduleMinutes);
   lines.push({
-    text: `Module ${m.module_number}: ${m.title} (${MODULE_HOURS.toFixed(1)} Hours)`,
+    text: `Module ${m.module_number}: ${m.title} (${moduleHours(m).toFixed(1)} Hours)`,
     bold: true,
     size: 12,
     gap: 4,
@@ -312,8 +334,11 @@ let grand = 0;
 for (const m of modules) {
   const rows = summary.filter((s) => s.module === m.module_number);
   const total = rows.reduce((a, r) => a + r.minutes, 0);
+  const expected = moduleHours(m) * 60;
   grand += total;
-  console.error(`Module ${m.module_number}: ${total} min ${total === 180 ? 'OK ' : 'BAD'}  ${m.title}`);
+  console.error(
+    `Module ${m.module_number}: ${total} min ${total === expected ? 'OK ' : 'BAD'}  ${m.title}`,
+  );
   for (const r of rows) {
     console.error(`    UNIT ${r.code.padEnd(5)} ${String(r.minutes).padStart(3)} min  ${String(r.subs).padStart(2)} sub  ${r.title.slice(0, 62)}`);
   }

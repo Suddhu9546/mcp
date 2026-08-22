@@ -22,34 +22,51 @@
 
 import { TRACK_LABELS, listSubjectStatuses, type CourseTrack } from '../catalog/subject-catalog.js';
 import { findPhUnits, getPhOutline, readPhModule, readPhUnit } from '../documents/ph-outline.js';
-import { getCourseDocumentStatus, ingestCourse } from '../documents/ingest.js';
-import { cdrCourseStatus, isCdrCourse, listCdrCourseStatuses } from '../cdr/catalog.js';
+import { ingestCourse } from '../documents/ingest.js';
+import { cdrCourseStatus, isCdrCourse } from '../cdr/catalog.js';
+import {
+  findStoryboardCourse,
+  findTrack,
+  listStoryboardCourses,
+  listStoryboardTracks,
+  storyboardCourseStatus,
+} from './storyboard-catalog.js';
 import { getDb, nowIso } from '../storage/db.js';
 import { buildModulePlan } from '../video/module-plan.js';
 import { createModulePackage, getModulePackage } from '../video/module-store.js';
 import { renderUnitReading } from '../video/render.js';
 
-export type FlowKind = 'module_content' | 'ph_reading' | 'storyboard' | 'cdr_storyboard';
+export type FlowKind = 'storyboard' | 'module_content' | 'ph_reading';
 
-/** Menu answers, including the number the user is shown and the older flow name. */
+/**
+ * Menu answers.
+ *
+ * The numbers are what the user is shown and so are what they type. The words
+ * are there because a user who says "storyboard" rather than "1" has answered
+ * the question just as clearly, and the older names are kept so a client holding
+ * a previous menu's vocabulary still lands on the right flow.
+ */
 const FLOW_ALIASES: Record<string, FlowKind> = {
-  '1': 'module_content',
+  '1': 'storyboard',
+  storyboard: 'storyboard',
+  story_board: 'storyboard',
+  cdr_storyboard: 'storyboard',
+  '2': 'module_content',
+  video_script: 'module_content',
   module_content: 'module_content',
   video_transcript: 'module_content',
   video: 'module_content',
-  '2': 'ph_reading',
+  script: 'module_content',
+  '3': 'ph_reading',
+  handbook_reading: 'ph_reading',
   ph_reading: 'ph_reading',
   reading: 'ph_reading',
   read: 'ph_reading',
-  '3': 'storyboard',
-  storyboard: 'storyboard',
-  '4': 'cdr_storyboard',
-  cdr_storyboard: 'cdr_storyboard',
-  cdr: 'cdr_storyboard',
 };
 
 export type FlowStepName =
   | 'choose_flow'
+  | 'choose_track'
   | 'choose_subject'
   | 'choose_module'
   | 'choose_unit'
@@ -104,12 +121,13 @@ export interface FlowStep {
   selections: FlowState;
 }
 
-const GREETING = 'Here is what I can do with the SCGJ course documents.';
+const GREETING = 'I can build content from the SCGJ course documents. What would you like?';
 
 const ALWAYS_AVAILABLE =
-  'Show the options as a numbered list and let the user reply with a number, a name, or the ' +
-  'topic they want. "back" changes the previous answer; "restart" clears the session and ' +
-  'returns to this menu from any step, finished ones included.';
+  'Show the options as a numbered list, exactly as given, and let the user reply with a number ' +
+  'or a name. Add nothing of your own: no preamble, no explanation of the options, no ' +
+  'recommendation, no follow-up question. "back" changes the previous answer; "restart" returns ' +
+  'to the menu from any step, finished ones included.';
 
 class FlowError extends Error {}
 
@@ -170,50 +188,69 @@ function base(sessionId: string, state: FlowState, step: FlowStepName, error?: s
 /**
  * The menu.
  *
- * Each option says what comes out of it, because the one thing a user cannot tell
- * from three verbs is which produces a file, which produces a script and which
- * returns the handbook's own words.
+ * Three lines and nothing else. Everything the previous menu explained -- what
+ * each option produces, how long it runs, which subjects are available -- is
+ * answered by the step that follows, and putting it here made the first thing a
+ * user saw a wall of text about choices they had not made yet.
  */
 function chooseFlowStep(sessionId: string, state: FlowState, error?: string): FlowStep {
   return {
     ...base(sessionId, state, 'choose_flow', error),
-    prompt: `${GREETING}\n\nWhich one do you want?`,
+    prompt: GREETING,
     options: [
-      {
-        value: 'module_content',
-        label: '1. Video script + slide deck for a module',
-        detail:
-          'You pick a subject and a module. You get a 3-minute video script in 18 segments, its ' +
-          'subtitles, and a 9-minute slide deck, as downloadable files. Covers every unit of the ' +
-          'module, written from the handbook.',
-      },
-      {
-        value: 'ph_reading',
-        label: '2. Read a handbook unit word for word',
-        detail:
-          "You pick a subject, a module and a unit. You get the Participant Handbook's own text, " +
-          'unchanged -- nothing summarised, rewritten or added.',
-      },
-      {
-        value: 'storyboard',
-        label: '3. Course storyboard + assessment blueprint',
-        detail:
-          'For a qualification course -- Biofuels, Solar PV. You pick a subject. You get the ' +
-          'curriculum storyboard for the whole course as a .docx built to the SCGJ template, ' +
-          'with the assessment question blueprint.',
-      },
-      {
-        value: 'cdr_storyboard',
-        label: '4. CDR storyboard + assessment blueprint',
-        detail:
-          'For a Carbon Dioxide Removal course -- CDR Biochar. Same template, same rules, same ' +
-          '.docx. The difference is the sources: each module is built from its own reference ' +
-          'document, as the course\'s master file directs, rather than from one handbook.',
-      },
+      { value: 'storyboard', label: '1. Generate storyboard' },
+      { value: 'module_content', label: '2. Generate video script' },
+      { value: 'ph_reading', label: '3. Read handbook content' },
     ],
     next_action:
-      'Show these three to the user and wait for their pick. Ask nothing else first and start no ' +
-      'work until one is chosen. ' +
+      'Show exactly these three lines and wait. Do not describe them, do not add a fourth, and ' +
+      'do not begin any work until the user picks one. ' +
+      ALWAYS_AVAILABLE,
+  };
+}
+
+/**
+ * Which programme the storyboard is for.
+ *
+ * The three tracks are genuinely different documents -- different template,
+ * different sources, different module routing -- so this is the first thing the
+ * storyboard flow has to know, and it is the only flow that asks it. The content
+ * flows do not: a subject carries its own track, and asking would cost a turn to
+ * learn something already known.
+ */
+function chooseTrackStep(sessionId: string, state: FlowState, error?: string): FlowStep {
+  const tracks = listStoryboardTracks();
+  return {
+    ...base(sessionId, state, 'choose_track', error),
+    prompt: 'Which course?',
+    options: tracks.map((t, i) => ({ value: t.track, label: `${i + 1}. ${t.label}` })),
+    next_action: `Show these ${tracks.length} lines and wait. ${ALWAYS_AVAILABLE}`,
+  };
+}
+
+/**
+ * Which course of that track.
+ *
+ * Listed from the course registry rather than the subject catalogue, because a
+ * storyboard needs more than a handbook: four approved documents and a reviewed
+ * crosswalk. A course short of either is shown and shown as unavailable with the
+ * reason, rather than hidden -- a subject that silently vanishes from a list
+ * reads as a bug, and the reason is the thing someone has to act on.
+ */
+function chooseStoryboardCourseStep(sessionId: string, state: FlowState, error?: string): FlowStep {
+  const track = state.track as CourseTrack;
+  const courses = listStoryboardCourses(track);
+  return {
+    ...base(sessionId, state, 'choose_subject', error),
+    prompt: `Which ${TRACK_LABELS[track]} subject?`,
+    options: courses.map((c, i) => ({
+      value: c.course_id,
+      label: `${i + 1}. ${c.name}`,
+      ...(c.selectable ? {} : { disabled: true, blocker: c.blocker! }),
+    })),
+    next_action:
+      'Show these lines and wait. A line marked unavailable stays in the list, with its reason ' +
+      'available if the user asks; do not drop it and do not lead with it. ' +
       ALWAYS_AVAILABLE,
   };
 }
@@ -225,73 +262,30 @@ function chooseFlowStep(sessionId: string, state: FlowState, error?: string): Fl
  * it is shown as a grouping label instead of costing the user a turn.
  */
 function chooseSubjectStep(sessionId: string, state: FlowState, error?: string): FlowStep {
-  // The CDR flow and the qualification flows draw from different catalogues, so
-  // a CDR course is never offered as though it were a handbook subject and vice
-  // versa. That separation is the point of having them as separate menu items.
-  if (state.flow === 'cdr_storyboard') return chooseCdrCourseStep(sessionId, state, error);
+  // The storyboard flow has already asked for a track and draws from the course
+  // registry; the content flows draw from the handbook subject catalogue. The two
+  // lists answer different questions about readiness and are never interchanged.
+  if (state.flow === 'storyboard') return chooseStoryboardCourseStep(sessionId, state, error);
 
   const ordered = [...listSubjectStatuses()].sort(
     (a, b) => Number(b.selectable) - Number(a.selectable) || Number(b.ready) - Number(a.ready),
   );
-  const verb =
-    state.flow === 'ph_reading'
-      ? 'read from'
-      : state.flow === 'storyboard'
-        ? 'build a storyboard for'
-        : 'build module content for';
+  const verb = state.flow === 'ph_reading' ? 'read from' : 'build a video script for';
   return {
     ...base(sessionId, state, 'choose_subject', error),
     prompt: `Which subject do you want to ${verb}?`,
     options: ordered.map((s) => ({
       value: s.subject_id,
       label: `${s.code} - ${s.name}`,
-      detail: `${TRACK_LABELS[s.track]}. ${
-        s.ready
-          ? `Handbook indexed (${s.ph_chunk_count} sections).`
-          : s.needs_index
-            ? 'Handbook supplied; it is indexed automatically the first time you pick it.'
-            : 'No handbook supplied yet.'
-      }`,
+      detail: TRACK_LABELS[s.track],
       ...(s.selectable ? {} : { disabled: true, blocker: s.blocker! }),
     })),
     next_action:
       'List the selectable subjects first and mark the rest unavailable rather than hiding them. ' +
-      'A subject marked "indexed automatically" is a normal choice -- offer it without ' +
-      'qualification and without asking the user to run anything; picking it indexes the ' +
-      'handbook first, which takes a few seconds once. If the user names a topic instead of a ' +
-      'subject, pass what they said straight through: it is resolved to the unit that holds it.',
-  };
-}
-
-/**
- * The CDR course list.
- *
- * Readiness here means every reference document the master file names is present
- * and indexed. A course missing three of its nine documents is shown, and shown
- * as unavailable with the filenames it is waiting for -- the same rule the
- * qualification subjects follow, applied to a longer document list.
- */
-function chooseCdrCourseStep(sessionId: string, state: FlowState, error?: string): FlowStep {
-  const courses = listCdrCourseStatuses();
-  return {
-    ...base(sessionId, state, 'choose_subject', error),
-    prompt: 'Which CDR course do you want to build a storyboard for?',
-    options: courses.map((c) => ({
-      value: c.course_id,
-      label: c.name,
-      detail:
-        `${c.module_count} modules, ${c.total_hours} hours, ${c.document_count} reference ` +
-        `documents. ${
-          c.ready
-            ? 'All documents indexed.'
-            : `${c.missing.length} document(s) not supplied yet.`
-        }`,
-      ...(c.ready ? {} : { disabled: true, blocker: c.blocker! }),
-    })),
-    next_action:
-      'List the CDR courses and let the user pick. A course that is not ready names the exact ' +
-      'files it is waiting for; report those filenames rather than paraphrasing them, because ' +
-      'they are what the user must place on disk.',
+      'Picking one that has never been indexed indexes it first, which takes a few seconds once ' +
+      'and needs nothing from the user -- do not mention it or ask them to run anything. If the ' +
+      'user names a topic instead of a subject, pass what they said straight through: it is ' +
+      'resolved to the unit that holds it.',
   };
 }
 
@@ -428,83 +422,64 @@ function readingCompleteStep(sessionId: string, state: FlowState): FlowStep {
 }
 
 /**
- * Terminal step of the CDR storyboard flow.
+ * Terminal step of the storyboard flow -- all three tracks.
  *
- * It hands over exactly as the qualification flow does, and to the same tools:
- * the difference between the two courses is which documents each module draws
- * from, and that is settled by the master file before generation starts. So the
- * client is told the routing rather than asked to work it out, and then told to
- * run the same loop.
- */
-function cdrReadyStep(sessionId: string, state: FlowState): FlowStep {
-  const status = cdrCourseStatus(state.course_id!);
-  saveSession(sessionId, 'storyboard_ready', state);
-  return {
-    session_id: sessionId,
-    flow: 'cdr_storyboard',
-    step: 'storyboard_ready',
-    prompt:
-      `Building the ${status.name} storyboard: ${status.module_count} modules, ` +
-      `${status.total_hours} hours, from ${status.document_count} reference documents.`,
-    data: {
-      course_id: status.course_id,
-      module_count: status.module_count,
-      total_hours: status.total_hours,
-      documents: status.documents,
-      routing: status.documents.flatMap((d) =>
-        d.used_by_modules.map((m) => ({ module: m, doc_key: d.doc_key, title: d.title })),
-      ),
-    },
-    next_action:
-      'Build it now, with the same tools and the same rules as any other storyboard -- the ' +
-      'template, the formatting and the citation requirements are identical. ' +
-      '(1) create_storyboard_draft with this course_id. ' +
-      '(2) storyboard_next_task with the artifact_id it returns. ' +
-      '(3) LOOP: write the fields in task.fields from the text in task.sources, cite chunk_ids ' +
-      'from task.sources, and call storyboard_submit_task; repeat until status is ' +
-      'READY_TO_RENDER. ' +
-      '(4) validate_storyboard, then render_storyboard_docx, and give the user the .docx. ' +
-      'What differs from a qualification course is only where the sources come from: each ' +
-      'module draws from the reference document(s) the master file assigns it, shown in ' +
-      'data.routing above. The task loop applies that routing for you, so every chunk a task ' +
-      'offers is already the right document -- do not search across the other documents and do ' +
-      'not cite one module\'s document in another module. Do not stop between tasks to ' +
-      'summarise or ask whether to continue.',
-    done: true,
-    selections: state,
-  };
-}
-
-/**
- * Terminal step of the storyboard flow.
+ * The subject was the last question, so this step does not ask another: it
+ * resolves the course, states what is about to be built, and hands the client the
+ * loop. The three tracks reach it by different routes and differ in exactly one
+ * respect once here -- where a module's sources come from -- so they share this
+ * step rather than owning three copies of it that drift apart.
  *
- * The storyboard runs on its own tool set and its own module numbering, so this
- * step hands over rather than continuing. It carries the resolved course_id and
- * the document status, which is what the first storyboard tools would otherwise
- * have to be called to discover.
+ * For CDR the per-module document routing is attached, because the client would
+ * otherwise have to discover it; for a qualification course the crosswalk does the
+ * same job invisibly inside the task queue and there is nothing to attach.
  */
 function storyboardReadyStep(sessionId: string, state: FlowState): FlowStep {
-  const documents = getCourseDocumentStatus(state.course_id!);
+  const courseId = state.course_id!;
+  const status = storyboardCourseStatus(courseId);
+  const cdr = isCdrCourse(courseId);
   saveSession(sessionId, 'storyboard_ready', state);
+
+  const routing = cdr
+    ? cdrCourseStatus(courseId).documents.flatMap((d) =>
+        d.used_by_modules.map((m) => ({ module: m, doc_key: d.doc_key, title: d.title })),
+      )
+    : undefined;
+
   return {
     session_id: sessionId,
     flow: 'storyboard',
     step: 'storyboard_ready',
-    prompt: `Building the storyboard for ${state.subject_id}.`,
-    data: { course_id: state.course_id, documents },
+    prompt: `Building the ${status.name} storyboard: ${status.module_count} modules.`,
+    data: {
+      course_id: courseId,
+      track: status.track,
+      module_count: status.module_count,
+      ...(routing ? { routing } : {}),
+    },
     next_action:
-      'Build the storyboard now. Three calls set it up and then one loop does the rest, so there ' +
-      'is nothing to plan and nothing to ask the user: ' +
-      '(1) create_storyboard_draft with this course_id. ' +
-      '(2) storyboard_next_task with the artifact_id it returns. ' +
-      '(3) LOOP: the result has status WRITE_THIS and a task -- write the fields in task.fields ' +
-      'using the handbook text in task.sources, cite chunk_ids from task.sources, and call ' +
-      'storyboard_submit_task. It returns the next task. Repeat until status is READY_TO_RENDER. ' +
-      'Each result also carries next_call naming the exact tool and arguments to use, so follow ' +
-      'that if in doubt. ' +
+      'Build it now. Do not ask the user anything further, do not summarise the plan, and do not ' +
+      'offer choices -- everything the storyboard needs has been settled. Four steps: ' +
+      '(1) create_storyboard_draft with this course_id. It returns an artifact_id and an EMPTY ' +
+      'skeleton; showing that skeleton to the user does not answer the request. ' +
+      '(2) storyboard_next_module with that artifact_id. ' +
+      '(3) LOOP: the result has status WRITE_THIS and one whole module -- write every slot it ' +
+      'lists from the text in module.sources, cite chunk_ids taken from module.sources, and call ' +
+      'storyboard_submit_module once with all of it. It commits and returns the next module. ' +
+      'Repeat until status is READY_TO_RENDER. Every result carries next_call naming the exact ' +
+      'tool and arguments, so there is nothing to plan. ' +
       '(4) validate_storyboard, then render_storyboard_docx, and give the user the .docx. ' +
-      'Do not stop between tasks to summarise or to ask whether to continue, and do not render ' +
-      'early. A course is 100-130 tasks; that is normal and each one is small. ' +
+      'A course runs to 100-130 tasks. That is expected and each one is small: do not stop ' +
+      'between them to summarise, do not ask whether to continue, and do not render early. ' +
+      'The template, fonts, colours and layout are applied by the renderer -- never specify ' +
+      'them, and never build a document by any other route. ' +
+      (cdr
+        ? 'This course has no single handbook: each module draws on the reference documents its ' +
+          'master file assigns it, listed in data.routing. The task loop applies that routing ' +
+          'for you, so every chunk a task offers is already the right document -- do not search ' +
+          'the other documents for a module and never cite one module\'s document in another. '
+        : 'Sources come from this course\'s own QP, PH and FG, scoped per module by the reviewed ' +
+          'crosswalk, which the task loop applies for you. ') +
       'This flow session holds no storyboard state; say "restart" on it to return to the menu.',
     done: true,
     selections: state,
@@ -536,6 +511,8 @@ function render(sessionId: string, step: FlowStepName, state: FlowState, error?:
   switch (step) {
     case 'choose_flow':
       return chooseFlowStep(sessionId, state, error);
+    case 'choose_track':
+      return chooseTrackStep(sessionId, state, error);
     case 'choose_subject':
       return chooseSubjectStep(sessionId, state, error);
     case 'choose_module':
@@ -545,9 +522,7 @@ function render(sessionId: string, step: FlowStepName, state: FlowState, error?:
     case 'choose_candidate':
       return chooseCandidateStep(sessionId, state, error);
     case 'storyboard_ready':
-      return state.flow === 'cdr_storyboard'
-        ? cdrReadyStep(sessionId, state)
-        : storyboardReadyStep(sessionId, state);
+      return storyboardReadyStep(sessionId, state);
     case 'module_ready':
       return moduleReadyStep(sessionId, state);
     case 'reading_complete':
@@ -557,8 +532,11 @@ function render(sessionId: string, step: FlowStepName, state: FlowState, error?:
 
 function previousStep(step: FlowStepName, state: FlowState): FlowStepName {
   switch (step) {
-    case 'choose_subject':
+    case 'choose_track':
       return 'choose_flow';
+    case 'choose_subject':
+      // Only the storyboard flow asks for a track, so only it has one to go back to.
+      return state.flow === 'storyboard' ? 'choose_track' : 'choose_flow';
     case 'choose_module':
     case 'choose_candidate':
     case 'storyboard_ready':
@@ -586,8 +564,14 @@ function clearFrom(step: FlowStepName, state: FlowState): FlowState {
   switch (step) {
     case 'choose_flow':
       return {};
-    case 'choose_subject':
+    case 'choose_track':
       drop('track', 'subject_id', 'course_id', 'module_number', 'unit_code', 'candidates', 'package_id');
+      return cleared;
+    case 'choose_subject':
+      // The track survives: going back from a subject re-asks the subject, not
+      // the programme it belongs to.
+      drop('subject_id', 'course_id', 'module_number', 'unit_code', 'candidates', 'package_id');
+      if (state.flow !== 'storyboard') delete cleared.track;
       return cleared;
     case 'choose_module':
       drop('module_number', 'unit_code', 'candidates', 'package_id');
@@ -695,42 +679,56 @@ export async function advanceFlow(sessionId: string, rawChoice: string): Promise
         return chooseFlowStep(
           sessionId,
           state,
-          `"${choice}" is not one of the three options. Answer 1, 2 or 3, or ` +
-            'module_content / ph_reading / storyboard.',
+          `"${choice}" is not one of the three options. Answer 1, 2 or 3.`,
         );
       }
       state.flow = flow;
+      // Only the storyboard needs to know the programme first; the content flows
+      // read it off whichever subject the user picks.
+      const next: FlowStepName = flow === 'storyboard' ? 'choose_track' : 'choose_subject';
+      saveSession(sessionId, next, state);
+      return render(sessionId, next, state);
+    }
+
+    case 'choose_track': {
+      const track = findTrack(choice);
+      if (!track) {
+        return chooseTrackStep(
+          sessionId,
+          state,
+          `"${choice}" is not one of the options. Answer 1, 2 or 3.`,
+        );
+      }
+      state.track = track;
       saveSession(sessionId, 'choose_subject', state);
-      return chooseSubjectStep(sessionId, state);
+      return chooseStoryboardCourseStep(sessionId, state);
     }
 
     case 'choose_subject': {
-      if (state.flow === 'cdr_storyboard') {
-        const courses = listCdrCourseStatuses();
-        const wantedCourse = lowered.replace(/[\s_]+/g, '-');
-        const course =
-          courses.find((c) => c.course_id === wantedCourse) ??
-          courses.find((c) => c.name.toLowerCase() === lowered);
+      if (state.flow === 'storyboard') {
+        const track = state.track as CourseTrack;
+        const course = findStoryboardCourse(track, choice);
         if (!course) {
-          return chooseCdrCourseStep(
+          return chooseStoryboardCourseStep(
             sessionId,
             state,
-            `"${choice}" is not one of the CDR courses. Choose ` +
-              `${courses.map((c) => c.course_id).join(', ')}.`,
+            `"${choice}" is not one of the ${TRACK_LABELS[track]} subjects. Answer with its ` +
+              'number or its name.',
           );
         }
-        if (!course.ready) {
-          // Present-but-unindexed is the server's job; genuinely absent files are
-          // the user's, so only the latter blocks.
-          const absent = course.missing.filter((d) => !d.present);
-          if (absent.length > 0) {
-            return chooseCdrCourseStep(sessionId, state, `${course.name} is not ready. ${course.blocker}`);
-          }
-          await ingestCourse(course.course_id);
+        if (!course.selectable) {
+          return chooseStoryboardCourseStep(
+            sessionId,
+            state,
+            `${course.name} cannot be built yet. ${course.blocker}`,
+          );
         }
+        // Indexing is the server's job and takes a few seconds once. It happens
+        // here rather than being handed back to the user as a chore.
+        if (course.needs_index) await ingestCourse(course.course_id);
         state.subject_id = course.course_id;
         state.course_id = course.course_id;
-        return cdrReadyStep(sessionId, state);
+        return storyboardReadyStep(sessionId, state);
       }
 
       const statuses = listSubjectStatuses();
@@ -765,9 +763,8 @@ export async function advanceFlow(sessionId: string, rawChoice: string): Promise
       state.subject_id = match.subject_id;
       state.course_id = match.course_id;
 
-      // The storyboard covers a whole course, so the subject is the last question
-      // it has. The content flows carry on to the module.
-      if (state.flow === 'storyboard') return storyboardReadyStep(sessionId, state);
+      // Both content flows continue to the module; the storyboard flow never
+      // reaches here, having taken its own branch above.
       saveSession(sessionId, 'choose_module', state);
       return chooseModuleStep(sessionId, state);
     }

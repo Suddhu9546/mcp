@@ -35,7 +35,12 @@ export type Db = DatabaseSyncType;
 // 4: a course may now hold many documents of one type. CDR courses carry nine
 //    reference documents plus a master file, so document_type alone no longer
 //    identifies a document and doc_key does.
-const SCHEMA_VERSION = 4;
+// 5: the FTS table carries an indexed `scope` column, so course, document and
+//    chapter scoping happens inside the index rather than as a filter applied to
+//    its output. Existing rows have no scope text and would match nothing, so the
+//    chunk tables are rebuilt.
+// 6: the ad-hoc single-unit transcript feature and its two tables are gone.
+const SCHEMA_VERSION = 6;
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -99,9 +104,15 @@ CREATE INDEX IF NOT EXISTS idx_chunks_unit    ON chunks(course_id, unit_code);
 CREATE INDEX IF NOT EXISTS idx_chunks_nos     ON chunks(course_id, nos_code);
 CREATE INDEX IF NOT EXISTS idx_chunks_page    ON chunks(course_id, document_type, pdf_page);
 
+-- The scope column holds the chunk's course, document, chapter and unit as
+-- opaque tokens (see documents/scope-tokens.ts). Scoping is ANDed into the MATCH
+-- expression so SQLite intersects postings lists and visits only in-scope
+-- chunks, instead of ranking the whole corpus and discarding what a WHERE clause
+-- then rejects. It is weighted 0 in bm25() so it orders nothing.
 CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
   content,
   section,
+  scope,
   chunk_id UNINDEXED,
   tokenize = 'porter unicode61'
 );
@@ -142,34 +153,6 @@ CREATE TABLE IF NOT EXISTS storyboard_changes (
 );
 
 CREATE INDEX IF NOT EXISTS idx_changes_artifact ON storyboard_changes(artifact_id, version);
-
--- Video transcripts. Separate from storyboard artifacts rather than a variant of
--- them: the two share no structure, no timing source and no output format, and
--- keeping them apart is what stops one flow's rules leaking into the other.
-CREATE TABLE IF NOT EXISTS video_transcripts (
-  transcript_id     TEXT PRIMARY KEY,
-  course_id         TEXT NOT NULL,
-  subject_id        TEXT,
-  unit_code         TEXT NOT NULL,
-  unit_title        TEXT NOT NULL,
-  requested_seconds INTEGER NOT NULL,
-  words_per_minute  INTEGER NOT NULL,
-  current_version   INTEGER NOT NULL DEFAULT 1,
-  state_json        TEXT NOT NULL,
-  created_at        TEXT NOT NULL,
-  updated_at        TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS video_transcript_versions (
-  transcript_id TEXT NOT NULL REFERENCES video_transcripts(transcript_id),
-  version       INTEGER NOT NULL,
-  state_json    TEXT NOT NULL,
-  note          TEXT,
-  created_at    TEXT NOT NULL,
-  PRIMARY KEY (transcript_id, version)
-);
-
-CREATE INDEX IF NOT EXISTS idx_video_scope ON video_transcripts(course_id, unit_code);
 
 -- Module content packages: the 3-minute video and 9-minute deck for one handbook
 -- module, planned and versioned together because they share one coverage
@@ -245,6 +228,10 @@ function migrate(db: Db): void {
   if (found === 0 || found === SCHEMA_VERSION) return;
 
   if (found < SCHEMA_VERSION) {
+    // The ad-hoc single-unit transcript feature was removed; its two tables are
+    // no longer written or read by anything.
+    db.exec('DROP TABLE IF EXISTS video_transcript_versions');
+    db.exec('DROP TABLE IF EXISTS video_transcripts');
     db.exec('DROP TABLE IF EXISTS chunks_fts');
     db.exec('DROP TABLE IF EXISTS chunks');
     // course_documents gained a column and lost a uniqueness constraint, so it is

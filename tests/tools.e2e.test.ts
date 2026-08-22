@@ -17,6 +17,8 @@ process.env.DB_PATH = path.join(mkdtempSync(path.join(tmpdir(), 'sbmcp-')), 'tes
 process.env.ARTIFACT_DIR = mkdtempSync(path.join(tmpdir(), 'sbmcp-art-'));
 
 const { TOOLS, runTool } = await import('../src/mcp/tools/index.js');
+// Imported after DB_PATH is set, like the tool layer itself.
+const { moduleSubmission } = await import('./helpers/build-storyboard.js');
 
 /** Calls a tool exactly as the MCP server does, including error conversion. */
 async function call(name: string, args: Record<string, unknown> = {}): Promise<any> {
@@ -146,8 +148,8 @@ describe('tool surface', () => {
     }, 60_000);
 
     it('reports the draft as unfinished work rather than as a result', async () => {
-      // A client that reads "call validate_storyboard, then render" after creating an
-      // empty skeleton stops and reports the draft, which is what this prevents.
+      // A client that reads "call validate_storyboard, then render" after creating
+      // an empty skeleton stops and reports the draft, which is what this prevents.
       const draft = await call('create_storyboard_draft', { course_id: COURSE });
       expect(draft.work.complete).toBe(false);
       expect(draft.work.empty_fields_remaining).toBeGreaterThan(100);
@@ -155,162 +157,122 @@ describe('tool surface', () => {
       expect(draft.work.modules_remaining).toBe(7);
       expect(draft.work.next_module).toBe(1);
       // The draft must point into the build loop, not read as a finished result.
-      expect(draft.next_call.tool).toBe('storyboard_next_task');
+      expect(draft.next_call.tool).toBe('storyboard_next_module');
       expect(draft.next_call.args.artifact_id).toBe(draft.artifact_id);
       expect(draft.next_step).toMatch(/empty skeleton/);
       expect(draft.next_step).not.toMatch(/^Call validate_storyboard/);
-
-      const search = await call('search_course_content', {
-        course_id: COURSE,
-        query: 'biomass energy fundamentals',
-        module_number: 1,
-        limit: 1,
-      });
-      const written = await call('set_storyboard_content', {
-        artifact_id: draft.artifact_id,
-        base_version: draft.version,
-        module_number: 1,
-        part_a_rows: [
-          {
-            row_id: 'm01-a-1.1',
-            activity_name: 'Guided reading',
-            interactive_description: 'Learners work through the fundamentals of biomass energy.',
-            sources: [{ chunk_id: search.results[0].chunk_id }],
-          },
-        ],
-      });
-
-      // One module filled is not the whole storyboard, and the tool must say so.
-      expect(written.work.complete).toBe(false);
-      expect(written.work.empty_fields_remaining).toBe(draft.work.empty_fields_remaining - 2);
-      expect(written.next_step).toMatch(/NOT FINISHED/);
-      expect(written.next_step).toMatch(/Continue now with module 1/);
     }, 120_000);
 
-    it('writes content with real citations and versions the change', async () => {
-      const search = await call('search_course_content', {
-        course_id: COURSE,
-        query: 'biomass preparation crushing moisture die',
-        module_number: 5,
-        document_types: ['PH'],
-        limit: 3,
-      });
-      const chunk = search.results[0];
-      expect(chunk).toBeTruthy();
+    it('hands out one module at a time, with its chapter attached exactly once', async () => {
+      const first = await call('storyboard_next_module', { artifact_id: artifactId });
+      expect(first.status).toBe('WRITE_THIS');
+      expect(first.module.number).toBe(1);
+      expect(first.progress.modules_total).toBe(7); // module 8 is not work
 
-      const before = await call('get_storyboard', { artifact_id: artifactId, module_number: 5 });
-      const rowId = before.module.part_a.rows[0].row_id;
+      // Every slot the module needs is enumerated, so nothing is left to infer.
+      expect(first.module.part_a.length).toBeGreaterThan(0);
+      expect(first.module.part_b.length).toBeGreaterThan(0);
+      expect(first.module.part_c.length).toBeGreaterThan(0);
+      expect(first.module.lms_rows.length).toBe(first.module.part_a.length);
+      expect(first.module.questions_needed).toBe(10);
 
-      const res = await call('set_storyboard_content', {
-        artifact_id: artifactId,
-        base_version: 1,
-        module_number: 5,
-        module_description: 'This module covers the manufacture of biomass pellets.',
-        part_a_rows: [
-          {
-            row_id: rowId,
-            activity_name: 'Pellet Preparation Sequencer',
-            interactive_description:
-              'Learners order the biomass preparation steps and set crushing size and moisture content.',
-            correlation: 'SGJ/N4105 / PC1, PC2',
-            sources: [
-              {
-                document_type: chunk.document_type,
-                pdf_page: chunk.pdf_page,
-                section: chunk.section,
-                chunk_id: chunk.chunk_id,
-              },
-            ],
-          },
-        ],
-        note: 'Module 5 unit 1 content',
-      });
+      // The sources are the module's own chapter, deduplicated. Sending a chunk
+      // more than once is the specific waste this loop exists to remove.
+      const ids = first.module.sources.map((s: any) => s.chunk_id);
+      expect(ids.length).toBeGreaterThan(0);
+      expect(new Set(ids).size).toBe(ids.length);
+      // Scoped to the module's chapter: module 1 maps to PH/FG chapter 1.
+      for (const source of first.module.sources) {
+        if (source.document_type === 'PH' || source.document_type === 'FG') {
+          expect(source.chunk_id, `${source.chunk_id} is out of module 1's scope`).toMatch(/:/);
+        }
+      }
 
-      expect(res.__isError).toBe(false);
-      expect(res.version).toBe(2);
-      expect(res.changes_applied).toBeGreaterThan(0);
-    });
+      // And the reply carries the submission's shape, so the client writes rather
+      // than works out an argument structure.
+      expect(first.next_call.tool).toBe('storyboard_submit_module');
+      expect(first.next_call.args.module).toBe(1);
+    }, 120_000);
 
-    it('rejects a stale base_version instead of overwriting', async () => {
-      const res = await call('set_storyboard_content', {
-        artifact_id: artifactId,
-        base_version: 1, // now stale
-        module_number: 5,
-        module_description: 'Should not apply.',
-      });
-      expect(res.__isError).toBe(true);
-      expect(res.message).toMatch(/Version conflict/);
-    });
+    it('writes a whole module in one call and versions it once', async () => {
+      const before = await call('get_storyboard', { artifact_id: artifactId });
+      const work = await call('storyboard_next_module', { artifact_id: artifactId });
 
-    it('rejects an unknown row_id without committing anything', async () => {
-      const artifactBefore = await call('get_storyboard', { artifact_id: artifactId });
-      const res = await call('set_storyboard_content', {
-        artifact_id: artifactId,
-        base_version: artifactBefore.version,
-        module_number: 5,
-        part_a_rows: [{ row_id: 'does-not-exist', interactive_description: 'x' }],
-      });
-      expect(res.__isError).toBe(true);
-      const after = await call('get_storyboard', { artifact_id: artifactId });
-      expect(after.version).toBe(artifactBefore.version);
-    });
+      const res = await call(
+        'storyboard_submit_module',
+        moduleSubmission(artifactId, work.module),
+      );
+      expect(res.__isError, res.message).toBe(false);
 
-    it('flags an unresolvable citation and a wrong-chapter citation', async () => {
-      const state = await call('get_storyboard', { artifact_id: artifactId });
+      // One module, one version. Per-row writing produced a version per field and
+      // rewrote the whole state each time.
+      expect(res.version).toBe(before.version + 1);
+      expect(res.committed_module).toBe(work.module.number);
+
+      // The module is done and the loop has moved on.
+      expect(res.status).toBe('WRITE_THIS');
+      expect(res.module.number).toBeGreaterThan(work.module.number);
+      expect(res.progress.modules_done).toBe(1);
+    }, 120_000);
+
+    it('refuses a citation the module was not given, and commits nothing', async () => {
+      const before = await call('get_storyboard', { artifact_id: artifactId });
+      const work = await call('storyboard_next_module', { artifact_id: artifactId });
 
       // A chunk that genuinely exists but belongs to another module's chapter.
-      const wrong = await call('search_course_content', {
+      const other = await call('search_course_content', {
         course_id: COURSE,
         query: 'first aid burns electric shock',
         module_number: 7, // chapter 5
         document_types: ['PH'],
         limit: 1,
       });
-      const wrongChunk = wrong.results[0];
-      expect(wrongChunk.chapter).toBe(5);
+      const foreign = other.results[0].chunk_id;
+      expect(work.module.sources.map((s: any) => s.chunk_id)).not.toContain(foreign);
 
-      const rows = state.modules.find((m: any) => m.number === 5).part_a.rows;
-
-      await call('set_storyboard_content', {
+      const res = await call('storyboard_submit_module', {
         artifact_id: artifactId,
-        base_version: state.version,
-        module_number: 5,
-        part_a_rows: [
+        module: work.module.number,
+        part_a: [
           {
-            row_id: rows[1].row_id,
-            activity_name: 'Bad Citation Probe',
-            interactive_description: 'Content citing a chunk from the wrong chapter.',
-            sources: [
-              {
-                document_type: wrongChunk.document_type,
-                pdf_page: wrongChunk.pdf_page,
-                section: wrongChunk.section,
-                chunk_id: wrongChunk.chunk_id,
-              },
-            ],
-          },
-          {
-            row_id: rows[2].row_id,
-            activity_name: 'Missing Chunk Probe',
-            interactive_description: 'Content citing a chunk that does not exist.',
-            sources: [
-              {
-                document_type: 'PH',
-                pdf_page: 1,
-                section: 'fabricated',
-                chunk_id: 'biofuels:PH:p999:9999',
-              },
-            ],
+            row_id: work.module.part_a[0].row_id,
+            activity_name: 'Wrong Chapter Probe',
+            interactive_description: 'Content citing a chunk from another chapter.',
+            chunk_ids: [foreign],
           },
         ],
       });
 
-      const report = await call('validate_storyboard', { artifact_id: artifactId });
-      const codes = report.levels.content.findings.map((f: any) => f.code);
-      expect(codes).toContain('wrong_chapter_citation');
-      expect(codes).toContain('unresolvable_citation');
-      expect(report.passed).toBe(false);
-    });
+      // Out-of-scope citation is refused at write time, so a wrong-chapter
+      // citation is not reachable by following the loop at all -- the validator's
+      // check for it is now a backstop rather than the only guard.
+      expect(res.__isError).toBe(true);
+      expect(JSON.stringify(res.detail)).toMatch(/not in module\.sources/);
+
+      const after = await call('get_storyboard', { artifact_id: artifactId });
+      expect(after.version).toBe(before.version);
+    }, 120_000);
+
+    it('rejects an unknown row_id without committing anything', async () => {
+      const before = await call('get_storyboard', { artifact_id: artifactId });
+      const work = await call('storyboard_next_module', { artifact_id: artifactId });
+
+      const res = await call('storyboard_submit_module', {
+        artifact_id: artifactId,
+        module: work.module.number,
+        part_a: [
+          {
+            row_id: 'does-not-exist',
+            interactive_description: 'x',
+            chunk_ids: [work.module.sources[0].chunk_id],
+          },
+        ],
+      });
+      expect(res.__isError).toBe(true);
+
+      const after = await call('get_storyboard', { artifact_id: artifactId });
+      expect(after.version).toBe(before.version);
+    }, 120_000);
 
     it('reports module 8 as insufficient source rather than inventing content', async () => {
       const report = await call('validate_storyboard', { artifact_id: artifactId, skip_content: true });
@@ -347,8 +309,12 @@ describe('tool surface', () => {
       const zip = await JSZip.loadAsync(readFileSync(res.docx_path));
 
       // Formatting lives in these parts; they must survive untouched.
+      // The course's own track template: each track has its own document, and
+      // rendering to another's would change the structure, not just the wording.
+      const { templateFile } = await import('../src/util/config.js');
+      const { getCourseConfig } = await import('../src/courses/course-config.js');
       const template = await JSZip.loadAsync(
-        readFileSync(path.join(process.cwd(), 'templates', 'storyboard-template-v1.docx')),
+        readFileSync(templateFile(getCourseConfig(COURSE).track)),
       );
       for (const part of ['word/styles.xml', 'word/theme/theme1.xml', 'word/numbering.xml', 'word/header1.xml', 'word/footer1.xml']) {
         const a = await zip.file(part)!.async('uint8array');
@@ -367,90 +333,26 @@ describe('tool surface', () => {
       expect(docXml).not.toMatch(/IREDA/);
     }, 60_000);
 
-    it('writes a question bank and renumbers it in module order', async () => {
-      const search = await call('search_course_content', {
-        course_id: COURSE,
-        query: 'pellet die moisture crushing',
-        module_number: 5,
-        document_types: ['PH'],
-        limit: 1,
-      });
-      const chunk = search.results[0];
-      const ref = {
-        document_type: chunk.document_type,
-        pdf_page: chunk.pdf_page,
-        section: chunk.section,
-        chunk_id: chunk.chunk_id,
-      };
-
+    it('numbers the question bank continuously across modules', async () => {
+      // Questions arrive one module at a time but the bank reads as one document,
+      // so numbering is assigned in module order rather than arrival order.
       const state = await call('get_storyboard', { artifact_id: artifactId });
-      const question = (n: number) => ({
-        module_number: 5,
-        stem: `Test question ${n} about biomass pellet preparation and moisture control?`,
-        options: { a: `Option A${n}`, b: `Option B${n}`, c: `Option C${n}`, d: `Option D${n}` },
-        correct_option: 'a',
-        explanation: `Explanation ${n} drawn from the pellet preparation content in the handbook.`,
-        sources: [ref],
-      });
+      const bank = state.assessment?.questions ?? [];
+      expect(bank.length).toBeGreaterThan(0);
 
-      const res = await call('set_assessment_content', {
-        artifact_id: artifactId,
-        base_version: state.version,
-        questions: Array.from({ length: 10 }, (_, i) => question(i + 1)),
-        minimum_aggregate_pass_pct: 70,
-        remarks: 'Total 30 hours.',
-      });
-
-      expect(res.__isError).toBe(false);
-      expect(res.total_questions).toBe(10);
-      expect(res.expected_per_module).toBe(10);
-      expect(res.per_module.find((m: any) => m.module === 5).questions).toBe(10);
-
-      const after = await call('get_storyboard', { artifact_id: artifactId });
-      const questions = after.assessment.questions;
-      // Numbers and ids are assigned by the server, continuously from 1.
-      expect(questions.map((q: any) => q.number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-      expect(questions[0].question_id).toBe('q-001');
-      // The policy exception must be recorded on every question.
-      expect(questions.every((q: any) => q.distractors_authored === true)).toBe(true);
-      expect(after.assessment.disclosure_note).toMatch(/do not contain an answer key/);
-      expect(after.assessment.minimum_aggregate_pass_pct).toBe(70);
-    });
-
-    it('rejects a question with no citation, and one for an unknown module', async () => {
-      const state = await call('get_storyboard', { artifact_id: artifactId });
-      const base = {
-        module_number: 5,
-        stem: 'A question',
-        options: { a: 'a', b: 'b', c: 'c', d: 'd' },
-        correct_option: 'a',
-        explanation: 'because',
-      };
-
-      const noCitation = await call('set_assessment_content', {
-        artifact_id: artifactId,
-        base_version: state.version,
-        questions: [{ ...base, sources: [] }],
-      });
-      expect(noCitation.__isError).toBe(true);
-      expect(JSON.stringify(noCitation.detail)).toMatch(/no sources/);
-
-      const badModule = await call('set_assessment_content', {
-        artifact_id: artifactId,
-        base_version: state.version,
-        questions: [{ ...base, module_number: 99, sources: [{ document_type: 'PH', pdf_page: 1, section: 's', chunk_id: 'x' }] }],
-      });
-      expect(badModule.__isError).toBe(true);
-
-      // Neither rejection may have advanced the version.
-      const after = await call('get_storyboard', { artifact_id: artifactId });
-      expect(after.version).toBe(state.version);
-    });
+      expect(bank.map((q: any) => q.number)).toEqual(bank.map((_: any, i: number) => i + 1));
+      const modules = bank.map((q: any) => q.module_number);
+      expect(modules).toEqual([...modules].sort((a: number, b: number) => a - b));
+      for (const q of bank) {
+        expect(q.distractors_authored).toBe(true);
+        expect(q.sources.length).toBeGreaterThan(0);
+      }
+    }, 120_000);
 
     it('flags a short question bank and renders the bank into the DOCX', async () => {
       const report = await call('validate_storyboard', { artifact_id: artifactId });
       const codes = report.levels.content.findings.map((f: any) => f.code);
-      // Module 5 has its ten; the other content modules have none.
+      // One module has its ten; the other content modules have none yet.
       expect(codes).toContain('question_count');
 
       const render = await call('render_storyboard_docx', { artifact_id: artifactId, allow_invalid: true });
@@ -462,14 +364,24 @@ describe('tool surface', () => {
       const xml = await zip.file('word/document.xml')!.async('string');
       const text = [...xml.matchAll(/<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>/g)].map((m) => m[1]!).join('');
 
-      expect(text).toMatch(/10-Question Bank \(Full Student Version\)/);
-      expect(text).toMatch(/Correct Answer: a\) Option A1/);
+      expect(text).toMatch(/\d+-Question Bank \(Full Student Version\)/);
+      expect(text).toMatch(/Correct Answer: a\)/);
       expect(text).toMatch(/Minimum Aggregate Passing % at QP Level: 70/);
       // The Solar reference's own bank must not survive.
       expect(text).not.toMatch(/voltage generating capacity of a single photovoltaic cell/);
     }, 60_000);
 
     it('keeps history append-only and supports rollback', async () => {
+      // One version per module, so a course produces a handful rather than the
+      // hundred-plus a per-field loop wrote. Two more modules give rollback
+      // something to roll back to.
+      for (let i = 0; i < 2; i++) {
+        const work = await call('storyboard_next_module', { artifact_id: artifactId });
+        if (work.status !== 'WRITE_THIS') break;
+        const res = await call('storyboard_submit_module', moduleSubmission(artifactId, work.module));
+        expect(res.__isError, res.message).toBe(false);
+      }
+
       const history = await call('get_storyboard_history', { artifact_id: artifactId });
       const versions = history.versions.map((v: any) => v.version);
       expect(versions).toEqual([...versions].sort((a, b) => a - b));

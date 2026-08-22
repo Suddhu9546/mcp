@@ -40,12 +40,14 @@ export interface MetadataRow {
 }
 
 /**
- * A bullet under "Instructional Design and Behavioral Analytics Tracking
- * Guidelines". The template groups these under two Heading2 sections.
+ * A cited bullet point grouped under a heading.
+ *
+ * Used by the assessment strategy, whose points sit under "Assessment Strategy"
+ * and carry the citations that support them.
  */
-export interface GuidelineBullet {
+export interface CitedBullet {
   bullet_id: string;
-  /** e.g. "xAPI Event Stream Configuration" or "SCORM State Variable Persistence". */
+  /** The Heading2 this bullet sits under. */
   group: string;
   text: string;
   sources: SourceRef[];
@@ -61,8 +63,6 @@ export interface FrontMatter {
   /** Body heading, e.g. "Bio-Energy Micro Entrepreneur: Storyboard & Curriculum Blueprint". */
   blueprint_heading: string;
   metadata: MetadataRow[];
-  guideline_groups: string[];
-  guidelines: GuidelineBullet[];
 }
 
 // ---------------------------------------------------------------------------
@@ -254,7 +254,7 @@ export interface Question {
 }
 
 export interface AssessmentBlueprint {
-  strategy_points: GuidelineBullet[];
+  strategy_points: CitedBullet[];
   minimum_aggregate_pass_pct: number;
   weightage_compulsory: WeightageRow[];
   weightage_electives: Record<string, WeightageRow[]>;
@@ -268,6 +268,23 @@ export interface AssessmentBlueprint {
 // Artifact-level state
 // ---------------------------------------------------------------------------
 
+/**
+ * One glossary line: a term or abbreviation used in the course, and its meaning.
+ *
+ * Collected per module rather than in one pass at the end, so each term is written
+ * from the module whose sources actually use it and carries that module's
+ * citations. The rendered glossary merges them, deduplicates by term and sorts
+ * alphabetically, so the reader sees one list rather than six.
+ */
+export interface GlossaryEntry {
+  /** The term or abbreviation as the documents write it, e.g. "PEM". */
+  term: string;
+  definition: string;
+  /** The module that contributed it, so per-module progress is answerable. */
+  module_number: number;
+  sources: SourceRef[];
+}
+
 export interface StoryboardState {
   /** e.g. "SB-2026-00001". */
   artifact_id: string;
@@ -278,6 +295,14 @@ export interface StoryboardState {
   front_matter: FrontMatter;
   modules: StoryboardModule[];
   assessment: Sourced<AssessmentBlueprint>;
+  /**
+   * Terms and abbreviations used across the course's approved documents.
+   *
+   * A reviewed requirement asks every storyboard to close with a comprehensive
+   * glossary. Optional on the type because artifacts created before it existed do
+   * not carry one, and those must still load and render.
+   */
+  glossary?: GlossaryEntry[];
 }
 
 // ---------------------------------------------------------------------------

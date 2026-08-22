@@ -7,9 +7,8 @@
  *   module.ts       feature 1, module content: video script, subtitles, deck
  *   reading.ts      feature 3, exact handbook reading
  *   storyboard.ts   feature 2, course storyboard and assessment blueprint
- *   storyboard-tasks.ts  feature 2's build loop: one task out, one task back
+ *   storyboard-build.ts  feature 1's build loop: one module out, one module back
  *   catalog.ts      handbook navigation shared by the reading and content flows
- *   transcript.ts   the narrower single-unit script, outside the guided flow
  *   result.ts       the tool shape and the result helpers everything shares
  *
  * The ordering below is the order the client sees, so the flow tools come first
@@ -37,8 +36,7 @@ import { CATALOG_TOOLS } from './catalog.js';
 import { MODULE_TOOLS } from './module.js';
 import { READING_TOOLS } from './reading.js';
 import { STORYBOARD_TOOLS, loadTemplate, loadTiming } from './storyboard.js';
-import { STORYBOARD_TASK_TOOLS } from './storyboard-tasks.js';
-import { TRANSCRIPT_TOOLS } from './transcript.js';
+import { STORYBOARD_BUILD_TOOLS } from './storyboard-build.js';
 
 export const TOOLS: ToolDefinition[] = [
   ...FLOW_TOOLS,
@@ -46,8 +44,7 @@ export const TOOLS: ToolDefinition[] = [
   ...MODULE_TOOLS,
   ...READING_TOOLS,
   ...STORYBOARD_TOOLS,
-  ...STORYBOARD_TASK_TOOLS,
-  ...TRANSCRIPT_TOOLS,
+  ...STORYBOARD_BUILD_TOOLS,
 ];
 
 const BY_NAME = new Map(TOOLS.map((t) => [t.name, t]));

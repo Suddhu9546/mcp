@@ -1,0 +1,441 @@
+{
+  "course_name": "Green Hydrogen Plant Entrepreneur",
+  "qp_code": "SGJ/Q0121",
+  "nsqf_level": "5",
+  "modules": [
+    {
+      "module_number": 1,
+      "title": "Introduction to Green Hydrogen",
+      "hours": 3.0,
+      "nos": "SGJ/N1817",
+      "units": [
+        {
+          "unit_code": "1.1",
+          "title": "Necessity of Green Hydrogen in Sustainable Energy Transition",
+          "sub_topics": [
+            { "printed_ref": "1.1.1", "title": "Introduction" },
+            { "printed_ref": "1.1.2", "title": "Green Hydrogen in Sustainable Energy Transition" }
+          ]
+        },
+        {
+          "unit_code": "1.2",
+          "title": "Properties, Characteristics and Nomenclature of Hydrogen",
+          "sub_topics": [
+            { "printed_ref": "1.2.1", "title": "Atomic Structure" },
+            { "printed_ref": "1.2.2", "title": "Properties of Hydrogen" },
+            { "printed_ref": "1.2.3", "title": "Hydrogen as an Energy Carrier" },
+            { "printed_ref": "1.2.4", "title": "Colour Code Nomenclature of Hydrogen" }
+          ]
+        },
+        {
+          "unit_code": "1.3",
+          "title": "Value Chain for Green Hydrogen",
+          "sub_topics": [
+            { "printed_ref": "1.3.1", "title": "Value Chain" },
+            { "printed_ref": "1.3.2", "title": "Benefits and Drawbacks of Existing Methods of Hydrogen Production" }
+          ]
+        },
+        {
+          "unit_code": "1.4",
+          "title": "Key Aspects and Challenges related to Production, Storage, Transportation, and Distribution of Green Hydrogen",
+          "sub_topics": [
+            { "printed_ref": "1.4.1", "title": "Challenges in Production of Green Hydrogen" },
+            { "printed_ref": "1.4.2", "title": "Challenges in Storage of Green Hydrogen" },
+            { "printed_ref": "1.4.3", "title": "Challenges in Transportation of Green Hydrogen" },
+            { "printed_ref": "1.4.4", "title": "Challenges in the Distribution of Green Hydrogen" }
+          ]
+        },
+        {
+          "unit_code": "1.5",
+          "title": "End Use Applications of Green Hydrogen in Industry, Transport and Power Production",
+          "sub_topics": [
+            { "printed_ref": "1.5.1", "title": "End Use Application of Green Hydrogen in Industry" },
+            { "printed_ref": "1.5.2", "title": "End Use Application of Green Hydrogen in Transport Sector" },
+            { "printed_ref": "1.5.3", "title": "End Use Application of Green Hydrogen in Power Sector" }
+          ]
+        },
+        {
+          "unit_code": "1.6",
+          "title": "Technology Options for Production of Green Hydrogen",
+          "sub_topics": [
+            { "printed_ref": "1.6.1", "title": "Electrolysis Process" },
+            { "printed_ref": "1.6.2", "title": "Types of Electrolysis" }
+          ]
+        },
+        {
+          "unit_code": "1.7",
+          "title": "Renewable Energy Sources for Large Scale Production of Green Hydrogen through Water Electrolysis",
+          "sub_topics": [
+            { "printed_ref": "1.7.1", "title": "Renewable Energy Sources" }
+          ]
+        },
+        {
+          "unit_code": "1.8",
+          "title": "Emerging Entrepreneurial Opportunities Across Green Hydrogen Value Chain",
+          "sub_topics": [
+            { "printed_ref": "1.8.1", "title": "Emerging Entrepreneurial Opportunities" },
+            { "printed_ref": "1.8.2", "title": "Opportunities to Various Renewable Energy Sources" }
+          ]
+        },
+        {
+          "unit_code": "1.9",
+          "title": "Role and Responsibilities of a Green Hydrogen Plant Entrepreneur",
+          "sub_topics": [
+            { "printed_ref": "1.9.1", "title": "Role and Responsibilities" },
+            { "printed_ref": "1.9.2", "title": "Career Progression for Green Hydrogen Plant Entrepreneur" }
+          ]
+        }
+      ]
+    },
+    {
+      "module_number": 2,
+      "title": "Components of Green Hydrogen Plant and its Layout",
+      "hours": 6.0,
+      "units": [
+        {
+          "unit_code": "2.1",
+          "title": "Key Components of the Green Hydrogen Plant",
+          "sub_topics": [
+            { "printed_ref": "2.1.1", "title": "Green Hydrogen Production Plant" },
+            { "printed_ref": "2.1.2", "title": "Key Components and Their Categorisation" },
+            { "printed_ref": "2.1.3", "title": "Mechanical Components" },
+            { "printed_ref": "2.1.4", "title": "Civil Components" }
+          ]
+        },
+        {
+          "unit_code": "2.2",
+          "title": "Functions of Key Components and Their Fundamental Principles",
+          "sub_topics": [
+            { "printed_ref": "2.2.1", "title": "Function of Electrical Components" },
+            { "printed_ref": "2.2.2", "title": "Functions of Mechanical Components" },
+            { "printed_ref": "2.2.3", "title": "Fundamental Principles of Main Components" }
+          ]
+        },
+        {
+          "unit_code": "2.3",
+          "title": "Types of Electrolyzers: Brief Description",
+          "sub_topics": [
+            { "printed_ref": "2.3.1", "title": "Brief Description of Electrolyzers" }
+          ]
+        },
+        {
+          "unit_code": "2.4",
+          "title": "Overall Layout of the Plant and Sparking Items",
+          "sub_topics": [
+            { "printed_ref": "2.4.1", "title": "Green Hydrogen Plant Layout" },
+            { "printed_ref": "2.4.2", "title": "Optimum Utilization of the Energy and Materials" },
+            { "printed_ref": "2.4.3", "title": "Sparking Items" }
+          ]
+        },
+        {
+          "unit_code": "2.5",
+          "title": "Read, Interpret and Understand the Relevant Drawings and O&M Manuals of the Plant Equipment",
+          "sub_topics": [
+            { "printed_ref": "2.5.1", "title": "Engineering Drawings" },
+            { "printed_ref": "2.5.2", "title": "O&M Manual" },
+            { "printed_ref": "2.5.3", "title": "Codes and Standards for Referring in Drawings/Manuals" }
+          ]
+        },
+        {
+          "unit_code": "2.6",
+          "title": "Key Material and Safety Codes, Technology Protocols and Standards Applicable in Green Industry",
+          "sub_topics": [
+            { "printed_ref": "2.6.1", "title": "Key Materials" },
+            { "printed_ref": "2.6.2", "title": "Hydrogen Safety Challenges" },
+            { "printed_ref": "2.6.3", "title": "Hydrogen Leak Detection" },
+            { "printed_ref": "2.6.4", "title": "Indian Standards on Hydrogen" },
+            { "printed_ref": "2.6.5", "title": "Personal Protective Equipment" },
+            { "printed_ref": "2.6.6", "title": "Hazards and Safety Measures" },
+            { "printed_ref": "2.6.7", "title": "Fire Prevention and Fire Fighting" },
+            { "printed_ref": "2.6.8", "title": "Safe Distance from Sparkling Devices" },
+            { "printed_ref": "2.6.9", "title": "Training and Health Monitoring" }
+          ]
+        },
+        {
+          "unit_code": "2.7",
+          "title": "Key Technical Insights for Setting Up and Running Successful Enterprise",
+          "sub_topics": [
+            { "printed_ref": "2.7.1", "title": "Key Technical Insights" }
+          ]
+        }
+      ]
+    },
+    {
+      "module_number": 3,
+      "title": "Key Technical and Entrepreneurial Aspects for Supporting Growth and Business Development in Green Hydrogen Production",
+      "hours": 6.0,
+      "units": [
+        {
+          "unit_code": "3.1",
+          "title": "Setting Up Green Hydrogen Production Plant",
+          "sub_topics": [
+            { "printed_ref": "3.1.1", "title": "Setting up a Hydrogen Production Plant" },
+            { "printed_ref": "3.1.2", "title": "Registrations Required for Setting Up Hydrogen Production Plant" },
+            { "printed_ref": "3.1.3", "title": "Availing Low-Cost Financing" },
+            { "printed_ref": "3.1.4", "title": "Evolving Opportunities" },
+            { "printed_ref": "3.1.5", "title": "Key Ingredients of a Business Plan" },
+            { "printed_ref": "3.1.6", "title": "Assess the Potential and Demand of Hydrogen in Different Sectors" }
+          ]
+        },
+        {
+          "unit_code": "3.2",
+          "title": "Cost Estimation",
+          "sub_topics": [
+            { "printed_ref": "3.2.1", "title": "Lifecycle Cost" },
+            { "printed_ref": "3.2.2", "title": "Key Aspects to Successfully Install, Operate, Safely Store and Market Hydrogen as Energy Source" },
+            { "printed_ref": "3.2.3", "title": "O&M Related Cost for the System" }
+          ]
+        },
+        {
+          "unit_code": "3.3",
+          "title": "Taxation and Related Compliances",
+          "sub_topics": [
+            { "printed_ref": "3.3.1", "title": "Taxation and Related Compliances in India" }
+          ]
+        },
+        {
+          "unit_code": "3.4",
+          "title": "Policies and Corresponding Incentives/Subsidies",
+          "sub_topics": [
+            { "printed_ref": "3.4.1", "title": "National Green Hydrogen Policy" },
+            { "printed_ref": "3.4.2", "title": "Evolving Start-Ups and New Ventures Boost-Up Hydrogen Economy" }
+          ]
+        }
+      ]
+    },
+    {
+      "module_number": 4,
+      "title": "Oversee the Assembly, Storage and O&M of Electrolyzer for Green Hydrogen Production",
+      "hours": 6.0,
+      "units": [
+        {
+          "unit_code": "4.1",
+          "title": "Types of Electrolyzers, their Technology Maturity and Technical Specifications",
+          "sub_topics": [
+            { "printed_ref": "4.1.1", "title": "Types and Technological Status of Electrolyzers" },
+            { "printed_ref": "4.1.2", "title": "Key Technical Specifications of Various Types of Electrolyzer" },
+            { "printed_ref": "4.1.3", "title": "Comparing Various Electrolyzers" },
+            { "printed_ref": "4.1.4", "title": "Operating Principles of PEM, AE and SOEC Electrolyzer" }
+          ]
+        },
+        {
+          "unit_code": "4.2",
+          "title": "Tools and Equipment for Installation",
+          "sub_topics": [
+            { "printed_ref": "4.2.1", "title": "Installation of Electrolyzers" },
+            { "printed_ref": "4.2.2", "title": "Technical Data Sheet" }
+          ]
+        },
+        {
+          "unit_code": "4.3",
+          "title": "Inputs/Outputs of an Electrolyzer System and Calculate Losses and Equipment Efficiency",
+          "sub_topics": [
+            { "printed_ref": "4.3.1", "title": "Inputs/Outputs of an Electrolyzer System" },
+            { "printed_ref": "4.3.2", "title": "Calculate Losses and Equipment Efficiency" }
+          ]
+        },
+        {
+          "unit_code": "4.4",
+          "title": "Input Renewable Power from Various Sources and its Integration with Electrolyzer",
+          "sub_topics": [
+            { "printed_ref": "4.4.1", "title": "Renewable Sources of Energy and Their Limitations" },
+            { "printed_ref": "4.4.2", "title": "Integration of Renewable Energy" }
+          ]
+        },
+        {
+          "unit_code": "4.5",
+          "title": "Assembly/Installation of Parts and Components of Electrolyzer",
+          "sub_topics": [
+            { "printed_ref": "4.5.1", "title": "Assembly of Electrolyzer" },
+            { "printed_ref": "4.5.2", "title": "PEM Electrolyzer/Fuel Cell Assembly" }
+          ]
+        },
+        {
+          "unit_code": "4.6",
+          "title": "Challenges Associated with Hydrogen in Storage, Handling and Transportation",
+          "sub_topics": [
+            { "printed_ref": "4.6.1", "title": "Need for Hydrogen Storage" },
+            { "printed_ref": "4.6.2", "title": "Challenges in Storing Hydrogen" }
+          ]
+        },
+        {
+          "unit_code": "4.7",
+          "title": "Hydrogen Compression System",
+          "sub_topics": [
+            { "printed_ref": "4.7.1", "title": "Selection of Compression System" },
+            { "printed_ref": "4.7.2", "title": "Precautions" },
+            { "printed_ref": "4.7.3", "title": "Key Components/Parameters" }
+          ]
+        },
+        {
+          "unit_code": "4.8",
+          "title": "O&M Requirements for Electrolyzer",
+          "sub_topics": [
+            { "printed_ref": "4.8.1", "title": "Operation and Maintenance (O&M) Activities" },
+            { "printed_ref": "4.8.2", "title": "Safety Precautions" }
+          ]
+        }
+      ]
+    },
+    {
+      "module_number": 5,
+      "title": "Micro-Entrepreneurship Opportunities in Green Hydrogen",
+      "hours": 6.0,
+      "units": [
+        {
+          "unit_code": "5.1",
+          "title": "Micro-entrepreneurship Opportunities for Water Supply, Installation and Commissioning of Electrolyzer",
+          "sub_topics": [
+            { "printed_ref": "5.1.1", "title": "Micro-Entrepreneurship Opportunities for Uninterrupted Quality Water Supply" },
+            { "printed_ref": "5.1.2", "title": "Handling of Salt Enriched Water from Water Feed Input System" },
+            { "printed_ref": "5.1.3", "title": "Installation and Commissioning of Electrolyzer" }
+          ]
+        },
+        {
+          "unit_code": "5.2",
+          "title": "Micro-entrepreneurship Opportunities for Renewable Energy Power Supply",
+          "sub_topics": [
+            { "printed_ref": "5.2.1", "title": "Renewable Energy Power Supply Arrangement for Green Hydrogen Plant" }
+          ]
+        },
+        {
+          "unit_code": "5.3",
+          "title": "Micro-entrepreneurship Opportunities for Storage, Transportation, and Installation",
+          "sub_topics": [
+            { "printed_ref": "5.3.1", "title": "Micro-Entrepreneurship Opportunities for Storage of Green Hydrogen" },
+            { "printed_ref": "5.3.2", "title": "Micro-Entrepreneurship Opportunities for Safe Transportation of Green Hydrogen to Consumers" },
+            { "printed_ref": "5.3.3", "title": "Micro-Entrepreneurship Opportunities for Installation of Pipelines in Green Hydrogen Plant/Industry" }
+          ]
+        },
+        {
+          "unit_code": "5.4",
+          "title": "Micro-entrepreneurship for Safety, Operation and Maintenance of Green Hydrogen Plant",
+          "sub_topics": [
+            { "printed_ref": "5.4.1", "title": "Micro-entrepreneurship Opportunities for Managing Safety of the Plant" },
+            { "printed_ref": "5.4.2", "title": "Micro-entrepreneurship Opportunities for Operation and Maintenance of Green Hydrogen Plant" }
+          ]
+        },
+        {
+          "unit_code": "5.5",
+          "title": "Micro-entrepreneurship for Leakage Monitoring",
+          "sub_topics": [
+            { "printed_ref": "5.5.1", "title": "Micro-Entrepreneurship Opportunities for Leakage Monitoring" },
+            { "printed_ref": "5.5.2", "title": "Micro-Entrepreneurship Opportunities for Purging of Hydrogen by CO2/NH3 Before Start of Work" },
+            { "printed_ref": "5.5.3", "title": "Micro-Entrepreneurship Opportunities for Recharging of Hydrogen by Avoiding Air Contact" }
+          ]
+        }
+      ]
+    },
+    {
+      "module_number": 6,
+      "title": "Perform Health and Safety Measures for Installing and Operating Green Hydrogen Systems",
+      "hours": 3.0,
+      "units": [
+        {
+          "unit_code": "6.1",
+          "title": "Occupational Health & Safety Standards and Regulations",
+          "sub_topics": [
+            { "printed_ref": "6.1.1", "title": "Introduction" },
+            { "printed_ref": "6.1.2", "title": "Health Effects of Hydrogen" },
+            { "printed_ref": "6.1.3", "title": "OSHA" },
+            { "printed_ref": "6.1.4", "title": "Standards" }
+          ]
+        },
+        {
+          "unit_code": "6.2",
+          "title": "Emergency Situations in a Hydrogen System",
+          "sub_topics": [
+            { "printed_ref": "-", "title": "Emergency Situations in a Hydrogen System" }
+          ]
+        },
+        {
+          "unit_code": "6.3",
+          "title": "Detectors and Safety Tools",
+          "sub_topics": [
+            { "printed_ref": "6.3.1", "title": "Hydrogen Leak Detection" },
+            { "printed_ref": "6.3.2", "title": "Methods of Hydrogen Leak Detection" },
+            { "printed_ref": "6.3.3", "title": "Controls and Protection" },
+            { "printed_ref": "6.3.4", "title": "Safety Tools" }
+          ]
+        },
+        {
+          "unit_code": "6.4",
+          "title": "Material Safety",
+          "sub_topics": [
+            { "printed_ref": "6.4.1", "title": "Chemical Labels" },
+            { "printed_ref": "6.4.2", "title": "Use of MSDS for Safe Handling" }
+          ]
+        },
+        {
+          "unit_code": "6.5",
+          "title": "Maintain Ideal Temperature and Humidity Level",
+          "sub_topics": [
+            { "printed_ref": "6.5.1", "title": "Effect of Temperature and Humidity on Hydrogen Purity" }
+          ]
+        },
+        {
+          "unit_code": "6.6",
+          "title": "Smart Hazardous Chemical Storage Monitoring",
+          "sub_topics": [
+            { "printed_ref": "6.6.1", "title": "Smart Monitoring" }
+          ]
+        },
+        {
+          "unit_code": "6.7",
+          "title": "Administering First Aid",
+          "sub_topics": [
+            { "printed_ref": "6.7.1", "title": "Health Monitoring" },
+            { "printed_ref": "6.7.2", "title": "First Aid and Medical Treatment" }
+          ]
+        },
+        {
+          "unit_code": "6.8",
+          "title": "Personal Protective Equipment",
+          "sub_topics": [
+            { "printed_ref": "6.8.1", "title": "Personal Protective Equipment" }
+          ]
+        },
+        {
+          "unit_code": "6.9",
+          "title": "Hazards Associated with Hydrogen Production System",
+          "sub_topics": [
+            { "printed_ref": "6.9.1", "title": "Hydrogen Production Equipment Related Hazards" },
+            { "printed_ref": "6.9.2", "title": "Spillage and Leakage Hazards" }
+          ]
+        },
+        {
+          "unit_code": "6.10",
+          "title": "Work Safety Procedures and Instructions",
+          "sub_topics": [
+            { "printed_ref": "6.10.1", "title": "Introduction" },
+            { "printed_ref": "6.10.2", "title": "Safety Guidelines" },
+            { "printed_ref": "6.10.3", "title": "Training" },
+            { "printed_ref": "6.10.4", "title": "Storage, Handling, and Labelling" },
+            { "printed_ref": "6.10.5", "title": "Transportation of Hydrogen" }
+          ]
+        },
+        {
+          "unit_code": "6.11",
+          "title": "Fire Protection",
+          "sub_topics": [
+            { "printed_ref": "6.11.1", "title": "Introduction" },
+            { "printed_ref": "6.11.2", "title": "Statutory Requirements for Fire Protection" },
+            { "printed_ref": "6.11.3", "title": "Best Practices" },
+            { "printed_ref": "6.11.4", "title": "Hydrogen Fire Fighting" }
+          ]
+        },
+        {
+          "unit_code": "6.12",
+          "title": "Housekeeping and Infection Control",
+          "sub_topics": [
+            { "printed_ref": "6.12.1", "title": "Introduction" },
+            { "printed_ref": "6.12.2", "title": "Housekeeping" },
+            { "printed_ref": "6.12.3", "title": "Infection Control" },
+            { "printed_ref": "6.12.4", "title": "Dos and Don'ts During Normal Operation and Maintenance" },
+            { "printed_ref": "6.12.5", "title": "Dos and Don'ts During Event of an Accident" }
+          ]
+        }
+      ]
+    }
+  ]
+}

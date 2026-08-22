@@ -16,7 +16,20 @@ import type { DocumentType, SourceRef } from '../types/source.js';
 import { DOCUMENT_TYPES } from '../types/source.js';
 import { getCourseConfig, getCrosswalkEntry } from '../courses/course-config.js';
 import { getDb } from '../storage/db.js';
+import {
+  chapterToken,
+  courseToken,
+  docKeyToken,
+  documentTypeToken,
+  nosToken,
+  unitToken,
+} from './scope-tokens.js';
 import { config } from '../util/config.js';
+
+/** One scope tokens ORed together, parenthesised so it binds before the AND. */
+function anyOf(tokens: readonly string[]): string {
+  return tokens.length === 1 ? tokens[0]! : `(${tokens.join(' OR ')})`;
+}
 
 export interface RetrievedChunk {
   chunk_id: string;
@@ -126,49 +139,41 @@ export function searchCourseContent(options: SearchOptions): RetrievedChunk[] {
   assertDocumentTypes(documentTypes);
 
   const limit = Math.min(options.limit ?? config.search.defaultLimit, config.search.maxLimit);
-  const match = toMatchExpression(query);
 
-  const params: (string | number)[] = [match, courseId];
-  let sql = `
-    SELECT c.chunk_id, c.course_id, c.document_type, c.doc_key, c.pdf_page, c.printed_page,
-           c.chapter, c.unit_code, c.nos_code, c.section, c.subsection, c.content,
-           bm25(chunks_fts, 1.0, 0.6) AS score
-    FROM chunks_fts
-    JOIN chunks c ON c.chunk_id = chunks_fts.chunk_id
-    WHERE chunks_fts MATCH ?
-      AND c.course_id = ?`;
+  if (options.docKeys !== undefined && options.docKeys.length === 0) {
+    // An empty routing list is a configuration error, not "match everything".
+    return [];
+  }
 
+  // The scope goes into the MATCH expression rather than into a WHERE clause, so
+  // SQLite intersects postings lists and ranks only chunks that are already in
+  // scope. As a WHERE clause it ranked every chunk of every course first and
+  // discarded almost all of them afterwards, which made each query cost grow with
+  // the size of the whole corpus rather than with the slice being searched.
+  const scope: string[] = [courseToken(courseId)];
   if (documentTypes.length > 0) {
-    sql += ` AND c.document_type IN (${documentTypes.map(() => '?').join(', ')})`;
-    params.push(...documentTypes);
+    scope.push(anyOf(documentTypes.map(documentTypeToken)));
   }
-  if (options.chapter !== undefined) {
-    sql += ' AND c.chapter = ?';
-    params.push(options.chapter);
-  }
-  if (options.docKeys !== undefined) {
-    if (options.docKeys.length === 0) {
-      // An empty routing list is a configuration error, not "match everything".
-      return [];
-    }
-    sql += ` AND c.doc_key IN (${options.docKeys.map(() => '?').join(', ')})`;
-    params.push(...options.docKeys);
-  }
-  if (options.unitCode !== undefined) {
-    sql += ' AND c.unit_code = ?';
-    params.push(options.unitCode);
-  }
-  if (options.nosCode !== undefined) {
-    sql += ' AND c.nos_code = ?';
-    params.push(options.nosCode);
-  }
+  if (options.chapter !== undefined) scope.push(chapterToken(options.chapter));
+  if (options.docKeys !== undefined) scope.push(anyOf(options.docKeys.map(docKeyToken)));
+  if (options.unitCode !== undefined) scope.push(unitToken(options.unitCode));
+  if (options.nosCode !== undefined) scope.push(nosToken(options.nosCode));
+
+  const match = `${scope.map((s) => `scope : ${s}`).join(' AND ')} AND (${toMatchExpression(query)})`;
 
   // Tie-break on chunk_id so identical scores return in a stable order; without
   // it the same query could return the same chunks in a different sequence.
-  sql += ' ORDER BY score ASC, c.chunk_id ASC LIMIT ?';
-  params.push(limit);
+  // `scope` is weighted 0: it selects rows, it must not rank them.
+  const sql = `
+    SELECT c.chunk_id, c.course_id, c.document_type, c.doc_key, c.pdf_page, c.printed_page,
+           c.chapter, c.unit_code, c.nos_code, c.section, c.subsection, c.content,
+           bm25(chunks_fts, 1.0, 0.6, 0.0) AS score
+    FROM chunks_fts
+    JOIN chunks c ON c.chunk_id = chunks_fts.chunk_id
+    WHERE chunks_fts MATCH ?
+    ORDER BY score ASC, c.chunk_id ASC LIMIT ?`;
 
-  const rows = getDb().prepare(sql).all(...params) as unknown as (ChunkRow & { score: number })[];
+  const rows = getDb().prepare(sql).all(match, limit) as unknown as (ChunkRow & { score: number })[];
 
   // SQLite's bm25() returns negative values, more negative being a better match.
   return rows.map((r) => ({ ...mapRow(r), score: -r.score }));
@@ -190,6 +195,8 @@ export function listChunksInScope(options: {
   documentTypes?: readonly DocumentType[];
   chapter?: number;
   docKeys?: readonly string[];
+  /** Restrict to one unit of the scope, e.g. "1.1". */
+  unitCode?: string;
   limit?: number;
 }): RetrievedChunk[] {
   getCourseConfig(options.courseId);
@@ -211,8 +218,17 @@ export function listChunksInScope(options: {
     sql += ` AND doc_key IN (${options.docKeys.map(() => '?').join(', ')})`;
     params.push(...options.docKeys);
   }
+  if (options.unitCode !== undefined) {
+    sql += ' AND unit_code = ?';
+    params.push(options.unitCode);
+  }
   sql += ' ORDER BY ordinal ASC, chunk_id ASC LIMIT ?';
-  params.push(Math.min(options.limit ?? config.search.defaultLimit, config.search.maxLimit));
+  // Bounded by maxScopeChunks, not by the search cap. This is a complete listing
+  // of a module's own material rather than a ranked answer to a query, and the
+  // search cap silently truncated it: a caller asking for a whole chapter got the
+  // first fifty chunks, so the end of a long chapter -- the material its last
+  // units are written from -- was simply absent.
+  params.push(Math.min(options.limit ?? config.search.defaultLimit, config.search.maxScopeChunks));
 
   const rows = getDb().prepare(sql).all(...params) as unknown as ChunkRow[];
   return rows.map((r) => ({ ...mapRow(r), score: 0 }));

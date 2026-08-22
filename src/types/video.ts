@@ -9,7 +9,6 @@
  * client can fill.
  */
 
-import type { SourceRef } from './source.js';
 
 export type SceneRole = 'hook' | 'body' | 'recap';
 
@@ -63,40 +62,4 @@ export interface ScenePlan {
   scenes: PlannedScene[];
   /** Advisory when the unit's length and the requested duration are mismatched. */
   coverage_note?: string;
-}
-
-export interface TranscriptScene {
-  scene_number: number;
-  scene_id: string;
-  role: SceneRole;
-  /** Short scene title, e.g. "Why feedstock choice decides your margin". */
-  title: string;
-  /** Camera, animation and on-screen action direction. */
-  visual: string;
-  /** Text or graphics burned onto the screen. Optional. */
-  on_screen_text?: string;
-  /** The spoken words. This is the educational content and must be cited. */
-  narration: string;
-  /** Derived from narration on write; never supplied by the client. */
-  word_count: number;
-  sources: SourceRef[];
-}
-
-export interface VideoTranscriptState {
-  transcript_id: string;
-  version: number;
-  course_id: string;
-  subject_id?: string;
-  subject_code?: string;
-  unit_code: string;
-  unit_title: string;
-  module_number: number;
-  /** Video title. Defaults to the unit title until the client sets one. */
-  title: string;
-  requested_seconds: number;
-  words_per_minute: number;
-  plan: ScenePlan;
-  scenes: TranscriptScene[];
-  created_at: string;
-  updated_at: string;
 }

@@ -42,10 +42,8 @@ import { parseTimingDocument } from '../../timing/timing-parser.js';
 import { masterAsTimingAllocation, parseMasterFile } from '../../cdr/master-file.js';
 import { withValidatedArithmetic } from '../../timing/timing-validator.js';
 import type { TimingAllocation } from '../../types/timing.js';
-import type { ChangeInput } from '../../storage/artifact-store.js';
 import {
   attachDocx,
-  commitVersion,
   createArtifact,
   getArtifact,
   getState,
@@ -101,15 +99,33 @@ async function loadMasterAllocation(
   return masterAsTimingAllocation(courseId, master, doc.file);
 }
 
-/** Caches the analyzed template; analysis parses a 700KB XML part. */
-const templateCache = new Map<string, AnalyzedTemplate>();
+/**
+ * Caches the analyzed template.
+ *
+ * Analysis unzips a 120KB package and parses a 690KB XML part into a DOM, which
+ * costs about a second. A storyboard build touches the template twice -- once to
+ * create the draft, once to render -- and a session builds several, so this is
+ * cached per track for the life of the process. The in-flight promise is cached
+ * rather than the result, so two concurrent first calls share one parse instead
+ * of racing to do it twice.
+ */
+const templateCache = new Map<string, Promise<AnalyzedTemplate>>();
 
-async function loadTemplate(version: string): Promise<AnalyzedTemplate> {
-  const cached = templateCache.get(version);
+function loadTemplate(track: string): Promise<AnalyzedTemplate> {
+  const cached = templateCache.get(track);
   if (cached) return cached;
-  const analyzed = await analyzeTemplate(templateFile(version), version);
-  templateCache.set(version, analyzed);
-  return analyzed;
+  const analyzing = analyzeTemplate(templateFile(track), track).catch((err) => {
+    // A failed analysis must not be cached, or every later call replays the error.
+    templateCache.delete(track);
+    throw err;
+  });
+  templateCache.set(track, analyzing);
+  return analyzing;
+}
+
+/** The template a course renders to: its track's. */
+function templateTrackFor(courseId: string): string {
+  return getCourseConfig(courseId).track;
 }
 
 import type { ToolDefinition } from './result.js';
@@ -159,27 +175,6 @@ function outstandingWork(state: StoryboardState, allocation: TimingAllocation) {
     remaining: modules,
   };
 }
-
-/** The instruction that goes with `outstandingWork`, phrased as work to do. */
-function continueInstruction(work: ReturnType<typeof outstandingWork>): string {
-  if (work.complete) {
-    return (
-      'Every module is filled. Call validate_storyboard, act on any findings, then ' +
-      'render_storyboard_docx and attach the .docx it returns.'
-    );
-  }
-  return (
-    `NOT FINISHED. ${work.empty_fields_remaining} fields across ${work.modules_remaining} ` +
-    `module(s) are still empty. Continue now with module ${work.next_module}: call ` +
-    'search_course_content for it, then set_storyboard_content. Do not validate, do not render, ' +
-    'and do not stop to summarise progress or ask whether to continue -- keep going module by ' +
-    'module until this reports complete. The deliverable is the rendered .docx, not the draft.'
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Course and document tools
-// ---------------------------------------------------------------------------
 
 const listCoursesTool: ToolDefinition = {
   name: 'list_courses',
@@ -470,15 +465,28 @@ const analyzeTemplateTool: ToolDefinition = {
     'section. Read this before generating content so the content you produce matches the ' +
     'shapes the template requires. Formatting is preserved automatically by the renderer; ' +
     'you never need to specify fonts, colours or layout.',
-  inputSchema: { template_version: z.string().optional().describe('Defaults to "v1".') },
+  inputSchema: {
+    course_id: z
+      .string()
+      .optional()
+      .describe(
+        'The course whose template to inspect. Each track has its own template, so passing the ' +
+          'course is how you get the right one. Defaults to the Entrepreneur template.',
+      ),
+    track: z.enum(['entrepreneur', 'orientation', 'cdr']).optional().describe('Instead of course_id.'),
+  },
   handler: async (args) => {
-    const version = args.template_version ? String(args.template_version) : 'v1';
-    const { map } = await loadTemplate(version);
+    const track = args.course_id
+      ? templateTrackFor(String(args.course_id))
+      : args.track
+        ? String(args.track)
+        : 'entrepreneur';
+    const { map } = await loadTemplate(track);
     return ok({
       ...map,
       // The prototype XML is an internal rendering detail and would be noise here.
       note:
-        'Content cells are populated from storyboard state via set_storyboard_content. ' +
+        'Content cells are populated from storyboard state by the build loop. ' +
         'Part B is always 5 three-minute segments and Part C always 7 slides; both are fixed ' +
         'by the template.',
     });
@@ -496,11 +504,10 @@ const createDraftTool: ToolDefinition = {
     'Creates a new storyboard artifact as version 1, pre-populated with everything derivable ' +
     'from the approved documents: modules, unit codes and titles, authoritative durations with ' +
     'provenance, correlation NOS codes, and empty rows/slides of the correct shape. Content ' +
-    'fields are left blank for you to fill via set_storyboard_content. Modules the sources ' +
+    'fields are left blank for the build loop to fill. Modules the sources ' +
     'cannot support are marked INSUFFICIENT_SOURCE_CONTENT rather than invented.',
   inputSchema: {
     course_id: z.string(),
-    template_version: z.string().optional().describe('Defaults to "v1".'),
     timing_strategy: z
       .enum(['part_a_verbatim', 'part_a_minus_30', 'part_a_carve_last_unit'])
       .optional()
@@ -513,7 +520,10 @@ const createDraftTool: ToolDefinition = {
   },
   handler: async (args) => {
     const courseId = String(args.course_id);
-    const templateVersion = args.template_version ? String(args.template_version) : 'v1';
+    // The template follows from the course, not from an argument: a course
+    // rendered to another track's template would come out structurally wrong,
+    // and nothing downstream could detect it.
+    const templateVersion = templateTrackFor(courseId);
     const allocation = await loadTiming(courseId);
 
     // Refuse rather than produce a storyboard on untrustworthy timing.
@@ -569,12 +579,12 @@ const createDraftTool: ToolDefinition = {
         insufficient_source: isInsufficientSource(m.part_a),
       })),
       work: outstandingWork(state, allocation),
-      next_call: { tool: 'storyboard_next_task', args: { artifact_id: artifact.artifact_id } },
+      next_call: { tool: 'storyboard_next_module', args: { artifact_id: artifact.artifact_id } },
       next_step:
         'This draft is an empty skeleton, not a deliverable -- do not report it to the user as ' +
         'though the storyboard were built, and do not ask whether to proceed. Call ' +
-        'storyboard_next_task with this artifact_id now. It hands you one small task at a time ' +
-        'with the handbook text already attached; write its fields, call storyboard_submit_task, ' +
+        'storyboard_next_module with this artifact_id now. It hands you one module at a time ' +
+        'with its source text already attached; write its slots, call storyboard_submit_module, ' +
         'and repeat until it returns status READY_TO_RENDER. Then validate_storyboard and ' +
         'render_storyboard_docx, and give the user the file.',
     });
@@ -630,482 +640,6 @@ const listStoryboardsTool: ToolDefinition = {
  * fresh copy of the current version. Anything not mentioned is left untouched --
  * this is what keeps edits incremental (INVARIANT 8).
  */
-const sourceRefSchema = z.object({
-  document_type: documentTypeSchema,
-  pdf_page: z.number().int(),
-  printed_page: z.number().int().optional(),
-  section: z.string(),
-  subsection: z.string().optional(),
-  chunk_id: z.string(),
-  quote: z.string().optional(),
-});
-
-const setContentTool: ToolDefinition = {
-  name: 'set_storyboard_content',
-  title: 'Set storyboard content',
-  description:
-    'Writes generated content into a storyboard and commits it as a new version. Address ' +
-    'rows and slides by their row_id / slide_id from get_storyboard; anything you do not ' +
-    'mention is left unchanged, so this is safe for incremental edits. Every content field ' +
-    'should carry sources citing chunk_ids returned by search_course_content -- ' +
-    'validate_storyboard checks that they resolve and are in the right chapter. Durations, ' +
-    'unit codes and unit titles are not writable here: they come from the Timing Allocation ' +
-    'Document. Use modify_storyboard_timing if a duration genuinely needs to change.',
-  inputSchema: {
-    artifact_id: z.string(),
-    base_version: z.number().int().describe('The version you read. Rejected if it is no longer current.'),
-    module_number: z.number().int(),
-    module_description: z.string().optional(),
-    module_description_sources: z
-      .array(sourceRefSchema)
-      .optional()
-      .describe('Citations for module_description. Required whenever the description is set.'),
-    part_c_subtitle: z.string().optional(),
-    part_a_rows: z
-      .array(
-        z.object({
-          row_id: z.string(),
-          activity_name: z.string().optional(),
-          interactive_description: z.string().optional(),
-          correlation: z.string().optional().describe('e.g. "SGJ/N4105 / PC1, PC3".'),
-          performance_criteria: z.array(z.string()).optional(),
-          sources: z.array(sourceRefSchema).optional(),
-        }),
-      )
-      .optional(),
-    lms_rows: z
-      .array(
-        z.object({
-          row_id: z.string().optional().describe('Omit to append a new row.'),
-          unit_range: z.string().describe('e.g. "7.1-7.2" or "7.3".'),
-          activity_type: z.string().describe('Must match a Part A activity_name in this module.'),
-          recommended_standard: z.enum(['xAPI', 'SCORM 2004', 'SCORM 1.2']),
-          tracking: z.string(),
-          completion_criteria: z.string(),
-          sources: z.array(sourceRefSchema).optional(),
-        }),
-      )
-      .optional()
-      .describe('Replaces the module\'s LMS Technical Mapping rows entirely.'),
-    part_b_rows: z
-      .array(
-        z.object({
-          row_id: z.string(),
-          visual: z.string().optional(),
-          gfx: z.string().optional(),
-          audio: z.string().optional(),
-          sources: z.array(sourceRefSchema).optional(),
-        }),
-      )
-      .optional(),
-    slides: z
-      .array(
-        z.object({
-          slide_id: z.string(),
-          title: z.string().optional(),
-          visual_cues: z.string().optional(),
-          instructor_script: z.string().optional(),
-          sources: z.array(sourceRefSchema).optional(),
-        }),
-      )
-      .optional(),
-    note: z.string().optional().describe('Recorded in the change log for this version.'),
-  },
-  handler: async (args) => {
-    const artifactId = String(args.artifact_id);
-    const baseVersion = Number(args.base_version);
-    const moduleNumber = Number(args.module_number);
-
-    const state = structuredClone(getState(artifactId)) as StoryboardState;
-    const module = state.modules.find((m) => m.number === moduleNumber);
-    if (!module) return fail(`Storyboard has no module ${moduleNumber}.`);
-
-    const changes: ChangeInput[] = [];
-    const errors: string[] = [];
-
-    if (typeof args.module_description === 'string') {
-      changes.push({
-        target: { kind: 'module_description', module: moduleNumber },
-        field: 'description',
-        change_type: 'updated',
-        old_value: typeof module.description === 'string' ? module.description : '(insufficient source)',
-        new_value: args.module_description,
-        ...(args.note ? { reason: String(args.note) } : {}),
-      });
-      module.description = args.module_description;
-      if (Array.isArray(args.module_description_sources)) {
-        module.description_sources = args.module_description_sources as never;
-      }
-    }
-
-    // --- Part A ---------------------------------------------------------
-    if (Array.isArray(args.part_a_rows)) {
-      if (isInsufficientSource(module.part_a)) {
-        errors.push(`Module ${moduleNumber} has no Part A: ${module.part_a.message}`);
-      } else {
-        for (const patch of args.part_a_rows as Record<string, unknown>[]) {
-          const row = module.part_a.rows.find((r) => r.row_id === patch.row_id);
-          if (!row) {
-            errors.push(
-              `No Part A row "${String(patch.row_id)}" in module ${moduleNumber}. ` +
-                `Valid row_ids: ${module.part_a.rows.map((r) => r.row_id).join(', ')}.`,
-            );
-            continue;
-          }
-          for (const field of ['activity_name', 'interactive_description', 'correlation'] as const) {
-            if (typeof patch[field] === 'string') {
-              changes.push({
-                target: { kind: 'part_a_cell', module: moduleNumber, row_id: row.row_id, field },
-                field,
-                change_type: 'updated',
-                old_value: row[field],
-                new_value: patch[field] as string,
-                ...(Array.isArray(patch.sources) ? { sources: patch.sources as never } : {}),
-              });
-              row[field] = patch[field] as string;
-            }
-          }
-          if (Array.isArray(patch.performance_criteria)) row.performance_criteria = patch.performance_criteria as string[];
-          if (Array.isArray(patch.sources)) row.sources = patch.sources as never;
-        }
-      }
-    }
-
-    // --- LMS mapping ----------------------------------------------------
-    if (Array.isArray(args.lms_rows)) {
-      if (isInsufficientSource(module.lms_mapping)) {
-        errors.push(`Module ${moduleNumber} has no LMS mapping section.`);
-      } else {
-        const rows = (args.lms_rows as Record<string, unknown>[]).map((r, i) => ({
-          row_id: typeof r.row_id === 'string' ? r.row_id : `m${String(moduleNumber).padStart(2, '0')}-lms-${i + 1}`,
-          unit_range: String(r.unit_range),
-          activity_type: String(r.activity_type),
-          recommended_standard: r.recommended_standard as 'xAPI' | 'SCORM 2004' | 'SCORM 1.2',
-          tracking: String(r.tracking),
-          completion_criteria: String(r.completion_criteria),
-          sources: (Array.isArray(r.sources) ? r.sources : []) as never,
-        }));
-        changes.push({
-          target: { kind: 'module', module: moduleNumber },
-          field: 'lms_mapping.rows',
-          change_type: 'replaced',
-          old_value: String(module.lms_mapping.rows.length),
-          new_value: String(rows.length),
-          ...(args.note ? { reason: String(args.note) } : {}),
-        });
-        module.lms_mapping = { rows };
-      }
-    }
-
-    // --- Part B ---------------------------------------------------------
-    if (Array.isArray(args.part_b_rows)) {
-      if (isInsufficientSource(module.part_b)) {
-        errors.push(`Module ${moduleNumber} has no Part B section.`);
-      } else {
-        for (const patch of args.part_b_rows as Record<string, unknown>[]) {
-          const row = module.part_b.rows.find((r) => r.row_id === patch.row_id);
-          if (!row) {
-            errors.push(
-              `No Part B row "${String(patch.row_id)}" in module ${moduleNumber}. ` +
-                `Valid row_ids: ${module.part_b.rows.map((r) => r.row_id).join(', ')}.`,
-            );
-            continue;
-          }
-          for (const field of ['visual', 'gfx', 'audio'] as const) {
-            if (typeof patch[field] === 'string') {
-              changes.push({
-                target: { kind: 'part_b_cell', module: moduleNumber, row_id: row.row_id, field },
-                field,
-                change_type: 'updated',
-                old_value: row[field] ?? '',
-                new_value: patch[field] as string,
-                ...(Array.isArray(patch.sources) ? { sources: patch.sources as never } : {}),
-              });
-              row[field] = patch[field] as string;
-            }
-          }
-          if (Array.isArray(patch.sources)) row.sources = patch.sources as never;
-        }
-      }
-    }
-
-    // --- Part C ---------------------------------------------------------
-    if (typeof args.part_c_subtitle === 'string' && !isInsufficientSource(module.part_c)) {
-      module.part_c.subtitle = args.part_c_subtitle;
-    }
-    if (Array.isArray(args.slides)) {
-      if (isInsufficientSource(module.part_c)) {
-        errors.push(`Module ${moduleNumber} has no Part C section.`);
-      } else {
-        for (const patch of args.slides as Record<string, unknown>[]) {
-          const slide = module.part_c.slides.find((s) => s.slide_id === patch.slide_id);
-          if (!slide) {
-            errors.push(
-              `No slide "${String(patch.slide_id)}" in module ${moduleNumber}. ` +
-                `Valid slide_ids: ${module.part_c.slides.map((s) => s.slide_id).join(', ')}.`,
-            );
-            continue;
-          }
-          for (const field of ['title', 'visual_cues', 'instructor_script'] as const) {
-            if (typeof patch[field] === 'string') {
-              changes.push({
-                target: { kind: 'slide', module: moduleNumber, slide_id: slide.slide_id, field },
-                field,
-                change_type: 'updated',
-                old_value: slide[field],
-                new_value: patch[field] as string,
-                ...(Array.isArray(patch.sources) ? { sources: patch.sources as never } : {}),
-              });
-              slide[field] = patch[field] as string;
-            }
-          }
-          if (Array.isArray(patch.sources)) slide.sources = patch.sources as never;
-        }
-      }
-    }
-
-    if (errors.length > 0) {
-      // Nothing is committed on a partial failure, so the client can correct the
-      // ids and resubmit against the same base_version.
-      return fail('No changes were committed because part of the request could not be applied.', errors);
-    }
-    if (changes.length === 0) {
-      return fail('The request contained no changes to apply.');
-    }
-
-    const result = commitVersion({
-      artifact_id: artifactId,
-      base_version: baseVersion,
-      state,
-      changes,
-      ...(args.note ? { note: String(args.note) } : {}),
-    });
-
-    // `state` is the committed content: commitVersion persisted this object.
-    const work = outstandingWork(state, await loadTiming(state.course_id));
-    return ok({
-      artifact_id: artifactId,
-      version: result.version,
-      changes_applied: changes.length,
-      work,
-      next_step: continueInstruction(work),
-    });
-  },
-};
-
-const weightageRowSchema = z.object({
-  nos_code: z.string().describe('e.g. "SGJ/N4102", or "Total" for the summary row.'),
-  nos_title: z.string(),
-  theory_marks: z.number(),
-  practical_marks: z.number(),
-  project_marks: z.number().optional(),
-  viva_marks: z.number().optional(),
-  total_marks: z.number(),
-  weightage: z.number(),
-  is_total: z.boolean().optional(),
-  sources: z.array(sourceRefSchema).optional(),
-});
-
-const questionSchema = z.object({
-  module_number: z.number().int().describe('Timing-Allocation module number this question belongs to.'),
-  number: z
-    .number()
-    .int()
-    .optional()
-    .describe('Position in the bank. Omitted numbers are assigned automatically in module order.'),
-  stem: z.string().describe('The question. Must be answerable from the cited chunks.'),
-  options: z.object({ a: z.string(), b: z.string(), c: z.string(), d: z.string() }),
-  correct_option: z.enum(['a', 'b', 'c', 'd']),
-  explanation: z.string().describe('What in the source supports the correct answer.'),
-  sources: z
-    .array(sourceRefSchema)
-    .describe('Chunks supporting the stem, correct answer and explanation. Required.'),
-  verbatim_from_source: sourceRefSchema
-    .optional()
-    .describe('Set when the question is reproduced verbatim from a source exercise.'),
-});
-
-export const DEFAULT_STRATEGY_POINTS = [
-  'Criteria for assessment for each Qualification will be created by the Sector Skill Council. Each Element/ Performance Criteria (PC) will be assigned marks proportional to its importance in NOS. SSC will also lay down proportion of marks for Theory and Skills Practical for each Element/ PC.',
-  'The assessment for the theory part will be based on knowledge bank of questions created by the SSC.',
-  'Assessment will be conducted for all compulsory NOS, and where applicable, on the selected elective/option NOS/set of NOS.',
-  'Individual assessment agencies will create unique question papers for theory part for each candidate at each examination/training center (as per assessment criteria below).',
-  'Individual assessment agencies will create unique evaluations for skill practical for every student at each examination/ training center based on these criteria.',
-  'To pass the Qualification assessment, every trainee should score the Recommended Pass % aggregate for the QP.',
-  'In case of unsuccessful completion, the trainee may seek reassessment on the Qualification.',
-];
-
-/**
- * The disclosure the reference document carries, reproduced because the same
- * exception applies: a source document has no answer key, so the wrong options
- * must be authored. Saying so in the artifact is what keeps the exception honest.
- */
-export function buildDisclosure(questionCount: number, verbatimNumbers: number[]): string {
-  const base =
-    `Note on this question bank: Every question stem, correct answer and explanation below is ` +
-    `based on content contained in the approved course source documents. The distractor sets and ` +
-    `the wording of the explanations have been authored for this blueprint, as the source ` +
-    `documents do not contain an answer key.`;
-  if (verbatimNumbers.length === 0) return base;
-  const list = verbatimNumbers.join(', ');
-  return `${base} Question${verbatimNumbers.length === 1 ? '' : 's'} ${list} ${
-    verbatimNumbers.length === 1 ? 'is' : 'are'
-  } reproduced verbatim from an exercise in the source documents.`;
-}
-
-const setAssessmentTool: ToolDefinition = {
-  name: 'set_assessment_content',
-  title: 'Set assessment content',
-  description:
-    'Writes the assessment strategy blueprint and the question bank, committing a new version. ' +
-    'The template runs ten questions per module, grouped under a per-module heading. Every ' +
-    'question must cite the chunk_ids that support its stem, correct answer and explanation; the ' +
-    'three incorrect options are authored, since a source document contains no answer key, and ' +
-    'the rendered document discloses that. Questions accumulate across calls, so you can submit ' +
-    'one module at a time -- pass replace: true to start over. Question numbers are assigned ' +
-    'automatically in module order unless you set them.',
-  inputSchema: {
-    artifact_id: z.string(),
-    base_version: z.number().int(),
-    questions: z.array(questionSchema).optional(),
-    replace: z
-      .boolean()
-      .optional()
-      .describe('Discard existing questions instead of adding to them. Default false.'),
-    minimum_aggregate_pass_pct: z
-      .number()
-      .optional()
-      .describe('From the QP, e.g. 70. Defaults to 70 if never set.'),
-    strategy_points: z
-      .array(z.string())
-      .optional()
-      .describe('Assessment guideline points from the QP. Defaults to the standard SCGJ seven.'),
-    weightage_compulsory: z.array(weightageRowSchema).optional().describe('Compulsory NOS marks table from the QP.'),
-    weightage_electives: z
-      .record(z.string(), z.array(weightageRowSchema))
-      .optional()
-      .describe('Elective marks tables, keyed by elective name.'),
-    remarks: z.string().optional().describe('The QP\'s remarks line, e.g. total hours breakdown.'),
-    note: z.string().optional(),
-  },
-  handler: (args) => {
-    const artifactId = String(args.artifact_id);
-    const state = structuredClone(getState(artifactId)) as StoryboardState;
-
-    // Start from whatever exists, so a caller can build the bank module by module.
-    const existing = isInsufficientSource(state.assessment) ? undefined : state.assessment;
-    const replace = args.replace === true;
-    const kept = replace ? [] : (existing?.questions ?? []);
-
-    const incoming = (args.questions ?? []) as z.infer<typeof questionSchema>[];
-    const errors: string[] = [];
-
-    const moduleNumbers = new Set(state.modules.map((m) => m.number));
-    for (const q of incoming) {
-      if (!moduleNumbers.has(q.module_number)) {
-        errors.push(
-          `Question "${q.stem.slice(0, 60)}..." targets module ${q.module_number}, which is not in ` +
-            `this storyboard (modules: ${[...moduleNumbers].join(', ')}).`,
-        );
-      }
-      if (!q.sources || q.sources.length === 0) {
-        errors.push(`Question "${q.stem.slice(0, 60)}..." has no sources. Citations are required.`);
-      }
-    }
-    if (errors.length > 0) {
-      return fail('No changes were committed because part of the request could not be applied.', errors);
-    }
-
-    // Replacing a module's questions wholesale is the common case when redoing a
-    // module, so incoming questions supersede kept ones for the same module.
-    const touchedModules = new Set(incoming.map((q) => q.module_number));
-    const merged = [
-      ...kept.filter((q) => !touchedModules.has(q.module_number)),
-      ...incoming.map((q) => ({
-        question_id: '',
-        number: q.number ?? 0,
-        module_number: q.module_number,
-        stem: q.stem,
-        options: q.options,
-        correct_option: q.correct_option,
-        explanation: q.explanation,
-        sources: q.sources as never,
-        distractors_authored: true,
-        ...(q.verbatim_from_source ? { verbatim_from_source: q.verbatim_from_source as never } : {}),
-      })),
-    ];
-
-    // Renumber in module order so the bank reads continuously regardless of the
-    // order modules were submitted in.
-    const moduleOrder = state.modules.map((m) => m.number);
-    merged.sort((a, b) => {
-      const byModule = moduleOrder.indexOf(a.module_number) - moduleOrder.indexOf(b.module_number);
-      return byModule !== 0 ? byModule : a.number - b.number;
-    });
-    merged.forEach((q, i) => {
-      q.number = i + 1;
-      q.question_id = `q-${String(i + 1).padStart(3, '0')}`;
-    });
-
-    const verbatim = merged.filter((q) => q.verbatim_from_source).map((q) => q.number);
-
-    state.assessment = {
-      strategy_points: (
-        (args.strategy_points as string[] | undefined) ??
-        existing?.strategy_points.map((p) => p.text) ??
-        DEFAULT_STRATEGY_POINTS
-      ).map((text, i) => ({
-        bullet_id: `as-${i + 1}`,
-        group: 'Assessment Strategy',
-        text,
-        sources: [],
-      })),
-      minimum_aggregate_pass_pct:
-        (args.minimum_aggregate_pass_pct as number | undefined) ??
-        existing?.minimum_aggregate_pass_pct ??
-        70,
-      weightage_compulsory:
-        (args.weightage_compulsory as never) ?? existing?.weightage_compulsory ?? [],
-      weightage_electives:
-        (args.weightage_electives as never) ?? existing?.weightage_electives ?? {},
-      remarks: (args.remarks as string | undefined) ?? existing?.remarks ?? '',
-      disclosure_note: buildDisclosure(merged.length, verbatim),
-      questions: merged,
-    };
-
-    const result = commitVersion({
-      artifact_id: artifactId,
-      base_version: Number(args.base_version),
-      state,
-      changes: [
-        {
-          target: null,
-          field: 'assessment',
-          change_type: replace ? 'replaced' : 'updated',
-          old_value: String(kept.length),
-          new_value: String(merged.length),
-          ...(args.note ? { reason: String(args.note) } : {}),
-        },
-      ],
-      ...(args.note ? { note: String(args.note) } : {}),
-    });
-
-    const perModule = state.modules.map((m) => ({
-      module: m.number,
-      questions: merged.filter((q) => q.module_number === m.number).length,
-    }));
-
-    return ok({
-      artifact_id: artifactId,
-      version: result.version,
-      total_questions: merged.length,
-      per_module: perModule,
-      expected_per_module: config.assessment.questionsPerModule,
-      next_step: 'Call validate_storyboard, then render_storyboard_docx.',
-    });
-  },
-};
-
 const validateTool: ToolDefinition = {
   name: 'validate_storyboard',
   title: 'Validate storyboard',
@@ -1115,7 +649,7 @@ const validateTool: ToolDefinition = {
     'resolves to a real chunk in the correct course and chapter, and the wording measurably ' +
     'overlaps the cited text. Level 2 checks timing arithmetic against the Timing Allocation ' +
     'Document. Level 3 checks structural conformance to the template. Findings are reported, ' +
-    'never auto-fixed -- decide how to address each one and resubmit via set_storyboard_content. ' +
+    'never auto-fixed -- decide how to address each one and resubmit the affected module. ' +
     'Note that low_grounding_overlap is a lexical signal only, not a judgement about meaning.',
   inputSchema: {
     artifact_id: z.string(),
@@ -1168,7 +702,14 @@ const renderTool: ToolDefinition = {
       );
     }
 
-    const template = await loadTemplate(state.template_version);
+    // The stored value is the track the draft was created against. Artifacts
+    // created before templates were filed per track carry a version string
+    // instead, which no longer names a directory; the course's own track is the
+    // correct answer for those and identical for every other case.
+    const track = templateTrackFor(state.course_id);
+    const template = await loadTemplate(
+      state.template_version === track ? state.template_version : track,
+    );
     const bytes = await renderStoryboardDocx({ template, state });
     const file = attachDocx(artifactId, version, bytes);
 
@@ -1305,7 +846,7 @@ const readTemplateSpecTool: ToolDefinition = {
   description:
     'Describes exactly which fields you are expected to write for each section, what each ' +
     'one means in the reference document, and which fields are read-only because they come ' +
-    'from the Timing Allocation Document. Read this before your first set_storyboard_content call.',
+    'from the Timing Allocation Document. Read it if a validation finding is unclear.',
   inputSchema: {},
   handler: () =>
     ok({
@@ -1337,7 +878,7 @@ const readTemplateSpecTool: ToolDefinition = {
         'slides[].number': 'Fixed by the template: seven slides per module.',
       },
       assessment: {
-        tool: 'set_assessment_content',
+        tool: 'storyboard_submit_module',
         'questions[]':
           'Ten per module. stem, options a-d, correct_option, explanation, and sources citing the chunk_ids that support the stem, correct answer and explanation.',
         distractors:
@@ -1377,8 +918,6 @@ export const STORYBOARD_TOOLS: ToolDefinition[] = [
   createDraftTool,
   getStoryboardTool,
   listStoryboardsTool,
-  setContentTool,
-  setAssessmentTool,
   validateTool,
   renderTool,
   historyTool,

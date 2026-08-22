@@ -107,7 +107,7 @@ describe('video flows', () => {
   it('lists every module and unit the handbook\'s contents page declares', async () => {
     const { extractPdf } = await import('../src/documents/pdf-extractor.js');
     const { collectContents } = await import('../src/documents/chunker.js');
-    const extracted = await extractPdf('courses/biofuels/ph.pdf');
+    const extracted = await extractPdf('courses/entrepreneur/biofuels/ph.pdf');
     const contents = collectContents(extracted.pages);
 
     const res = await call('get_ph_outline', { subject: 'biofuels' });
@@ -229,151 +229,26 @@ describe('video flows', () => {
     expect(vague.candidates.length).toBeGreaterThan(1);
   });
 
-  it('runs the shortcut flow end to end and lands on the requested duration', async () => {
-    const planned = await call('plan_video_transcript', {
-      heading: 'quality control and testing of pellets',
-      duration: '2 min',
-    });
-    expect(planned.plan.unit_code).toBe('7.3');
-    expect(planned.plan.requested_seconds).toBe(120);
-
-    // Write each scene at its target length, quoting the source so the grounding
-    // check has something real to measure.
-    const scenes = planned.plan.scenes.map((s: any) => ({
-      scene_number: s.scene_number,
-      title: `Scene ${s.scene_number}`,
-      visual: 'Camera pushes in on the pellet sample.',
-      narration: s.source_text.split(/\s+/).slice(0, s.target_words).join(' '),
-      sources: s.source_chunk_ids.map((chunk_id: string) => ({ chunk_id })),
-    }));
-
-    const submitted = await call('submit_video_transcript', {
-      transcript_id: planned.transcript_id,
-      base_version: planned.base_version,
-      scenes,
-    });
-    expect(submitted.__isError).toBe(false);
-    expect(submitted.scenes_written).toBe(planned.plan.scene_count);
-
-    const report = await call('validate_video_transcript', { transcript_id: planned.transcript_id });
-    expect(report.passed).toBe(true);
-    expect(Math.abs(report.duration.variance_pct)).toBeLessThanOrEqual(10);
-
-    const script = await call('get_video_transcript', { transcript_id: planned.transcript_id });
-    expect(script.__body).toContain('SCENE 1');
-    expect(script.__body).toContain('NARRATION');
-    expect(script.validation_passed).toBe(true);
-
-    // The copy-ready script carries no sourcing furniture: the user pastes it as it
-    // is, and a page reference under a scene would have to be deleted by hand.
-    expect(script.__body).not.toMatch(/Participant Handbook/i);
-    expect(script.__body).not.toMatch(/\bpp?\.\s?\d+/i);
-    expect(script.__body).not.toMatch(/source\s*:/i);
-    expect(script.__body).not.toMatch(/budget/i);
-    expect(script.__body).not.toMatch(/chunk/i);
-
-    // The same transcript still renders with its sourcing for a reviewer.
-    const production = await call('get_video_transcript', {
-      transcript_id: planned.transcript_id,
-      format: 'production',
-    });
-    expect(production.__body).toMatch(/Participant Handbook/);
-  });
-
-  it('rejects a script that refers to the handbook, a page or a figure', async () => {
-    const planned = await call('plan_video_transcript', {
-      subject: 'biofuels',
-      unit_code: '7.3',
-      duration: '1 min',
-    });
-    const scenes = planned.plan.scenes.map((s: any) => ({
-      scene_number: s.scene_number,
-      title: 'Measuring moisture',
-      visual: 'Close-up of the meter display.',
-      narration: 'Moisture content is shown as a percentage on the meter display.',
-      sources: s.source_chunk_ids.map((chunk_id: string) => ({ chunk_id })),
-    }));
-    // One scene points the viewer at the source, the way a handbook exercise would.
-    scenes[0].on_screen_text = 'Watch: NREL Energy Basics — Biomass (QR in handbook, p.11)';
-
-    await call('submit_video_transcript', {
-      transcript_id: planned.transcript_id,
-      base_version: planned.base_version,
-      scenes,
-    });
-    const report = await call('validate_video_transcript', { transcript_id: planned.transcript_id });
-    expect(report.passed).toBe(false);
-    const leak = report.findings.find((f: any) => f.code === 'source_reference_in_script');
-    expect(leak).toBeTruthy();
-    expect(leak.path).toBe('scenes[1].on_screen_text');
-  });
-
-  it('refuses a citation that belongs to another unit', async () => {
-    const planned = await call('plan_video_transcript', {
-      subject: 'biofuels',
-      unit_code: '7.3',
-      duration: '1 min',
-    });
-    const otherUnit = readPhUnit(COURSE, '1.1').chunk_ids[0]!;
-    await call('submit_video_transcript', {
-      transcript_id: planned.transcript_id,
-      base_version: planned.base_version,
-      scenes: planned.plan.scenes.map((s: any) => ({
-        scene_number: s.scene_number,
-        title: 't',
-        visual: 'v',
-        narration: 'narration text for this scene',
-        sources: [{ chunk_id: otherUnit }],
-      })),
-    });
-    const report = await call('validate_video_transcript', { transcript_id: planned.transcript_id });
-    expect(report.passed).toBe(false);
-    expect(report.findings.some((f: any) => f.code === 'citation_outside_unit')).toBe(true);
-  });
-
-  it('rejects a stale base_version instead of overwriting newer work', async () => {
-    const planned = await call('plan_video_transcript', {
-      subject: 'biofuels',
-      unit_code: '7.3',
-      duration: '1 min',
-    });
-    const scene = (n: number) => ({
-      scene_number: n,
-      title: 't',
-      visual: 'v',
-      narration: 'some narration',
-      sources: [],
-    });
-    const numbers = planned.plan.scenes.map((s: any) => s.scene_number);
-    await call('submit_video_transcript', {
-      transcript_id: planned.transcript_id,
-      base_version: 1,
-      scenes: numbers.map(scene),
-    });
-    const stale = await call('submit_video_transcript', {
-      transcript_id: planned.transcript_id,
-      base_version: 1,
-      scenes: numbers.map(scene),
-    });
-    expect(stale.__isError).toBe(true);
-    expect(stale.message).toMatch(/Version conflict/);
-  });
-
-  it('offers four distinct options and re-asks rather than guessing', async () => {
+  it('offers three bare options and re-asks rather than guessing', async () => {
     const start = await call('start_flow');
     const session = start.session_id;
     expect(start.options.map((o: any) => o.value)).toEqual([
-      'module_content', 'ph_reading', 'storyboard', 'cdr_storyboard',
+      'storyboard', 'module_content', 'ph_reading',
     ]);
-    // Each option says what comes out of it, not merely what it is called.
-    for (const option of start.options) expect(option.detail.length).toBeGreaterThan(40);
+    // The menu is a list of three choices and nothing else. Explaining them here
+    // means the first thing a user sees is a wall of text about choices they have
+    // not made yet; every option's detail belongs to the step that follows it.
+    expect(start.options.map((o: any) => o.label)).toEqual([
+      '1. Generate storyboard', '2. Generate video script', '3. Read handbook content',
+    ]);
+    for (const option of start.options) expect(option.detail).toBeUndefined();
 
     const bad = await call('flow_choose', { session_id: session, choice: 'something else' });
     expect(bad.step).toBe('choose_flow');
     expect(bad.error).toBeTruthy();
 
     // The menu number the user is shown is an answer the menu accepts.
-    const picked = await call('flow_choose', { session_id: session, choice: '2' });
+    const picked = await call('flow_choose', { session_id: session, choice: '3' });
     expect(picked.flow).toBe('ph_reading');
     expect(picked.step).toBe('choose_subject');
   });
@@ -495,18 +370,58 @@ describe('video flows', () => {
     expect(second.data.plan.module_number).toBe(8);
   });
 
-  it('hands the storyboard flow over with the course already resolved', async () => {
+  it('hands the storyboard flow over in three answers, course already resolved', async () => {
     const start = await call('start_flow');
     const session = start.session_id;
-    const subjects = await call('flow_choose', { session_id: session, choice: 'storyboard' });
-    expect(subjects.step).toBe('choose_subject');
 
-    // The storyboard covers a whole course, so the subject is its last question.
+    // The storyboard asks which programme first, because the three tracks are
+    // different documents built to different templates from different sources.
+    const tracks = await call('flow_choose', { session_id: session, choice: 'storyboard' });
+    expect(tracks.step).toBe('choose_track');
+    expect(tracks.options.map((o: any) => o.value)).toEqual(['entrepreneur', 'orientation', 'cdr']);
+
+    const subjects = await call('flow_choose', { session_id: session, choice: '1' });
+    expect(subjects.step).toBe('choose_subject');
+    expect(subjects.options.map((o: any) => o.value)).toEqual([
+      'solar-pv', 'biofuels', 'green-hydrogen', 'agri-residue-aggregator',
+    ]);
+    // Every Entrepreneur subject has its documents and a reviewed crosswalk.
+    for (const option of subjects.options) expect(option.disabled).toBeUndefined();
+
+    // The subject is the storyboard's last question: it generates from here.
     const handoff = await call('flow_choose', { session_id: session, choice: 'biofuels' });
     expect(handoff.step).toBe('storyboard_ready');
     expect(handoff.done).toBe(true);
     expect(handoff.data.course_id).toBe(COURSE);
+    expect(handoff.data.track).toBe('entrepreneur');
     expect(handoff.next_action).toMatch(/create_storyboard_draft/);
+  });
+
+  it('resolves an Entrepreneur subject by number, folder name or course_id', async () => {
+    for (const answer of ['1', 'solar', 'solar-pv', 'Solar Photovoltaic Entrepreneur']) {
+      const start = await call('start_flow');
+      await call('flow_choose', { session_id: start.session_id, choice: '1' });
+      await call('flow_choose', { session_id: start.session_id, choice: 'entrepreneur' });
+      const done = await call('flow_choose', { session_id: start.session_id, choice: answer });
+      expect(done.step, answer).toBe('storyboard_ready');
+      expect(done.data.course_id, answer).toBe('solar-pv');
+    }
+  });
+
+  it('goes back from a subject to the subject list, not to the programme', async () => {
+    const start = await call('start_flow');
+    const session = start.session_id;
+    await call('flow_choose', { session_id: session, choice: 'storyboard' });
+    await call('flow_choose', { session_id: session, choice: 'entrepreneur' });
+    await call('flow_choose', { session_id: session, choice: 'biofuels' });
+
+    const back = await call('flow_choose', { session_id: session, choice: 'back' });
+    expect(back.step).toBe('choose_subject');
+    expect(back.selections.track).toBe('entrepreneur');
+    expect(back.selections.course_id).toBeUndefined();
+
+    const backAgain = await call('flow_choose', { session_id: session, choice: 'back' });
+    expect(backAgain.step).toBe('choose_track');
   });
 
   it('returns exact handbook text with no added or removed content', async () => {
@@ -518,10 +433,11 @@ describe('video flows', () => {
   });
 
   it('refuses a subject whose handbook has not been supplied', async () => {
-    const res = await call('plan_video_transcript', { subject: 'esg', unit_code: '1.1', duration: 2 });
+    const res = await call('plan_module_content', { subject: 'esg', module_number: 1 });
     expect(res.__isError).toBe(true);
-    expect(res.message).toMatch(/not available yet/);
+    expect(res.message).toMatch(/not available yet|No Participant Handbook|no handbook/i);
   });
+
 
   it('keeps the outline and the reading in agreement about every unit', () => {
     const outline = getPhOutline(COURSE);

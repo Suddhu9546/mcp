@@ -22,5 +22,33 @@ top of that file.
 Check the result with `npx tsx scripts/parse-timing.ts <course_id>`, which prints
 every module and unit and reports whether the arithmetic is exact.
 
-`solar-pv-structure.json` is the extracted input for Solar Photovoltaic
-Entrepreneur, kept so its timing.pdf can be regenerated rather than only edited.
+Course constants live in the structure file, not the script: `course_name`,
+`qp_code`, `nsqf_level`, and either a course-wide `module_hours` or a per-module
+`hours`. A course whose modules differ in length states each module's `hours`,
+which is where the reviewed module timings for Green Hydrogen and Agri-Residue
+come from. Nothing is inferred -- a module with no stated hours falls back to the
+course-wide constant, and Solar Photovoltaic Entrepreneur's original values
+remain the defaults so its document regenerates unchanged.
+
+The extracted inputs are kept so each timing.pdf can be regenerated rather than
+only edited:
+
+    solar-pv-structure.json               Solar Photovoltaic Entrepreneur
+    green-hydrogen-structure.json         Green Hydrogen Plant Entrepreneur
+    agri-residue-aggregator-structure.json  Agri-Residue Aggregator
+
+Solar's came from a reviewed "Topics and Subtopics" .docx via
+`extract-structure.mjs`. The other two have no such document, so their modules,
+units and subtopics were read from the Participant Handbook -- unit titles from
+the table of contents, which prints them unwrapped, and subtopics from the
+printed body headings. Units are renumbered by position and subtopics
+sequentially within their unit, because both handbooks number them
+inconsistently: Green Hydrogen prints two headings as 2.1.1, skips 4.2.2, and
+labels one 2.2.6.4; Agri-Residue prints 5.1.1 as 5-1-1 and repeats 6.1.5. Where a
+unit is written as continuous narrative with no numbered headings -- Green
+Hydrogen Unit 6.2 -- it carries a single subtopic repeating the unit title, as
+Solar's Units 6.2 and 9.2 do.
+
+Agri-Residue's Module 7 is Employability Skills, which its handbook covers only
+by a link to the common workbook. Its three units are the same ones the Biofuels
+timing document states for that module.

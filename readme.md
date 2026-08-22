@@ -43,25 +43,40 @@ They are kept strictly apart. A session records which flow it is in, and the too
 of one flow cannot produce the output of another.
 
 ```
-                     start_flow   ← "can we start", "show me what you have"
-                          │
-          ┌───────────────┼───────────────┐
-          ▼               ▼               ▼
-    1 Module Content  2 Exact PH     3 Storyboard
-                        Reading
-          │               │               │
-          ▼               ▼               ▼
-       subject         subject         subject
-          │               │               │
-          ▼               ▼               ▼
-       module          module        storyboard_ready
-          │               │          (whole course; hands
-          ▼               ▼           over with course_id)
-    module_ready         unit
-    generation begins     │
-                          ▼
-                 reading_complete
+                start_flow   ← "hi", "start", "can we start", "let's get started"
+                     │
+     ┌───────────────┼───────────────┐
+     ▼               ▼               ▼
+1 Storyboard   2 Video Script   3 Handbook Reading
+     │               │               │
+     ▼               ▼               ▼
+  programme       subject         subject
+Entrepreneur         │               │
+Orientation          ▼               ▼
+    CDR           module          module
+     │               │               │
+     ▼               ▼               ▼
+  subject      module_ready         unit
+     │         generation begins     │
+     ▼                               ▼
+storyboard_ready                reading_complete
+generation begins
 ```
+
+The menu is three lines and nothing else: what each option produces is answered by
+the step that follows it, and explaining them up front made the first thing a user
+saw a wall of text about choices they had not made yet.
+
+Only the storyboard asks which programme, and it asks first, because the three
+tracks are genuinely different documents — a different template, different sources,
+different module routing — and everything after that answer depends on it. The
+content flows do not ask: a subject carries its own track, so the question is
+already answered.
+
+The subject is the storyboard's last question. Nothing is asked about length,
+modules, format or confirmation, because none of it is open: the course's module
+count comes from its timing document, the shape from its template, and the loop
+that fills it runs without the user.
 
 The flow asks only what it cannot work out. There is no "would you like to type or
 browse" question, no course-type question, and no duration question: a topic typed
@@ -107,31 +122,41 @@ an independent session whenever you want one.
 **Shortcut.** A user who names a topic skips the menus: `plan_module_content` takes
 a `topic` and builds the module that holds it; `read_ph_unit` takes a heading.
 
-**Ad-hoc single-unit script.** `plan_video_transcript` still produces a
-scene-by-scene script for one unit at any duration you ask for. It sits outside the
-guided flow, for when someone wants exactly that rather than a module package.
-
-**Subjects.** Eight across two course types. Each reports exactly what it is
+**Subjects.** Nine across three programmes. Each reports exactly what it is
 waiting for, and the flow offers only the ones it can serve.
 
-| Orientation | Entrepreneur |
-|---|---|
-| ESG — Environmental, Social and Governance | Solar PV ✅ |
-| GHG — Greenhouse Gas | Biofuels ✅ |
-| GL — Green Logistics | Agri-Residue Aggregator |
-| BG — Biogas | Green Hydrogen |
+| Entrepreneur | Orientation | CDR |
+|---|---|---|
+| Solar Photovoltaic ✅ | ESG — Environmental, Social and Governance | CDR Biochar |
+| Bio-Energy (Biofuels) ✅ | GHG — Greenhouse Gas | |
+| Green Hydrogen ✅ | GL — Green Logistics | |
+| Agri-Residue Aggregator ✅ | BG — Biogas | |
 
-**Adding a subject: drop the PDFs in and pick it from the menu.** Put
-`ph.pdf` (and `qp.pdf`, `fg.pdf`, `timing.pdf` for storyboards) into
-`courses/<course_id>/`. Nothing else is required — a handbook that is present but
-not yet indexed shows in the menu as a normal choice and is indexed the first time
-it is picked, which takes a few seconds once. Modules and units are derived from
-the handbook itself, so nothing about its structure is declared in code.
+✅ means a storyboard builds today: four approved documents on disk and a reviewed
+crosswalk. All four Entrepreneur subjects qualify. The Orientation subjects have
+their documents but no reviewed crosswalk yet; CDR's is blocked on its rewritten
+master file (see Known gaps).
 
-If the documents arrive in a folder named differently from the `course_id` — as
-Solar's did, in `courses/solar` rather than `courses/solar-pv` — add that name to
-the course's `directory_aliases` in `src/courses/course-config.ts`. Renaming the
-folder works too, but the folder is the thing that keeps arriving.
+**Adding a subject: drop the PDFs in and pick it from the menu.** Put `ph.pdf`
+(and `qp.pdf`, `fg.pdf`, `timing.pdf` for storyboards) into
+`courses/<track>/<subject>/`, and name that path in the course's `directory` in
+[`src/courses/course-config.ts`](src/courses/course-config.ts). A handbook that is
+present but not yet indexed shows in the menu as a normal choice and is indexed the
+first time it is picked, which takes a few seconds once. Modules and units are
+derived from the handbook itself, so nothing about its structure is declared in
+code.
+
+The folder need not be named for the `course_id` — Solar's documents arrive in
+`courses/entrepreneur/solar` while the course is `solar-pv` — because `directory`
+states the path outright. That is preferred to renaming the folder, because the
+folder is the thing that keeps arriving.
+
+**Templates are per track.** Each track renders to `templates/<track>/`, and the
+template is chosen from the subject rather than passed in, so a course cannot be
+built to another track's document. The Entrepreneur and Orientation templates are
+not interchangeable: Orientation's carries an Instructional Design and Behavioral
+Analytics section that Entrepreneur's does not, and the table of contents is
+derived from whichever template is in use rather than assumed.
 
 Module titles come from the handbook's own chapter headings where it prints them.
 A handbook that jumps straight to its first unit leaves modules titled `Module 3`;
@@ -152,7 +177,7 @@ cp .env.example .env
 Then index the course documents once:
 
 ```bash
-npm run ingest -- biofuels
+npm run ingest -- solar-pv
 ```
 
 ### Add to Antigravity
@@ -211,8 +236,8 @@ stdio.
 |---|---|
 | `create_storyboard_draft` | Skeleton with structure and timing pre-filled |
 | `get_storyboard` / `list_storyboards` | Read state, optionally one module |
-| `set_storyboard_content` | Write content; commits a new version |
-| `set_assessment_content` | Write the assessment blueprint and question bank |
+| `storyboard_next_module` | One whole module to write, with its sources attached once |
+| `storyboard_submit_module` | Write a whole module; commits one version, returns the next |
 | `validate_storyboard` | Three-level mechanical validation |
 | `render_storyboard_docx` | Populate the template and export |
 | `get_storyboard_history` | Versions and change log |
@@ -255,17 +280,6 @@ stdio.
 | `get_module_package` / `list_module_packages` / `get_module_package_history` | Read state and versions |
 | `get_module_units` | The units behind a module — for your orientation, not a user menu |
 
-**Single-unit transcript** (ad-hoc, outside the flow)
-
-| Tool | Purpose |
-|---|---|
-| `plan_video_transcript` | Scene plan: timings, word budgets, per-scene source text |
-| `get_video_transcript_spec` | What to write per scene, and the grounding rules |
-| `submit_video_transcript` | Write the scenes; commits a new version |
-| `validate_video_transcript` | Structure, duration fit, citation scope, grounding |
-| `get_video_transcript` | The copy-ready script text (or `production` / `json` formats) |
-| `list_video_transcripts` / `get_video_transcript_history` | Read back drafts and versions |
-
 **Exact reading**
 
 | Tool | Purpose |
@@ -274,18 +288,31 @@ stdio.
 
 ## Typical flow
 
+Storyboard — three answers from the user, then a loop the client runs alone:
+
+```
+start_flow → flow_choose ×3          (menu → programme → subject; stops there)
+  → create_storyboard_draft           → artifact_id
+  → storyboard_next_module            → WRITE_THIS + one module, sources attached once
+  → loop: storyboard_submit_module    → commits one version, returns the next module
+     until READY_TO_RENDER            (one call per module: 6–10 for a course)
+  → validate_storyboard → render_storyboard_docx → give the user the .docx
+```
+
+The older hand-driven path still works and is what the task loop runs underneath:
+
 ```
 list_courses → ingest_course_documents → get_course_manifest
   → get_timing_allocation → analyze_storyboard_template
   → get_storyboard_field_spec → create_storyboard_draft
-  → per module: search_course_content → set_storyboard_content
+  → per module: search_course_content → storyboard_submit_module
   → validate_storyboard → render_storyboard_docx
 ```
 
 Module content:
 
 ```
-start_flow → flow_choose ×3            (feature → subject → module; stops there)
+start_flow → flow_choose ×3            (menu → subject → module; stops there)
   → plan_module_content                 18 segments + 14 slides, unit by unit
   → get_module_content_spec → get_module_source
   → set_module_story                    the film's constants, before any segment
@@ -302,6 +329,66 @@ Exact reading:
 find_ph_unit → read_ph_unit            returned unchanged; nothing else runs
 ```
 
+## Cost and speed
+
+A storyboard is written by a model over many calls, so what governs how long it
+takes and what it costs is **how many times the client is asked**, not how fast the
+server answers. Every MCP round trip re-sends the tool list and the whole
+conversation so far and buys back one answer, so the number of calls multiplies
+everything.
+
+The build loop was originally one call per row, which for a six-module course was
+130 calls. Measured on Green Hydrogen:
+
+| | per row (before) | per module (now) |
+|---|---|---|
+| Round trips for a 6-module course | 132 | **10** |
+| Tool-result payload | ~300K tokens | **~110K** |
+| Client arguments | ~29K tokens | **~16K** |
+| Source text sent | ~178K tokens | **~70K** |
+| Chunk sends / distinct chunks | 774 / 228 (**3.4× each**, worst 24×) | 293 / 293 (**1.00×**) |
+| Versions written | 130, each rewriting the whole state | **7** |
+| Conversation history re-sent | 130 times, growing | 10 times |
+
+Three things were being paid for repeatedly:
+
+**The asking.** Per-row batching bought a few fields per call. A module is the
+natural batch — it is what the template repeats, what the crosswalk scopes, and
+what one writer can hold in mind at once — so the loop now hands out a whole module
+and takes it back in one call.
+
+**The same source text, again and again.** Sources were retrieved per row, so a
+chunk was re-sent for every row whose wording happened to match it. A module's
+material is now retrieved once, deduplicated, and sent once.
+
+**Re-describing the tools.** 54 tool schemas went out with every one of those 130
+calls. The surface is now 44 tools, and the loop that uses them is 10 calls rather
+than 130.
+
+Server-side work is not the bottleneck and never was — a complete course builds in
+1.3–1.7s of server time — but two things there were genuinely wrong and are fixed:
+
+**Retrieval was scoped after the fact.** The scope was a `WHERE` clause, so SQLite
+matched a query's terms against every chunk of every course, ranked all of them
+with `bm25()`, and only then discarded the out-of-scope 99% — and because a query
+is an OR of its terms, it matched 2494 of 2530 chunks. Cost grew with the whole
+corpus, so indexing a second course slowed retrieval for the first. The scope is
+now carried as indexed tokens inside the FTS index and ANDed into the MATCH, so
+postings lists intersect: **12.4 ms → 1.8 ms**, and independent of how many other
+courses exist.
+
+**A module could not see the end of its own chapter.** Scope listings were capped
+at the search limit of 50, and handbook and guide chunks interleaved, so a module
+whose chapter ran to 145 chunks got the first fifty of a mixed set — the material
+its last units are written from was simply absent. Sources are now budgeted **per
+unit**: every Part A row is a unit and gets its own slice, so coverage is
+guaranteed per row and the total scales with how many units a module has rather
+than with how long its chapter happens to be. A test asserts every row has source
+material about its own unit.
+
+Tuning, if a course needs it: `MODULE_CHUNKS_PER_UNIT` (default 6) and
+`MODULE_CONTEXT_CHUNKS` (default 10) set how much source a module carries.
+
 ## What the server enforces
 
 These are structural, not advisory — the client cannot route around them.
@@ -310,10 +397,71 @@ These are structural, not advisory — the client cannot route around them.
 predicate. There is no code path that returns a chunk from another course, and an
 unregistered `course_id` throws rather than falling back.
 
+The scope is carried *inside* the full-text index rather than applied to its
+output. Each chunk is indexed with opaque tokens naming its course, document,
+chapter, unit and NOS (see
+[`src/documents/scope-tokens.ts`](src/documents/scope-tokens.ts)), and a query
+ANDs the ones it needs into the MATCH expression. As a `WHERE` clause the scope
+could only be applied after the fact: SQLite ranked every chunk of every course —
+a typical query, being an OR of its terms, matched 98% of the corpus — joined each
+one, and then discarded almost all of them. Cost therefore grew with the size of
+the whole corpus, so indexing a second course slowed retrieval for the first.
+Intersecting postings lists instead made a scoped query roughly seven times
+faster, and made it independent of how many other courses are indexed.
+
 **Timing is read-only.** Durations are parsed from the Timing Allocation Document
-and carry a page citation. `set_storyboard_content` cannot write a duration.
+and carry a page citation. The build loop cannot write a duration.
 `modify_storyboard_timing` refuses any value that disagrees with the document and
 explains the conflict.
+
+**Parts B and C are spent out of the module's own time.** They are fixed at 15
+minutes each, so Part A is the module total less half an hour — a three-hour module
+gives Part A 2.5 hours. That is the template's own arithmetic: every Part A heading
+in it reads "(2.5 hours)" under the three-hour modules it states. Handing Part A the
+whole module made its heading disagree with the template and made the three parts
+sum to half an hour more than the module lasts.
+
+**The two tables agree about an activity by construction.** An LMS Technical
+Mapping row's Unit and Activity Type are copied from that unit's Part A row rather
+than written again, because both tables describe the same activity. They are read
+from the state as just written, not from the work order — the work order is computed
+before the call, when Part A is still blank, so taking them from it left the Activity
+Type column empty in every module.
+
+**The table of contents is rebuilt as a field, from the document produced.** The
+template's contents is a live `TOC` field: each entry is a hyperlink to a `_Toc…`
+bookmark, a right-aligned tab with a dot leader, and a `PAGEREF`. Rewriting those
+entries as plain text destroyed all three -- the output carried zero TOC fields, so
+`w:updateFields` had nothing to refresh, no page number or leader could ever appear,
+and the bare run left behind still carried the `Hyperlink` character style, so it
+rendered as blue underlined text. The renderer now discards the template's entries
+and emits one per Heading1 and Heading2 in the finished body, bookmarking each
+heading as it goes. Levels come from the heading styles, so a course with a
+different module count, and the glossary, are carried without a second list to keep
+in step.
+
+The field is written `\o "1-2"`, matching what the template's contents actually
+shows. Its own field instruction says `"1-3"`, which disagrees with its cached
+entries -- there are ten Heading3 question-group headings and none is listed -- so
+refreshing under `"1-3"` would add eleven lines the reference document does not
+have.
+
+**The cover keeps its page break.** It ends with one, in the same paragraph as the
+strapline, and that is what puts the contents on page two. Replacing a paragraph's
+text discarded every run in it, the page break included, so the contents rode up
+onto the cover. `setParagraphText` now carries page-break runs across the rewrite.
+
+**Every storyboard closes with a glossary.** Terms and abbreviations are gathered a
+module at a time, from the sources that use them, so each carries that module's
+citations; the renderer merges them into one Glossary of Terms and Abbreviations,
+deduplicated by term and sorted alphabetically, and lists it in the contents.
+
+**One folder per subject, holding one document.** A render writes
+`artifacts/<course_id>/<course_id>-storyboard.docx` and removes any earlier render
+beside it. Version history stays in the database, which is where it is queryable;
+what is on disk is the deliverable, and there is exactly one of it. Naming the
+folder for the artifact and the file for the version meant every draft made a new
+directory and every render added a file.
 
 **The module crosswalk.** The source documents disagree about module numbering.
 The client-authored timing document renumbers the SCGJ chapters:
@@ -474,15 +622,28 @@ citing it. It cannot judge whether a sentence is a fair paraphrase — that
 assessment belongs to the client, and `low_grounding_overlap` is reported as a
 warning rather than an error to reflect that.
 
-**Table of contents page numbers.** The template's TOC is a Word field. Entry text
-is regenerated and `w:updateFields` is set, so Word refreshes page numbers when the
-document is opened. Page numbers cannot be computed without a layout engine.
+**Table of contents page numbers appear when Word opens the file.** The contents is
+a real `TOC` field with a `PAGEREF` per entry, and `w:updateFields` asks Word to
+resolve them on open, which it does. They cannot be computed here -- that needs a
+layout engine -- so each `PAGEREF` ships with an empty cached result. A simple
+viewer that renders cached field results rather than resolving them shows the
+entries and their dot leaders with the numbers blank until the document has been
+opened in Word once.
 
-**One course has documents.** All eight subjects are registered; only `biofuels`
-has PDFs. The video and reading flows need only that subject's `ph.pdf`; a
-storyboard needs all four documents plus a reviewed crosswalk and chapter-title map
-in [`src/courses/course-config.ts`](src/courses/course-config.ts), which is left
-empty for the seven pending subjects rather than guessed at.
+**Orientation has documents but no crosswalk.** All four Orientation subjects have
+their PDFs on disk, so the video and reading flows serve them today. A storyboard
+additionally needs a reviewed crosswalk and chapter-title map in
+[`src/courses/course-config.ts`](src/courses/course-config.ts), which is left empty
+for them rather than guessed at: an inferred crosswalk produces a storyboard about
+the wrong chapter under citations that look valid. The storyboard menu lists them
+and says so.
+
+**CDR's master file has been rewritten.** `courses/cdr-biochar/master.docx` now
+declares five modules rather than seven, states each duration on the line after the
+module heading rather than on it, and names its reference documents by their
+on-disk filenames. `src/cdr/master-file.ts` still expects the previous shape and
+finds no module headings at all, so the CDR track cannot build and its generation
+tests are skipped with that reason. Nothing else depends on it.
 
 **Video pace is one number.** Read time is estimated at a single words-per-minute
 figure (140 by default, overridable per plan). It does not model pauses, B-roll,
@@ -493,7 +654,7 @@ not a stopwatch.
 
 ```bash
 npm run typecheck
-npm test                       # 93 tests
+npm test                       # 118 tests
 npm run flow                   # walk the guided flow by hand in the terminal
 npm run verify-pptx -- <file>   # open a generated deck in the real PowerPoint
 npm run flow -- "<heading>"    # the shortcut flow, from a unit heading
@@ -518,11 +679,11 @@ src/
   mcp/server.ts          stdio MCP server
   mcp/tools/index.ts     the registry: assembles the lists below and dispatches
   mcp/tools/flow.ts      start_flow, flow_choose, get_flow -- the entry point
-  mcp/tools/module.ts    feature 1, the 13 module content package tools
-  mcp/tools/storyboard.ts  feature 2, the 21 storyboard tools
+  mcp/tools/module.ts    feature 2, the module content package tools (video + deck)
+  mcp/tools/storyboard.ts  feature 1, the storyboard's course, timing and render tools
+  mcp/tools/storyboard-build.ts  feature 1's build loop: one module out, one back
   mcp/tools/reading.ts   feature 3, read_ph_unit
-  mcp/tools/catalog.ts   handbook navigation shared by features 1 and 3
-  mcp/tools/transcript.ts  the single-unit script, outside the guided flow
+  mcp/tools/catalog.ts   handbook navigation shared by features 2 and 3
   catalog/               course types, subjects, and their readiness
   courses/               course registry, crosswalk, chapter titles
   documents/             PDF extraction, chunking, ingestion, BM25 retrieval
@@ -531,11 +692,13 @@ src/
   flow/                  the guided step machine, persisted per session
   timing/                timing parser and arithmetic validator
   docx/                  OOXML helpers, template analyzer, renderer
-  storyboard/            skeleton builder, three-level validator
-  video/                 module + scene planning, story beats, continuity, stores
+  storyboard/            skeleton builder, module work order, three-level validator
+  video/                 module planning, story beats, continuity, package store
   pptx/                  PowerPoint writer, design system, diagrams, package validator
   storage/               SQLite schema, artifact and version store
-courses/biofuels/        qp.pdf ph.pdf fg.pdf timing.pdf
-templates/               storyboard-template-v1.docx
-artifacts/               generated .docx by artifact and version
+courses/<track>/<subject>/   qp.pdf ph.pdf fg.pdf timing.pdf
+templates/<track>/           that track's storyboard template
+scripts/timing/              author a Timing Allocation Document for a new course
+scripts/cdr/                 regenerate the CDR course definitions from a master file
+artifacts/<course_id>/       the finished storyboard, one document per subject
 ```

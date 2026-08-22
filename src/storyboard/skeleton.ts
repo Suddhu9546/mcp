@@ -5,7 +5,7 @@
  * The skeleton fixes module count, module and unit durations, unit codes and
  * titles, row and slide counts, correlation NOS codes, and the source chapter each
  * module must draw from. Content fields are left empty for the client to fill via
- * `set_storyboard_content`.
+ * the build loop.
  *
  * This is the division of labour: the tool layer decides *structure*, because
  * structure is derivable from the approved documents and the template. The client
@@ -216,11 +216,13 @@ function buildFrontMatter(course: CourseConfig, allocation: TimingAllocation, ti
   return {
     title: course.name,
     subtitle: course.subtitle,
-    strapline: `Official SCGJ Metadata Curriculum Storyboard & Assessment StrategyNSQF Level ${course.nsqf_level} | Micro-credential Reference: ${course.qp_code}`,
+    // Two lines, as the template's cover has them: the newline becomes a <w:br/>.
+    // Run together they read "...Assessment StrategyNSQF Level 4 | ...".
+    strapline:
+      'Official Curriculum Storyboard & Assessment Strategy\n' +
+      `NSQF Level ${course.nsqf_level} | Micro-credential Reference: ${course.qp_code}`,
     blueprint_heading: `${course.name}: Storyboard & Curriculum Blueprint`,
     metadata,
-    guideline_groups: ['1. xAPI Event Stream Configuration', '2. SCORM State Variable Persistence'],
-    guidelines: [],
   };
 }
 
@@ -236,11 +238,14 @@ export interface BuildSkeletonOptions {
 export function buildSkeleton(options: BuildSkeletonOptions): StoryboardState {
   const { courseId, allocation, templateVersion } = options;
   const course = getCourseConfig(courseId);
-  // CDR courses treat Parts B and C as consuming 30 minutes of the module's
-  // curriculum time, so the default carves that budget from Part A.
-  // Qualification courses keep Part A verbatim by default.
-  const defaultStrategy: TimingStrategy = course.kind === 'cdr' ? 'part_a_minus_30' : 'part_a_verbatim';
-  const strategy = options.timingStrategy ?? defaultStrategy;
+  // Parts B and C are fixed at 15 minutes each and are spent out of the module's
+  // own curriculum time, so Part A gets the module total less thirty minutes. That
+  // is the template's own arithmetic, not a preference: every Part A heading in it
+  // reads "(2.5 hours)" under a three-hour module, and the module durations it
+  // states are three hours. Handing Part A the whole module made its heading
+  // disagree with the template and made the parts sum to half an hour more than
+  // the module lasts.
+  const strategy: TimingStrategy = options.timingStrategy ?? 'part_a_minus_30';
 
   const wanted = options.modules;
   const timingModules = wanted
@@ -328,7 +333,7 @@ export function buildSkeleton(options: BuildSkeletonOptions): StoryboardState {
       message:
         'The assessment blueprint has not been populated yet. Retrieve the QP assessment ' +
         'weightage table and the per-module source content, then submit it via ' +
-        'set_storyboard_content with section "assessment".',
+        'the build loop, one module at a time.',
     },
   };
 }

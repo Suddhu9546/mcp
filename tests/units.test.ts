@@ -11,7 +11,7 @@ import { chunkDocument } from '../src/documents/chunker.js';
 import { toMatchExpression } from '../src/documents/retriever.js';
 import { groundingOverlap } from '../src/storyboard/validator.js';
 import { setParagraphText, parseXml, textOf, W, descendants } from '../src/docx/ooxml.js';
-import { courseDir, getCourseConfig } from '../src/courses/course-config.js';
+import { courseDir, getCourseConfig, listCourses } from '../src/courses/course-config.js';
 import { parseTimingDocument } from '../src/timing/timing-parser.js';
 import { withValidatedArithmetic } from '../src/timing/timing-validator.js';
 import type { OffsetMappedText } from '../src/documents/pdf-extractor.js';
@@ -208,20 +208,32 @@ describe('course directory resolution', () => {
   const asPosix = (p: string) => p.split(path.sep).join('/');
 
   it('finds documents delivered in a folder named differently from the course_id', () => {
-    // Solar's PDFs arrived in courses/solar, but the course is registered as
-    // solar-pv. Without the alias the course reports "no documents supplied"
+    // Solar's PDFs arrived in a folder named for the subject, not the course_id.
+    // Without the declared directory the course reports "no documents supplied"
     // while the files sit next to it.
-    expect(getCourseConfig('solar-pv').directory_aliases).toContain('solar');
-    expect(asPosix(courseDir('solar-pv')).endsWith('/courses/solar')).toBe(true);
+    expect(getCourseConfig('solar-pv').directory).toBe('entrepreneur/solar');
+    expect(asPosix(courseDir('solar-pv')).endsWith('/courses/entrepreneur/solar')).toBe(true);
   });
 
-  it('uses the course_id directory when it exists', () => {
-    expect(asPosix(courseDir('biofuels')).endsWith('/courses/biofuels')).toBe(true);
+  it('files each course under its own track', () => {
+    expect(asPosix(courseDir('biofuels')).endsWith('/courses/entrepreneur/biofuels')).toBe(true);
+    expect(asPosix(courseDir('green-hydrogen')).endsWith('/courses/entrepreneur/green-hydrogen')).toBe(
+      true,
+    );
+    expect(asPosix(courseDir('cdr-biochar')).endsWith('/courses/cdr-biochar')).toBe(true);
   });
 
-  it('names the canonical location when nothing is on disk', () => {
-    // The "supply the documents here" message must not point at an alias.
-    expect(asPosix(courseDir('green-hydrogen')).endsWith('/courses/green-hydrogen')).toBe(true);
+  it('names the declared location when nothing is on disk', () => {
+    // The "supply the documents here" message must name the canonical path, not
+    // a legacy fallback that happens to exist.
+    expect(asPosix(courseDir('esg')).endsWith('/courses/orientation/esg-fundamentals')).toBe(true);
+  });
+
+  it('gives every registered course a track and a directory', () => {
+    for (const course of listCourses()) {
+      expect(course.track, course.course_id).toBeTruthy();
+      expect(course.directory, course.course_id).toBeTruthy();
+    }
   });
 });
 

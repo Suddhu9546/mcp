@@ -1,4 +1,5 @@
 import { config as loadDotenv } from 'dotenv';
+import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
 loadDotenv();
@@ -43,10 +44,34 @@ export const config = {
   search: {
     defaultLimit: num('SEARCH_DEFAULT_LIMIT', 8),
     maxLimit: num('SEARCH_MAX_LIMIT', 50),
+    /**
+     * Chunks attached to one module's work order, per unit of that module.
+     *
+     * A Part A row is a unit and is written about that unit, so each unit gets its
+     * own slice: coverage is then guaranteed per row, and the total scales with how
+     * many units a module has rather than with how long its chapter is.
+     */
+    moduleChunksPerUnit: num('MODULE_CHUNKS_PER_UNIT', 6),
+    /**
+     * Extra chunks of module-wide context, on top of the per-unit slices.
+     *
+     * The chapter's opening pages and the Facilitator Guide's notes carry no unit
+     * code, and they are what Part A activities and Part C scripts draw on.
+     */
+    moduleContextChunks: num('MODULE_CONTEXT_CHUNKS', 10),
+    maxScopeChunks: num('MAX_SCOPE_CHUNKS', 400),
   },
   assessment: {
     // The reference template runs ten questions per module.
     questionsPerModule: num('ASSESSMENT_QUESTIONS_PER_MODULE', 10),
+    /**
+     * Glossary lines each module contributes.
+     *
+     * The glossary is one list at the end of the document, but it is gathered a
+     * module at a time so every term is written from the sources that use it. Six
+     * modules at eight terms each is a glossary of around fifty, less duplicates.
+     */
+    glossaryTermsPerModule: num('GLOSSARY_TERMS_PER_MODULE', 8),
   },
   grounding: {
     minOverlap: num('GROUNDING_MIN_OVERLAP', 0.35),
@@ -66,6 +91,36 @@ export function coursesRoot(): string {
   return config.paths.courses;
 }
 
-export function templateFile(version = 'v1'): string {
-  return path.join(config.paths.templates, `storyboard-template-${version}.docx`);
+/**
+ * The storyboard template for a track.
+ *
+ * Each track has its own template directory, because the three tracks' documents
+ * genuinely differ -- the Entrepreneur template carries no Instructional Design
+ * guidelines section, for instance -- and rendering one to another's template
+ * would change the document's structure, not just its wording.
+ *
+ * The directory is read rather than a fixed filename, so a template can be
+ * dropped in under whatever name it arrives with. Exactly one .docx per directory
+ * is expected; more than one is ambiguous and is refused rather than guessed at.
+ */
+export function templateFile(track: string): string {
+  const dir = path.join(config.paths.templates, track);
+  if (!existsSync(dir)) {
+    throw new Error(
+      `No storyboard template directory for track "${track}". Expected ${dir} holding one .docx.`,
+    );
+  }
+  const candidates = readdirSync(dir).filter(
+    (f) => f.toLowerCase().endsWith('.docx') && !f.startsWith('~$'),
+  );
+  const exact = candidates.find((f) => f === 'storyboard-template.docx');
+  if (exact) return path.join(dir, exact);
+  if (candidates.length === 1) return path.join(dir, candidates[0]!);
+  if (candidates.length === 0) {
+    throw new Error(`No .docx storyboard template in ${dir}. Place the track's template there.`);
+  }
+  throw new Error(
+    `${dir} holds ${candidates.length} .docx files (${candidates.join(', ')}), so the template ` +
+      'is ambiguous. Keep one, or name the intended one storyboard-template.docx.',
+  );
 }

@@ -16,16 +16,20 @@
 
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { courseDir, getCourseConfig, listCourseIds } from '../courses/course-config.js';
+import { TRACK_LABELS, courseDir, getCourseConfig, listCourseIds } from '../courses/course-config.js';
+import type { CourseTrack } from '../courses/course-config.js';
 import { getCourseDocumentStatus } from '../documents/ingest.js';
 
-export const COURSE_TRACKS = ['orientation', 'entrepreneur'] as const;
-export type CourseTrack = (typeof COURSE_TRACKS)[number];
+export { TRACK_LABELS };
+export type { CourseTrack };
 
-export const TRACK_LABELS: Record<CourseTrack, string> = {
-  orientation: 'Orientation',
-  entrepreneur: 'Entrepreneur',
-};
+/**
+ * The tracks that hold handbook subjects.
+ *
+ * CDR is a track but has no Participant Handbook, so it appears in no subject
+ * list: its courses reach the storyboard flow through the CDR catalogue instead.
+ */
+export const COURSE_TRACKS = ['entrepreneur', 'orientation'] as const;
 
 export interface SubjectEntry {
   /** Stable slug used in tool arguments, e.g. "esg". */

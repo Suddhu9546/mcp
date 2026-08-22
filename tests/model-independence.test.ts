@@ -15,6 +15,7 @@
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { runTool } from '../src/mcp/tools/index.js';
+import { buildStoryboard } from './helpers/build-storyboard.js';
 
 const COURSE = 'biofuels';
 
@@ -33,133 +34,114 @@ describe('model independence', () => {
   }, 300_000);
 
   it('builds a complete, valid storyboard from a client that only follows next_call', async () => {
-    // --- the two questions the user answers -------------------------------
+    // --- the three questions the user answers ------------------------------
     const menu = await call('start_flow');
     expect(menu.options.map((o: any) => o.value)).toContain('storyboard');
 
     let step = await call('flow_choose', { session_id: menu.session_id, choice: 'storyboard' });
+    step = await call('flow_choose', { session_id: menu.session_id, choice: 'entrepreneur' });
     step = await call('flow_choose', { session_id: menu.session_id, choice: COURSE });
     expect(step.step).toBe('storyboard_ready');
     expect(step.done).toBe(true);
 
     // --- everything after this point is the server's job ------------------
-    const draft = await call('create_storyboard_draft', { course_id: step.data.course_id });
-    expect(draft.next_call.tool).toBe('storyboard_next_task');
+    const built = await buildStoryboard(call, step.data.course_id);
 
-    let res = await call(draft.next_call.tool, draft.next_call.args);
-    let submits = 0;
-    const seen = new Set<string>();
+    // One call per module, plus the first next_module. The whole point of the
+    // module loop is the call count: a regression to per-row batching would still
+    // produce a valid document, just slowly and expensively, and nothing else
+    // here would notice.
+    expect(built.calls).toBe(built.modules + 1);
+    expect(built.modules).toBeLessThanOrEqual(10);
 
-    while (res.status === 'WRITE_THIS') {
-      const task = res.task;
-
-      // Every task must arrive ready to answer: sources attached, fields named.
-      expect(task.sources.length, `task ${task.task_id} has no sources`).toBeGreaterThan(0);
-      expect(task.fields.length).toBeGreaterThan(0);
-      expect(seen.has(task.task_id), `task ${task.task_id} was handed out twice`).toBe(false);
-      seen.add(task.task_id);
-
-      const source = task.sources[0];
-      const sentence = source.text.replace(/\s+/g, ' ').slice(0, 200);
-      const args: Record<string, unknown> = {
-        artifact_id: draft.artifact_id,
-        task_id: task.task_id,
-      };
-
-      if (task.section === 'lms_mapping') {
-        // The row count comes from the task, not from the client's judgement.
-        expect(task.expected_rows.length).toBeGreaterThan(0);
-        args.lms_rows = task.expected_rows.map((r: any) => ({
-          unit_range: r.unit_range,
-          activity_type: r.activity_type,
-          recommended_standard: 'xAPI',
-          tracking: `Completion and score verbs for ${r.unit_range}.`,
-          completion_criteria: sentence,
-          chunk_ids: [source.chunk_id],
-        }));
-      } else if (task.section === 'assessment') {
-        args.questions = Array.from({ length: 10 }, (_, i) => ({
-          stem: `Question ${i + 1} on ${task.module_title}?`,
-          options: { a: 'First', b: 'Second', c: 'Third', d: 'Fourth' },
-          correct_option: 'a',
-          explanation: sentence,
-          chunk_ids: [source.chunk_id],
-        }));
-      } else {
-        args.entries = task.fields.map((f: any) => ({
-          field_id: f.field_id,
-          text: `${f.label}: ${sentence}`,
-          ...(f.requires_citation ? { chunk_ids: [source.chunk_id] } : {}),
-        }));
-      }
-
-      const before = res.progress.tasks_done;
-      res = await call('storyboard_submit_task', args);
-      submits++;
-
-      expect(res.__isError, `submit failed on ${task.task_id}: ${res.message}`).toBe(false);
-      // The queue must always shrink, or a loop like this never terminates.
-      expect(res.progress.tasks_done, `no progress after ${task.task_id}`).toBeGreaterThan(before);
-      expect(submits).toBeLessThan(400); // a runaway queue is a failure, not a slow pass
-    }
-
-    expect(res.status).toBe('READY_TO_RENDER');
-    expect(res.progress.fields_remaining).toBe(0);
-    expect(res.progress.percent_complete).toBe(100);
+    expect(built.final.status).toBe('READY_TO_RENDER');
+    expect(built.final.progress.fields_remaining).toBe(0);
+    expect(built.final.progress.percent_complete).toBe(100);
 
     // --- and it is genuinely valid, not merely finished --------------------
-    const report = await call(res.next_call.tool, res.next_call.args);
+    const report = await call(built.final.next_call.tool, built.final.next_call.args);
     expect(report.summary.errors, JSON.stringify(report.levels.content.findings.slice(0, 3))).toBe(0);
     expect(report.passed).toBe(true);
 
-    const rendered = await call('render_storyboard_docx', { artifact_id: draft.artifact_id });
+    const rendered = await call('render_storyboard_docx', { artifact_id: built.artifactId });
     expect(rendered.__isError).toBe(false);
     expect(rendered.validation_passed).toBe(true);
     expect(rendered.docx_path).toMatch(/\.docx$/);
     expect(rendered.bytes).toBeGreaterThan(20_000);
   }, 600_000);
 
-  it('refuses a citation the task did not offer, so scope cannot be widened', async () => {
+  it('refuses a citation the work order did not offer, so scope cannot be widened', async () => {
     const draft = await call('create_storyboard_draft', { course_id: COURSE });
-    const first = await call('storyboard_next_task', { artifact_id: draft.artifact_id });
-    const task = first.task;
+    const first = await call('storyboard_next_module', { artifact_id: draft.artifact_id });
 
-    const rejected = await call('storyboard_submit_task', {
+    const rejected = await call('storyboard_submit_module', {
       artifact_id: draft.artifact_id,
-      task_id: task.task_id,
-      entries: task.fields.map((f: any) => ({
-        field_id: f.field_id,
-        text: 'Some text.',
-        ...(f.requires_citation ? { chunk_ids: ['not-a-real-chunk'] } : {}),
+      module: first.module.number,
+      part_a: first.module.part_a.map((s: any) => ({
+        row_id: s.row_id,
+        interactive_description: 'Some text.',
+        chunk_ids: ['not-a-real-chunk'],
       })),
     });
     expect(rejected.__isError).toBe(true);
+    expect(JSON.stringify(rejected.detail)).toMatch(/not in module.sources/);
 
-    // Nothing was committed, so the same task is still the one to answer.
-    const again = await call('storyboard_next_task', { artifact_id: draft.artifact_id });
-    expect(again.task.task_id).toBe(task.task_id);
+    // Nothing was committed, so the same module is still the one to answer.
+    const again = await call('storyboard_next_module', { artifact_id: draft.artifact_id });
+    expect(again.module.number).toBe(first.module.number);
+    expect(again.module.part_a.length).toBe(first.module.part_a.length);
   }, 120_000);
 
-  it('rejects a stale task_id rather than writing into the wrong row', async () => {
+  it('rejects a module that is not the current one rather than writing elsewhere', async () => {
     const draft = await call('create_storyboard_draft', { course_id: COURSE });
-    const first = await call('storyboard_next_task', { artifact_id: draft.artifact_id });
+    const first = await call('storyboard_next_module', { artifact_id: draft.artifact_id });
 
-    const wrong = await call('storyboard_submit_task', {
+    const wrong = await call('storyboard_submit_module', {
       artifact_id: draft.artifact_id,
-      task_id: 'nonsense:task:id',
-      entries: [{ field_id: first.task.fields[0].field_id, text: 'x' }],
+      module: 99,
+      description: 'x',
+      description_chunk_ids: [first.module.sources[0].chunk_id],
     });
     expect(wrong.__isError).toBe(true);
-    expect(wrong.message).toMatch(/is not the current task/);
-    expect(wrong.detail.current_task_id).toBe(first.task.task_id);
+    expect(wrong.message).toMatch(/is not the module being built/);
+    expect(wrong.detail.current_module).toBe(first.module.number);
+  }, 120_000);
+
+  it('commits a partial submission and asks only for what is still blank', async () => {
+    // A reply carrying a whole module can be truncated. When that happens the
+    // work already written must survive, or every truncation costs a module.
+    const draft = await call('create_storyboard_draft', { course_id: COURSE });
+    const first = await call('storyboard_next_module', { artifact_id: draft.artifact_id });
+    const module = first.module;
+    const chunk = module.sources[0].chunk_id;
+
+    const partial = await call('storyboard_submit_module', {
+      artifact_id: draft.artifact_id,
+      module: module.number,
+      part_a: module.part_a.map((s: any) => ({
+        row_id: s.row_id,
+        activity_name: 'Guided Simulation',
+        interactive_description: 'What the learner does here.',
+        correlation: 'PC1',
+        chunk_ids: [chunk],
+      })),
+    });
+    expect(partial.__isError, partial.message).toBe(false);
+
+    // Same module, Part A now settled, everything else still outstanding.
+    expect(partial.status).toBe('WRITE_THIS');
+    expect(partial.module.number).toBe(module.number);
+    expect(partial.module.part_a).toHaveLength(0);
+    expect(partial.module.part_c.length).toBe(module.part_c.length);
+    expect(partial.module.questions_needed).toBe(module.questions_needed);
   }, 120_000);
 
   it('skips a module the sources cannot support instead of offering it as work', async () => {
     // Biofuels module 8 is Employability Skills, which the supplied documents do
-    // not contain. It must never appear in the queue.
+    // not contain. It must never appear in the loop.
     const draft = await call('create_storyboard_draft', { course_id: COURSE });
-    const first = await call('storyboard_next_task', { artifact_id: draft.artifact_id });
-    expect(first.task.module).toBe(1);
+    const first = await call('storyboard_next_module', { artifact_id: draft.artifact_id });
+    expect(first.module.number).toBe(1);
 
     const m8 = draft.modules.find((m: any) => m.number === 8);
     expect(m8.insufficient_source).toBe(true);
@@ -167,48 +149,13 @@ describe('model independence', () => {
 
   it('drives the same loop for Solar, whose crosswalk and unit counts differ', async () => {
     await call('ingest_course_documents', { course_id: 'solar-pv' });
-    const draft = await call('create_storyboard_draft', { course_id: 'solar-pv' });
-    expect(draft.module_count).toBe(10);
+    const built = await buildStoryboard(call, 'solar-pv');
 
-    let res = await call('storyboard_next_task', { artifact_id: draft.artifact_id });
-    let submits = 0;
-    while (res.status === 'WRITE_THIS' && submits < 400) {
-      const task = res.task;
-      expect(task.sources.length, `task ${task.task_id} has no sources`).toBeGreaterThan(0);
-      const source = task.sources[0];
-      const sentence = source.text.replace(/\s+/g, ' ').slice(0, 200);
-      const args: Record<string, unknown> = { artifact_id: draft.artifact_id, task_id: task.task_id };
-      if (task.section === 'lms_mapping') {
-        args.lms_rows = task.expected_rows.map((r: any) => ({
-          unit_range: r.unit_range,
-          activity_type: r.activity_type,
-          recommended_standard: 'xAPI',
-          tracking: `Verbs for ${r.unit_range}.`,
-          completion_criteria: sentence,
-          chunk_ids: [source.chunk_id],
-        }));
-      } else if (task.section === 'assessment') {
-        args.questions = Array.from({ length: 10 }, (_, i) => ({
-          stem: `Question ${i + 1} on ${task.module_title}?`,
-          options: { a: 'First', b: 'Second', c: 'Third', d: 'Fourth' },
-          correct_option: 'a',
-          explanation: sentence,
-          chunk_ids: [source.chunk_id],
-        }));
-      } else {
-        args.entries = task.fields.map((f: any) => ({
-          field_id: f.field_id,
-          text: `${f.label}: ${sentence}`,
-          ...(f.requires_citation ? { chunk_ids: [source.chunk_id] } : {}),
-        }));
-      }
-      res = await call('storyboard_submit_task', args);
-      expect(res.__isError, `submit failed: ${res.message}`).toBe(false);
-      submits++;
-    }
+    expect(built.modules).toBe(10);
+    expect(built.calls).toBe(11);
+    expect(built.final.status).toBe('READY_TO_RENDER');
 
-    expect(res.status).toBe('READY_TO_RENDER');
-    const rendered = await call('render_storyboard_docx', { artifact_id: draft.artifact_id });
+    const rendered = await call('render_storyboard_docx', { artifact_id: built.artifactId });
     expect(rendered.validation_passed).toBe(true);
     expect(rendered.docx_path).toMatch(/\.docx$/);
   }, 600_000);

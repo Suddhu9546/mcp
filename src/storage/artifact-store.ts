@@ -6,7 +6,7 @@
  * always recoverable.
  */
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { StoryboardState, StoryboardTarget } from '../types/storyboard.js';
 import type { SourceRef } from '../types/source.js';
@@ -216,10 +216,32 @@ export function commitVersion(input: CommitInput): { version: number; artifact: 
 }
 
 /** Records the rendered .docx for a version. */
+/**
+ * Writes the rendered storyboard to disk and records it against the version.
+ *
+ * One folder per course, holding one file: the storyboard as it currently stands.
+ * Previously the folder was named for the artifact and the file for the version,
+ * so every draft of a course made a new folder and every render added a file --
+ * a subject rebuilt a few times left a dozen directories, and picking the finished
+ * document out of them meant knowing which artifact id and which version number
+ * were the real ones.
+ *
+ * The version history is unaffected: it lives in the database, which is where it
+ * is queryable. What is on disk is the deliverable, and there is exactly one of it.
+ */
 export function attachDocx(artifactId: string, version: number, bytes: Uint8Array): string {
-  const dir = path.join(config.paths.artifacts, artifactId);
+  const { course_id } = getArtifact(artifactId);
+  const dir = path.join(config.paths.artifacts, course_id);
   mkdirSync(dir, { recursive: true });
-  const file = path.join(dir, `${artifactId}-v${version}.docx`);
+  const file = path.join(dir, `${course_id}-storyboard.docx`);
+
+  // Renders of the same course under older naming, and any stale per-version
+  // files, are removed so the folder never holds two candidate documents.
+  for (const stale of readdirSync(dir)) {
+    const full = path.join(dir, stale);
+    if (full !== file && stale.toLowerCase().endsWith('.docx')) rmSync(full, { force: true });
+  }
+
   writeFileSync(file, bytes);
   getDb()
     .prepare('UPDATE storyboard_versions SET docx_path = ? WHERE artifact_id = ? AND version = ?')

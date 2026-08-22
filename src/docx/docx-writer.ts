@@ -26,10 +26,12 @@ import {
   bodyBlocks,
   childElements,
   descendants,
+  firstChild,
   paragraphStyle,
   parseXml,
   serializeXml,
   setCellParagraphs,
+  setParagraphStyle,
   setParagraphText,
   tableRows,
   textOf,
@@ -265,53 +267,217 @@ function renderMetadataTable(table: Element, state: StoryboardState): void {
 }
 
 /**
- * Rewrites the cached table-of-contents entries.
+ * The table of contents, rebuilt as a real Word field.
  *
- * Page numbers are dropped rather than guessed: `w:updateFields` is set in
- * settings.xml so Word recomputes the whole TOC, including page numbers, when the
- * document is opened.
+ * The template's TOC is a live `TOC` field: an opening `fldChar`, the field
+ * instruction, and then one paragraph per entry, each carrying a hyperlink to a
+ * `_Toc…` bookmark, a right-aligned tab with a dot leader, and a `PAGEREF` field
+ * holding the page number. That structure is the whole of how it looks -- the dots
+ * and the numbers are the tab and the PAGEREF, not text.
+ *
+ * Rewriting the entries as plain text destroyed all of it. `sanitizeClone` strips
+ * `fldChar`/`instrText` runs to stop cloned module headings repeating the
+ * template's bookmarks, and applied to a TOC paragraph that also removes the field
+ * itself: the output had zero TOC fields, so `w:updateFields` had nothing to
+ * refresh, no page numbers could ever appear, and what was left -- a bare run
+ * still carrying the `Hyperlink` character style -- rendered as blue underlined
+ * text with no leaders.
+ *
+ * So the TOC is not edited, it is rebuilt, and from the document that was actually
+ * produced rather than from a second list of what it should contain. Every
+ * Heading1 and Heading2 in the finished body gets a fresh bookmark, and one entry
+ * is emitted per heading in document order. Levels come from the heading styles,
+ * so the glossary, a module count that differs from the template's, and anything
+ * else added later are all carried without further bookkeeping.
+ *
+ * Page numbers still cannot be computed here -- that needs a layout engine -- so
+ * each PAGEREF caches an empty result and `w:updateFields` asks Word to resolve
+ * them when the document is opened. Word fills in every number and leader on open;
+ * a simple viewer that renders the cached field result shows the entries and their
+ * leaders with the numbers blank.
  */
-function renderToc(blocks: readonly Element[], state: StoryboardState): void {
-  const tocParagraphs = blocks.filter((b) => {
-    const style = b.localName === 'p' ? paragraphStyle(b) : '';
-    return style === 'TOC1' || style === 'TOC2';
-  });
 
-  const entries: { level: 1 | 2; text: string }[] = [
-    { level: 1, text: 'Table of Contents' },
-    { level: 1, text: state.front_matter.blueprint_heading },
-    { level: 2, text: 'Official SCGJ Metadata' },
-    { level: 1, text: 'Instructional Design and Behavioral Analytics Tracking Guidelines' },
-    ...state.front_matter.guideline_groups.map((g) => ({ level: 2 as const, text: g })),
-  ];
+/** Levels the field publishes. See the note in `rebuildToc` about "1-2". */
+const TOC_FIELD_INSTRUCTION = 'TOC \\o "1-2" \\h \\z \\u';
 
-  for (const module of state.modules) {
-    entries.push({ level: 1, text: `Module ${module.number}: ${module.title}` });
-    if (isInsufficientSource(module.part_a)) continue;
-    entries.push({ level: 2, text: module.part_a.header_label.replace(/^Part A: /, 'Part A: ') });
-    entries.push({ level: 2, text: `LMS Technical Mapping for Module ${module.number}` });
-    entries.push({ level: 2, text: 'Part B: Video Production Script (15 minutes)' });
-    entries.push({ level: 2, text: 'Part C: Online Instructor-Led Interactive Session (15 minutes)' });
-  }
+/** Creates a `w:`-prefixed element with optional attributes. */
+function wEl(doc: Document, name: string, attrs: Record<string, string> = {}): Element {
+  const el = doc.createElementNS(W, `w:${name}`);
+  for (const [key, value] of Object.entries(attrs)) el.setAttribute(key, value);
+  return el;
+}
 
-  if (!isInsufficientSource(state.assessment)) {
-    const count = state.assessment.questions.length;
-    entries.push({ level: 1, text: `Advanced Assessment Strategy Blueprint & ${count}-Question Bank` });
-    entries.push({ level: 2, text: 'Assessment Strategy' });
-    entries.push({ level: 2, text: `${count}-Question Bank (Full Student Version)` });
-  }
+/** A run carrying the given children, under optional run properties. */
+function wRun(doc: Document, children: readonly Element[], rPr?: Element): Element {
+  const run = wEl(doc, 'r');
+  if (rPr) run.appendChild(rPr);
+  for (const child of children) run.appendChild(child);
+  return run;
+}
 
-  // Reuse as many TOC paragraphs as there are entries; strip any surplus, and
-  // accept a shortfall rather than inventing differently-styled paragraphs --
-  // Word rebuilds the field on open regardless.
-  tocParagraphs.forEach((p, i) => {
-    const entry = entries[i];
-    if (entry) {
-      sanitizeClone(p);
-      setParagraphText(p, entry.text);
-    } else {
-      p.parentNode?.removeChild(p);
+/** `<w:rPr><w:noProof/><w:webHidden/></w:rPr>` -- the field runs' properties. */
+function hiddenRunProps(doc: Document): Element {
+  const rPr = wEl(doc, 'rPr');
+  rPr.appendChild(wEl(doc, 'noProof'));
+  rPr.appendChild(wEl(doc, 'webHidden'));
+  return rPr;
+}
+
+function wText(doc: Document, text: string): Element {
+  const t = wEl(doc, 't');
+  t.setAttribute('xml:space', 'preserve');
+  t.appendChild(doc.createTextNode(text));
+  return t;
+}
+
+function wInstr(doc: Document, text: string): Element {
+  const t = wEl(doc, 'instrText');
+  t.setAttribute('xml:space', 'preserve');
+  t.appendChild(doc.createTextNode(text));
+  return t;
+}
+
+/**
+ * Removes every bookmark in the body.
+ *
+ * The template's own `_Toc…` names are about to be reissued, and a document
+ * carrying two bookmarks of one name is invalid OOXML that makes Word offer to
+ * repair the file. Clearing first means the names emitted below are the only ones.
+ */
+function stripBookmarks(doc: Document): void {
+  for (const name of ['bookmarkStart', 'bookmarkEnd'] as const) {
+    for (const node of [...descendants(doc.documentElement as Element, name)]) {
+      node.parentNode?.removeChild(node);
     }
+  }
+}
+
+interface TocTarget {
+  level: 1 | 2;
+  text: string;
+  bookmark: string;
+}
+
+/**
+ * Bookmarks every heading the contents will list, in document order.
+ *
+ * Only Heading1 and Heading2, because that is what the template's contents shows.
+ * Its field instruction says `\o "1-3"`, which disagrees with its own cached
+ * entries -- there are ten Heading3 question-group headings and none of them is
+ * listed -- so honouring the instruction on refresh would add eleven lines the
+ * reference document does not have. The visible template is the specification, so
+ * the field is emitted as "1-2" and Word's refresh reproduces exactly what the
+ * template shows.
+ */
+function bookmarkHeadings(doc: Document, body: Element): TocTarget[] {
+  const targets: TocTarget[] = [];
+  let id = 900_100;
+
+  for (const block of childElements(body, 'p')) {
+    const style = paragraphStyle(block);
+    const level = style === 'Heading1' ? 1 : style === 'Heading2' ? 2 : undefined;
+    if (level === undefined) continue;
+    const text = textOf(block).replace(/\s+/g, ' ').trim();
+    if (text === '') continue;
+
+    const bookmark = `_Toc${id}`;
+    const start = wEl(doc, 'bookmarkStart', { 'w:id': String(id), 'w:name': bookmark });
+    const end = wEl(doc, 'bookmarkEnd', { 'w:id': String(id) });
+    id += 1;
+
+    // After pPr so the bookmark opens inside the paragraph, as Word writes it.
+    const pPr = firstChild(block, 'pPr');
+    if (pPr?.nextSibling) block.insertBefore(start, pPr.nextSibling);
+    else if (pPr) block.appendChild(start);
+    else block.insertBefore(start, block.firstChild);
+    block.appendChild(end);
+
+    targets.push({ level: level as 1 | 2, text, bookmark });
+  }
+
+  return targets;
+}
+
+/**
+ * One contents entry: hyperlink, dot-leader tab, and a PAGEREF for the number.
+ *
+ * `first` opens the TOC field and `last` closes it, exactly as the template does:
+ * the field brackets the whole run of entry paragraphs rather than each one.
+ */
+function buildTocEntry(
+  doc: Document,
+  prototype: Element,
+  target: TocTarget,
+  first: boolean,
+  last: boolean,
+): Element {
+  // The prototype supplies pPr -- the TOC style and, crucially, the right-aligned
+  // tab stop with the dot leader that draws the dots.
+  const p = prototype.cloneNode(true) as Element;
+  for (const child of [...childElements(p, 'r')]) p.removeChild(child);
+  for (const child of [...childElements(p, 'hyperlink')]) p.removeChild(child);
+  for (const child of [...childElements(p, 'bookmarkStart')]) p.removeChild(child);
+  for (const child of [...childElements(p, 'bookmarkEnd')]) p.removeChild(child);
+  setParagraphStyle(p, target.level === 1 ? 'TOC1' : 'TOC2');
+
+  if (first) {
+    p.appendChild(wRun(doc, [wEl(doc, 'fldChar', { 'w:fldCharType': 'begin' })]));
+    p.appendChild(wRun(doc, [wInstr(doc, TOC_FIELD_INSTRUCTION)]));
+    p.appendChild(wRun(doc, [wEl(doc, 'fldChar', { 'w:fldCharType': 'separate' })]));
+  }
+
+  const link = wEl(doc, 'hyperlink', { 'w:anchor': target.bookmark, 'w:history': '1' });
+
+  const textProps = wEl(doc, 'rPr');
+  textProps.appendChild(wEl(doc, 'rStyle', { 'w:val': 'Hyperlink' }));
+  textProps.appendChild(wEl(doc, 'noProof'));
+  link.appendChild(wRun(doc, [wText(doc, target.text)], textProps));
+
+  // The tab that runs the dots out to the page number.
+  link.appendChild(wRun(doc, [wEl(doc, 'tab')], hiddenRunProps(doc)));
+
+  // PAGEREF, cached empty: Word resolves it on open, which is what fills in the
+  // page numbers this renderer cannot compute.
+  link.appendChild(wRun(doc, [wEl(doc, 'fldChar', { 'w:fldCharType': 'begin' })], hiddenRunProps(doc)));
+  link.appendChild(wRun(doc, [wInstr(doc, ` PAGEREF ${target.bookmark} \\h `)], hiddenRunProps(doc)));
+  link.appendChild(wRun(doc, [wEl(doc, 'fldChar', { 'w:fldCharType': 'separate' })], hiddenRunProps(doc)));
+  link.appendChild(wRun(doc, [wText(doc, '')], hiddenRunProps(doc)));
+  link.appendChild(wRun(doc, [wEl(doc, 'fldChar', { 'w:fldCharType': 'end' })], hiddenRunProps(doc)));
+
+  p.appendChild(link);
+
+  if (last) {
+    p.appendChild(wRun(doc, [wEl(doc, 'fldChar', { 'w:fldCharType': 'end' })]));
+  }
+  return p;
+}
+
+/**
+ * Replaces the template's contents entries with ones describing this document.
+ *
+ * Runs last, after every other section is in place, because it reads the finished
+ * body: what the contents lists is whatever headings the document ended up with.
+ */
+function rebuildToc(doc: Document, body: Element): void {
+  const isTocParagraph = (b: Element) =>
+    b.localName === 'p' && ['TOC1', 'TOC2'].includes(paragraphStyle(b));
+
+  const existing = childElements(body, 'p').filter(isTocParagraph);
+  if (existing.length === 0) return;
+
+  // Kept as the formatting prototype: its pPr carries the dot-leader tab stop.
+  const prototype = existing[0]!.cloneNode(true) as Element;
+  const anchor = existing[existing.length - 1]!.nextSibling;
+
+  stripBookmarks(doc);
+  const targets = bookmarkHeadings(doc, body);
+
+  for (const p of existing) if (p.parentNode === body) body.removeChild(p);
+
+  targets.forEach((target, i) => {
+    const entry = buildTocEntry(doc, prototype, target, i === 0, i === targets.length - 1);
+    if (anchor && anchor.parentNode === body) body.insertBefore(entry, anchor);
+    else body.appendChild(entry);
   });
 }
 
@@ -365,8 +531,6 @@ export async function renderStoryboardDocx(options: RenderOptions): Promise<Uint
 
   const metadataTable = blocks.find((b) => b.localName === 'tbl');
   if (metadataTable) renderMetadataTable(metadataTable, state);
-
-  renderToc(blocks, state);
 
   // --- Module region ----------------------------------------------------
   const firstModule = template.map.modules[0];
@@ -432,6 +596,11 @@ export async function renderStoryboardDocx(options: RenderOptions): Promise<Uint
       renderAssessment(doc, body, template, state, tail);
     }
   }
+
+  // --- Table of contents ------------------------------------------------
+  // Last, because it describes the document that was actually produced: every
+  // heading now in the body, at the level its style gives it.
+  rebuildToc(doc, body);
 
   // --- Repackage --------------------------------------------------------
   const parts: Record<string, Uint8Array> = { ...template.parts };
@@ -539,9 +708,52 @@ function renderAssessment(
     }
   }
 
+  renderGlossary(doc, state, proto, push);
+
   const sectEl = bodyBlocks(doc).blocks.find((b) => b.localName === 'sectPr') ?? null;
   for (const el of blocks) {
     if (sectEl && sectEl.parentNode === body) body.insertBefore(el, sectEl);
     else body.appendChild(el);
   }
+}
+
+/**
+ * The closing Glossary of Terms and Abbreviations.
+ *
+ * Terms are gathered a module at a time, from the sources that use them, and this
+ * is where they become one list: merged, deduplicated case-insensitively by term,
+ * and sorted alphabetically so the reader can look one up.
+ *
+ * Rendered as a heading and bullets rather than a table because the template
+ * carries no glossary section to clone a table from, and the assessment section it
+ * follows is bullets throughout -- so this reads as part of the same document
+ * rather than as something bolted on. Abbreviations sort with their letters, which
+ * is what a reader scanning for "PEM" expects.
+ */
+function renderGlossary(
+  doc: Document,
+  state: StoryboardState,
+  proto: AnalyzedTemplate['prototypes'],
+  push: (protoXml: string, text: string) => void,
+): void {
+  const entries = state.glossary ?? [];
+  if (entries.length === 0) return;
+
+  const byTerm = new Map<string, (typeof entries)[number]>();
+  for (const entry of entries) {
+    const key = entry.term.trim().toLowerCase();
+    if (!byTerm.has(key)) byTerm.set(key, entry);
+  }
+
+  const sorted = [...byTerm.values()].sort((a, b) =>
+    a.term.localeCompare(b.term, 'en', { sensitivity: 'base' }),
+  );
+
+  push(proto.module_heading, 'Glossary of Terms and Abbreviations');
+  push(
+    proto.module_description,
+    `${sorted.length} technical, financial, regulatory and operational terms and abbreviations ` +
+      "used across this course's approved documents.",
+  );
+  for (const entry of sorted) push(proto.assessment_bullet, `${entry.term}: ${entry.definition}`);
 }

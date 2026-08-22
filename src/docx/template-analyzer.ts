@@ -86,6 +86,17 @@ export interface TemplateMap {
     blueprint_heading_block: number;
     blueprint_heading_text: string;
     metadata_table: TableShape | null;
+    /**
+     * Every heading the template prints ahead of the first module, in order.
+     *
+     * The renderer leaves front matter in place and only swaps specific text, so
+     * this is exactly what the finished document contains -- which makes it the
+     * only correct source for the table of contents' opening entries. The two
+     * tracks genuinely differ here: the Orientation template carries an
+     * Instructional Design and Behavioral Analytics section that the Entrepreneur
+     * one does not, and a TOC that assumed either would be wrong for the other.
+     */
+    front_headings: { level: 1 | 2; text: string }[];
     guideline_groups: string[];
     guideline_bullet_count: number;
   };
@@ -320,6 +331,12 @@ export async function analyzeTemplate(file: string, templateVersion = 'v1'): Pro
   const guidelineGroups = frontBlocks
     .filter((b) => b.kind === 'p' && b.style === 'Heading2')
     .map((b) => b.text);
+  // Headings only, and only ones that carry text: the Entrepreneur template
+  // leaves an empty Heading1 where its guidelines section was removed, and an
+  // empty TOC entry is worse than none.
+  const frontHeadings = frontBlocks
+    .filter((b) => b.kind === 'p' && (b.style === 'Heading1' || b.style === 'Heading2') && b.text.trim() !== '')
+    .map((b) => ({ level: b.style === 'Heading1' ? (1 as const) : (2 as const), text: b.text }));
 
   // --- Assessment --------------------------------------------------------
   let assessment: TemplateMap['assessment'] = null;
@@ -352,6 +369,7 @@ export async function analyzeTemplate(file: string, templateVersion = 'v1'): Pro
       blueprint_heading_block: blueprintHeading?.index ?? -1,
       blueprint_heading_text: blueprintHeading?.text ?? '',
       metadata_table: metadataTableBlock ? analyzeTable(metadataTableBlock.el, metadataTableBlock.tableIndex ?? 1) : null,
+      front_headings: frontHeadings,
       guideline_groups: guidelineGroups,
       guideline_bullet_count: frontBlocks.filter((b) => b.kind === 'p' && b.style.startsWith('ListBullet')).length,
     },

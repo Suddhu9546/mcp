@@ -15,6 +15,7 @@ import { courseDir, getCourseConfig } from '../courses/course-config.js';
 import { ensureCourseRegistered } from '../courses/course-manager.js';
 import { chunkDocument, type Chunk } from './chunker.js';
 import { extractPdf } from './pdf-extractor.js';
+import { chunkScopeText } from './scope-tokens.js';
 import { getDb, nowIso, transaction, type Db } from '../storage/db.js';
 import { logger } from '../util/logger.js';
 
@@ -43,7 +44,9 @@ function insertChunks(db: Db, docId: string, docKey: string, chunks: readonly Ch
                          chapter, unit_code, nos_code, section, subsection, content, char_count, ordinal)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
-  const insertFts = db.prepare('INSERT INTO chunks_fts (content, section, chunk_id) VALUES (?, ?, ?)');
+  const insertFts = db.prepare(
+    'INSERT INTO chunks_fts (content, section, scope, chunk_id) VALUES (?, ?, ?, ?)',
+  );
 
   for (const c of chunks) {
     insertChunk.run(
@@ -63,7 +66,9 @@ function insertChunks(db: Db, docId: string, docKey: string, chunks: readonly Ch
       c.char_count,
       c.ordinal,
     );
-    insertFts.run(c.content, c.section, c.chunk_id);
+    // The scope text is derived from the chunk itself, so it can never disagree
+    // with the columns a citation check reads back.
+    insertFts.run(c.content, c.section, chunkScopeText({ ...c, doc_key: docKey }), c.chunk_id);
   }
 }
 
