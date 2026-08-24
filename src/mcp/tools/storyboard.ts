@@ -61,7 +61,7 @@ import {
 } from '../../storage/artifact-store.js';
 import { config, templateFile } from '../../util/config.js';
 import { computeSourceFingerprint } from '../../storage/source-fingerprint.js';
-import { findReusableStoryboard } from '../../storyboard/reuse.js';
+import { describeExisting, findReusableStoryboard } from '../../storyboard/reuse.js';
 import { preparedStoryboard } from '../../cdr/prepared.js';
 
 // ---------------------------------------------------------------------------
@@ -584,22 +584,28 @@ const createDraftTool: ToolDefinition = {
         return ok({
           status: 'ALREADY_EXISTS' as const,
           course_id: courseId,
-          artifact_id: existing.artifact_id,
           docx_path: existing.docx_path,
-          module_count: existing.module_count,
-          built_at: existing.created_at,
+          filename: existing.filename,
           rendered_at: existing.rendered_at,
+          known_locally: existing.known_locally,
+          ...(existing.artifact_id ? { artifact_id: existing.artifact_id } : {}),
+          ...(existing.module_count !== undefined ? { module_count: existing.module_count } : {}),
+          ...(existing.created_at ? { built_at: existing.created_at } : {}),
           sources_state: existing.verdict.state,
           ...(existing.verdict.state === 'changed'
             ? { source_changes: existing.verdict.changes }
             : {}),
           message:
-            `This course already has a finished storyboard (${existing.artifact_id}, ` +
-            `${existing.module_count} modules, built ${existing.created_at.slice(0, 10)}, ` +
-            `${existing.verdict_summary}). No draft was created. Give the user the file at ` +
-            'docx_path. Only if they ask for a NEW storyboard, call this tool again with ' +
-            'regenerate: true -- writing one costs a hundred or more model calls, so it is not ' +
-            'something to do because a document already existed.',
+            `This course already has a finished storyboard (${describeExisting(existing)}). No ` +
+            'draft was created. Give the user the file at docx_path. Only if they ask for a NEW ' +
+            'storyboard, call this tool again with regenerate: true -- writing one costs a ' +
+            'hundred or more model calls, so it is not something to do because a document ' +
+            'already existed.' +
+            (existing.known_locally
+              ? ''
+              : ' This machine has no database record of it, which is normal for a document that ' +
+                'arrived with a checkout: it can be handed over but not edited module by module ' +
+                'here.'),
         });
       }
     }

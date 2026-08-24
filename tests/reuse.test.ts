@@ -19,7 +19,13 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { existsSync } from 'node:fs';
 import { runTool } from '../src/mcp/tools/index.js';
 import { buildStoryboard } from './helpers/build-storyboard.js';
-import { findReusableStoryboard, reuseOptions } from '../src/storyboard/reuse.js';
+import {
+  findReusableStoryboard,
+  listReusableStoryboards,
+  matchReuseAnswer,
+  renderedLabel,
+  reuseOptions,
+} from '../src/storyboard/reuse.js';
 import {
   compareSourceFingerprint,
   computeSourceFingerprint,
@@ -101,7 +107,7 @@ describe('finding a storyboard to reuse', () => {
   }, 300_000);
 
   it('offers only generation when nothing has been built', () => {
-    const options = reuseOptions(undefined);
+    const options = reuseOptions([]);
     expect(options.map((o) => o.value)).toEqual(['generate']);
   });
 
@@ -125,8 +131,8 @@ describe('finding a storyboard to reuse', () => {
     expect(existing!.docx_path).toBeDefined();
     expect(exististsOrFail(existing!.docx_path!)).toBe(true);
 
-    const options = reuseOptions(existing);
-    expect(options.map((o) => o.value)).toEqual(['reuse', 'generate']);
+    const options = reuseOptions([existing!]);
+    expect(options.map((o) => o.value)).toEqual(['reuse:1', 'generate']);
   }, 300_000);
 
   it('records the fingerprint on the artifact itself', async () => {
@@ -138,11 +144,10 @@ describe('finding a storyboard to reuse', () => {
     expect(parsed.template_version).toBe(templateTrackFor(COURSE));
   }, 300_000);
 
-  it('offers the newest of several, not the first or an arbitrary one', async () => {
-    // A subject accumulates storyboards. Someone who asks for one after
-    // regenerating means the one they just made, so recency decides -- and
-    // recency is the artifact's own updated_at, which moves when content is
-    // committed rather than when a document is rendered.
+  it('lists both when a subject has two, newest first', async () => {
+    // A subject accumulates storyboards and each is a real deliverable, so each is
+    // offered. Order is by when the document was rendered, which is the only signal
+    // available with no database and is also the better question.
     const older = await buildStoryboard(call, COURSE);
     await call('render_storyboard_docx', { artifact_id: older.artifactId });
 
@@ -152,8 +157,22 @@ describe('finding a storyboard to reuse', () => {
     const existing = findReusableStoryboard(COURSE, templateTrackFor(COURSE));
     expect(existing!.artifact_id).toBe(newer.artifactId);
     expect(existing!.artifact_id).not.toBe(older.artifactId);
-    // The offer names which one it is, so nobody has to infer it.
-    expect(reuseOptions(existing)[0]!.detail).toContain(newer.artifactId);
+    // Both are listed, newest first, and the label carries the id and the moment.
+    const all = listReusableStoryboards(COURSE, templateTrackFor(COURSE));
+    expect(all[0]!.artifact_id).toBe(newer.artifactId);
+    expect(all.map((e) => e.artifact_id)).toContain(older.artifactId);
+
+    const options = reuseOptions(all);
+    expect(options[0]!.label).toContain(newer.artifactId);
+    expect(options[0]!.label).toContain(renderedLabel(all[0]!.rendered_at));
+    // Generation is always the last line.
+    expect(options[options.length - 1]!.value).toBe('generate');
+
+    // Answering by position gives the one at that position.
+    const picked = matchReuseAnswer('1', all);
+    expect(picked?.kind).toBe('reuse');
+    if (picked?.kind !== 'reuse') throw new Error('unreachable');
+    expect(picked.storyboard.artifact_id).toBe(newer.artifactId);
   }, 600_000);
 
   it('falls back to an older storyboard when the newest has no document', async () => {
@@ -291,14 +310,20 @@ describe('the reuse question in the flow', () => {
     const { step } = await toSubject();
     expect(step.step).toBe('choose_storyboard_source');
     expect(step.done).toBe(false);
-    expect(step.options.map((o: any) => o.value)).toEqual(['reuse', 'generate']);
-    expect(step.data.existing.module_count).toBe(3);
-    expect(step.data.existing.sources_state).toBe('unchanged');
+    // One line per storyboard the subject has, then generation.
+    const values = step.options.map((o: any) => o.value);
+    expect(values[values.length - 1]).toBe('generate');
+    expect(values.slice(0, -1).every((v: string) => /^reuse:\d+$/.test(v))).toBe(true);
+
+    expect(step.data.existing.length).toBe(values.length - 1);
+    expect(step.data.existing[0].module_count).toBe(3);
+    expect(step.data.existing[0].sources_state).toBe('unchanged');
+    expect(step.data.existing[0].option).toBe(1);
   }, 300_000);
 
   it('hands over the existing document without any generation', async () => {
     const { session } = await toSubject();
-    const done = await call('flow_choose', { session_id: session, choice: 'reuse' });
+    const done = await call('flow_choose', { session_id: session, choice: '1' });
 
     expect(done.step).toBe('storyboard_ready');
     expect(done.done).toBe(true);
@@ -340,16 +365,18 @@ describe('the reuse question in the flow', () => {
   }, 300_000);
 
   it('accepts the answer by number and by the words people use', async () => {
-    for (const answer of ['1', 'use it', 'existing', 'saved', 'reuse'] as const) {
+    // A position, and the words for "the one that exists" -- which mean the first
+    // line, since that is what a list puts first.
+    for (const answer of ['1', 'use it', 'existing', 'saved', 'reuse', 'latest'] as const) {
       const { session } = await toSubject();
       const done = await call('flow_choose', { session_id: session, choice: answer });
       expect(done.data?.source, answer).toBe('saved');
       expect(done.step, answer).toBe('storyboard_ready');
     }
-    // And the second option is generation, by number and by name. Not "new":
-    // that is a global command meaning restart, and is handled before a step
-    // sees it.
-    for (const answer of ['2', 'generate', 'from scratch'] as const) {
+    // Generation, by name. Not "new": that is a global command meaning restart,
+    // handled before a step sees it. Its position depends on how many storyboards
+    // are listed, so the name is what this asserts.
+    for (const answer of ['generate', 'from scratch'] as const) {
       const { session } = await toSubject();
       const done = await call('flow_choose', { session_id: session, choice: answer });
       expect(done.data?.source, answer).toBeUndefined();
