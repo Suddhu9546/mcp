@@ -46,8 +46,14 @@ export interface ReusableStoryboard {
   created_at: string;
   updated_at: string;
   module_count: number;
-  /** The most recent rendered document, when one still exists on disk. */
-  docx_path?: string;
+  /**
+   * The rendered document being offered. Never absent: a storyboard with no
+   * document on disk is not offered at all, so there is no state in which this
+   * describes an offer that cannot be honoured.
+   */
+  docx_path: string;
+  /** When that document was rendered, which can be later than the content date. */
+  rendered_at: string;
   /** Whether the sources have moved since this was written. */
   verdict: FingerprintVerdict;
   /** One line describing the verdict, for a client to show as-is. */
@@ -66,11 +72,12 @@ function storedFingerprint(artifact: ArtifactRecord): SourceFingerprint | undefi
 }
 
 /** The newest rendered file for an artifact that is still on disk. */
-function latestDocx(artifactId: string): string | undefined {
+function latestDocx(artifactId: string): { path: string; rendered_at: string } | undefined {
   const withFiles = listVersions(artifactId)
     .filter((v) => v.docx_path !== undefined && existsSync(v.docx_path))
     .sort((a, b) => b.version - a.version);
-  return withFiles[0]?.docx_path;
+  const found = withFiles[0];
+  return found?.docx_path ? { path: found.docx_path, rendered_at: found.created_at } : undefined;
 }
 
 /**
@@ -92,39 +99,53 @@ function isComplete(artifactId: string): boolean {
 /**
  * The storyboard that would be offered for reuse, if there is one.
  *
- * The most recently updated *complete* storyboard for the course. Incomplete
- * drafts are not offered: half a storyboard is not a deliverable, and resuming one
- * is what the build loop already does when handed its artifact_id.
+ * The most recent *complete* storyboard for the course *that has a rendered
+ * document still on disk*. All three conditions matter, and the third is easy to
+ * get wrong: an earlier version of this took the newest complete storyboard and
+ * then looked for its document, so building a subject a second time and not
+ * rendering it withdrew the offer of the first one -- a perfectly good delivered
+ * document became unreachable because something newer existed on paper only. The
+ * newest *offerable* one is the answer, not the newest one.
  *
- * Only one is offered rather than a list. A course accumulates artifacts over time
- * and asking a user to choose between six dated drafts is a worse question than the
- * one being asked; `list_storyboards` remains available for anyone who wants the
- * full history.
+ * Incomplete drafts are not offered either: half a storyboard is not a
+ * deliverable, and resuming one is what the build loop already does when handed
+ * its artifact_id.
+ *
+ * Recency is the artifact's own `updated_at`, which moves when content is
+ * committed and not when a document is rendered -- so "most recent" means the
+ * newest *content*, which is what someone asking for a subject's storyboard means.
+ * Only one is offered rather than a list; `list_storyboards` has the full history
+ * for anyone who wants an older one.
  */
 export function findReusableStoryboard(courseId: string, templateVersion: string): ReusableStoryboard | undefined {
-  const candidates = listArtifacts(courseId)
-    .filter((a) => isComplete(a.artifact_id))
-    .sort((a, b) => b.updated_at.localeCompare(a.updated_at) || b.artifact_id.localeCompare(a.artifact_id));
+  const ordered = listArtifacts(courseId).sort(
+    (a, b) => b.updated_at.localeCompare(a.updated_at) || b.artifact_id.localeCompare(a.artifact_id),
+  );
 
-  const artifact = candidates[0];
-  if (!artifact) return undefined;
+  for (const artifact of ordered) {
+    if (!isComplete(artifact.artifact_id)) continue;
+    const docx = latestDocx(artifact.artifact_id);
+    if (!docx) continue;
 
-  const current = computeSourceFingerprint(courseId, templateVersion);
-  const verdict = compareSourceFingerprint(storedFingerprint(artifact), current);
-  const state = getState(artifact.artifact_id);
-  const docx = latestDocx(artifact.artifact_id);
+    const current = computeSourceFingerprint(courseId, templateVersion);
+    const verdict = compareSourceFingerprint(storedFingerprint(artifact), current);
+    const state = getState(artifact.artifact_id);
 
-  return {
-    artifact_id: artifact.artifact_id,
-    course_id: artifact.course_id,
-    version: artifact.current_version,
-    created_at: artifact.created_at,
-    updated_at: artifact.updated_at,
-    module_count: state.modules.length,
-    ...(docx ? { docx_path: docx } : {}),
-    verdict,
-    verdict_summary: describeVerdict(verdict),
-  };
+    return {
+      artifact_id: artifact.artifact_id,
+      course_id: artifact.course_id,
+      version: artifact.current_version,
+      created_at: artifact.created_at,
+      updated_at: artifact.updated_at,
+      module_count: state.modules.length,
+      docx_path: docx.path,
+      rendered_at: docx.rendered_at,
+      verdict,
+      verdict_summary: describeVerdict(verdict),
+    };
+  }
+
+  return undefined;
 }
 
 export interface ReuseOption {
@@ -136,30 +157,36 @@ export interface ReuseOption {
 /**
  * The choices to put to the user, given what exists.
  *
- * "reuse" appears only when a rendered document is actually on disk, so the option
- * is never offered and then found to have nothing behind it. Saved state with no
- * rendered document is not an offer -- it is content nobody has produced a
- * deliverable from, and handing it over would mean rendering it now, which is the
- * thing this no longer does.
+ * `existing` is already an offerable storyboard or nothing at all -- the lookup
+ * does not return content it has no document for -- so there is no case here where
+ * "use the existing one" is offered and then cannot be honoured.
+ *
+ * The detail names its artifact id and both dates. A course can hold several
+ * storyboards, this offers the newest, and someone who expected a different one
+ * needs to be able to see which they are being given rather than infer it.
  */
 export function reuseOptions(existing: ReusableStoryboard | undefined): ReuseOption[] {
-  const generateOnly: ReuseOption[] = [
-    {
-      value: 'generate',
-      label: 'Generate the storyboard',
-      detail: 'No storyboard has been built for this subject yet.',
-    },
-  ];
-
-  if (!existing || !existing.docx_path) return generateOnly;
+  if (!existing) {
+    return [
+      {
+        value: 'generate',
+        label: 'Generate the storyboard',
+        detail: 'No storyboard has been built for this subject yet.',
+      },
+    ];
+  }
 
   const built = existing.created_at.slice(0, 10);
+  const rendered = existing.rendered_at.slice(0, 10);
+  const when = built === rendered ? `built ${built}` : `built ${built}, rendered ${rendered}`;
+
   return [
     {
       value: 'reuse',
       label: 'Use the existing storyboard',
       detail:
-        `${existing.module_count} modules, built ${built}, ${existing.verdict_summary}. ` +
+        `${existing.artifact_id}: ${existing.module_count} modules, ${when}, ` +
+        `${existing.verdict_summary}. The most recent one for this subject. ` +
         'Hands over the document already rendered. No generation.',
     },
     {
@@ -171,15 +198,4 @@ export function reuseOptions(existing: ReusableStoryboard | undefined): ReuseOpt
           : 'Writes a new one. The saved storyboard is kept either way.',
     },
   ];
-}
-
-/**
- * True when there is something worth asking the user about.
- *
- * A saved storyboard with no rendered document leaves only one answer, so the
- * question is not asked at all -- an option list of one is a worse experience than
- * no question.
- */
-export function hasReusableOffer(existing: ReusableStoryboard | undefined): boolean {
-  return existing !== undefined && existing.docx_path !== undefined;
 }

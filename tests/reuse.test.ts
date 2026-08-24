@@ -138,6 +138,55 @@ describe('finding a storyboard to reuse', () => {
     expect(parsed.template_version).toBe(templateTrackFor(COURSE));
   }, 300_000);
 
+  it('offers the newest of several, not the first or an arbitrary one', async () => {
+    // A subject accumulates storyboards. Someone who asks for one after
+    // regenerating means the one they just made, so recency decides -- and
+    // recency is the artifact's own updated_at, which moves when content is
+    // committed rather than when a document is rendered.
+    const older = await buildStoryboard(call, COURSE);
+    await call('render_storyboard_docx', { artifact_id: older.artifactId });
+
+    const newer = await buildStoryboard(call, COURSE);
+    await call('render_storyboard_docx', { artifact_id: newer.artifactId });
+
+    const existing = findReusableStoryboard(COURSE, templateTrackFor(COURSE));
+    expect(existing!.artifact_id).toBe(newer.artifactId);
+    expect(existing!.artifact_id).not.toBe(older.artifactId);
+    // The offer names which one it is, so nobody has to infer it.
+    expect(reuseOptions(existing)[0]!.detail).toContain(newer.artifactId);
+  }, 600_000);
+
+  it('falls back to an older storyboard when the newest has no document', async () => {
+    // The regression this guards: the lookup used to take the newest complete
+    // storyboard and *then* look for its document, so building a subject again
+    // without rendering it withdrew the offer of the one before -- a delivered
+    // document became unreachable because something newer existed on paper only.
+    const rendered = await buildStoryboard(call, COURSE);
+    await call('render_storyboard_docx', { artifact_id: rendered.artifactId });
+
+    // Complete, newer, never rendered.
+    const unrendered = await buildStoryboard(call, COURSE);
+    expect(unrendered.final.status).toBe('READY_TO_RENDER');
+
+    const existing = findReusableStoryboard(COURSE, templateTrackFor(COURSE));
+    expect(existing).toBeDefined();
+    expect(existing!.artifact_id).toBe(rendered.artifactId);
+    expect(existing!.artifact_id).not.toBe(unrendered.artifactId);
+    expect(existsSync(existing!.docx_path)).toBe(true);
+  }, 600_000);
+
+  it('never returns a storyboard whose document is missing', async () => {
+    // Whatever comes back is offerable: the type says docx_path is present, and
+    // the value must actually be on disk. Anything else offers the user a file
+    // that cannot be handed over.
+    const existing = findReusableStoryboard(COURSE, templateTrackFor(COURSE));
+    if (existing) {
+      expect(typeof existing.docx_path).toBe('string');
+      expect(existsSync(existing.docx_path)).toBe(true);
+      expect(existing.rendered_at).toMatch(/^\d{4}-\d{2}-\d{2}/);
+    }
+  }, 300_000);
+
   it('does not offer an unfinished draft', async () => {
     // A draft with no content is not a deliverable, and offering it as "already
     // generated" would be the worst of both outcomes.

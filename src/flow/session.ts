@@ -26,7 +26,6 @@ import { ingestCourse } from '../documents/ingest.js';
 import { isCdrCourse, cdrCourseStatus } from '../cdr/catalog.js';
 import {
   findReusableStoryboard,
-  hasReusableOffer,
   reuseOptions,
   type ReusableStoryboard,
 } from '../storyboard/reuse.js';
@@ -700,8 +699,8 @@ function render(sessionId: string, step: FlowStepName, state: FlowState, error?:
       return chooseCandidateStep(sessionId, state, error);
     case 'choose_storyboard_source': {
       const existing = findReusableStoryboard(state.course_id!, templateTrackFor(state.course_id!));
-      return hasReusableOffer(existing)
-        ? chooseStoryboardSourceStep(sessionId, state, existing!, error)
+      return existing
+        ? chooseStoryboardSourceStep(sessionId, state, existing, error)
         : storyboardReadyStep(sessionId, state);
     }
     case 'storyboard_ready': {
@@ -965,20 +964,20 @@ export async function advanceFlow(sessionId: string, rawChoice: string): Promise
     case 'choose_storyboard_source': {
       const courseId = state.course_id!;
       const existing = findReusableStoryboard(courseId, templateTrackFor(courseId));
-      if (!hasReusableOffer(existing)) {
+      if (!existing) {
         // The saved storyboard vanished between the question and the answer.
         // Building is the only remaining answer, so it is taken rather than
         // reported as the user's problem.
         return storyboardReadyStep(sessionId, state);
       }
 
-      const allowed = reuseOptions(existing!).map((o) => o.value);
+      const allowed = reuseOptions(existing).map((o) => o.value);
       const picked = matchReuseChoice(choice, allowed);
       if (!picked) {
         return chooseStoryboardSourceStep(
           sessionId,
           state,
-          existing!,
+          existing,
           `"${choice}" is not one of the options. Answer with its number, or with ` +
             `${allowed.join(', ')}.`,
         );
@@ -989,7 +988,7 @@ export async function advanceFlow(sessionId: string, rawChoice: string): Promise
         return storyboardReadyStep(sessionId, state);
       }
 
-      state.reuse_artifact_id = existing!.artifact_id;
+      state.reuse_artifact_id = existing.artifact_id;
       return storyboardReusedStep(sessionId, state);
     }
 
@@ -1032,7 +1031,7 @@ export async function advanceFlow(sessionId: string, rawChoice: string): Promise
         // on disk to hand over. Saved state with no document leaves one answer, and
         // an option list of one is a worse experience than no question at all.
         const existing = findReusableStoryboard(course.course_id, templateTrackFor(course.course_id));
-        if (hasReusableOffer(existing)) return chooseStoryboardSourceStep(sessionId, state, existing!);
+        if (existing) return chooseStoryboardSourceStep(sessionId, state, existing);
         return storyboardReadyStep(sessionId, state);
       }
 
