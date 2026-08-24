@@ -129,7 +129,7 @@ describe('tool surface', () => {
     let artifactId: string;
 
     it('creates a draft carrying authoritative durations', async () => {
-      const res = await call('create_storyboard_draft', { course_id: COURSE, note: 'e2e test' });
+      const res = await call('create_storyboard_draft', { course_id: COURSE, note: 'e2e test', regenerate: true });
       expect(res.__isError).toBe(false);
       artifactId = res.artifact_id;
       expect(res.version).toBe(1);
@@ -150,7 +150,7 @@ describe('tool surface', () => {
     it('reports the draft as unfinished work rather than as a result', async () => {
       // A client that reads "call validate_storyboard, then render" after creating
       // an empty skeleton stops and reports the draft, which is what this prevents.
-      const draft = await call('create_storyboard_draft', { course_id: COURSE });
+      const draft = await call('create_storyboard_draft', { course_id: COURSE, regenerate: true });
       expect(draft.work.complete).toBe(false);
       expect(draft.work.empty_fields_remaining).toBeGreaterThan(100);
       // Module 8 has no source content, so it is not work anyone can do.

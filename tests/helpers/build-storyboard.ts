@@ -96,8 +96,15 @@ export interface BuildResult {
  * document, just slowly and expensively, and only a call count catches that.
  */
 export async function buildStoryboard(call: Call, courseId: string): Promise<BuildResult> {
-  const draft = await call('create_storyboard_draft', { course_id: courseId });
+  // regenerate: true because a test that builds a storyboard wants a new one,
+  // every time. Without it the second build of a course returns the first one --
+  // which is the tool doing its job, since rebuilding a subject that already has
+  // a finished document is exactly what it now refuses to do by default.
+  const draft = await call('create_storyboard_draft', { course_id: courseId, regenerate: true });
   if (draft.__isError) throw new Error(`create_storyboard_draft failed: ${draft.message}`);
+  if (!draft.artifact_id) {
+    throw new Error(`create_storyboard_draft returned no artifact: ${draft.status ?? JSON.stringify(draft)}`);
+  }
 
   let res = await call('storyboard_next_module', { artifact_id: draft.artifact_id });
   let calls = 1;

@@ -76,7 +76,7 @@ describe('model independence', () => {
   }, 600_000);
 
   it('refuses a citation the work order did not offer, so scope cannot be widened', async () => {
-    const draft = await call('create_storyboard_draft', { course_id: COURSE });
+    const draft = await call('create_storyboard_draft', { course_id: COURSE, regenerate: true });
     const first = await call('storyboard_next_module', { artifact_id: draft.artifact_id });
 
     const rejected = await call('storyboard_submit_module', {
@@ -98,7 +98,7 @@ describe('model independence', () => {
   }, 120_000);
 
   it('rejects a module that is not the current one rather than writing elsewhere', async () => {
-    const draft = await call('create_storyboard_draft', { course_id: COURSE });
+    const draft = await call('create_storyboard_draft', { course_id: COURSE, regenerate: true });
     const first = await call('storyboard_next_module', { artifact_id: draft.artifact_id });
 
     const wrong = await call('storyboard_submit_module', {
@@ -115,7 +115,7 @@ describe('model independence', () => {
   it('commits a partial submission and asks only for what is still blank', async () => {
     // A reply carrying a whole module can be truncated. When that happens the
     // work already written must survive, or every truncation costs a module.
-    const draft = await call('create_storyboard_draft', { course_id: COURSE });
+    const draft = await call('create_storyboard_draft', { course_id: COURSE, regenerate: true });
     const first = await call('storyboard_next_module', { artifact_id: draft.artifact_id });
     const module = first.module;
     const chunk = module.sources[0].chunk_id;
@@ -144,7 +144,7 @@ describe('model independence', () => {
   it('skips a module the sources cannot support instead of offering it as work', async () => {
     // Biofuels module 8 is Employability Skills, which the supplied documents do
     // not contain. It must never appear in the loop.
-    const draft = await call('create_storyboard_draft', { course_id: COURSE });
+    const draft = await call('create_storyboard_draft', { course_id: COURSE, regenerate: true });
     const first = await call('storyboard_next_module', { artifact_id: draft.artifact_id });
     expect(first.module.number).toBe(1);
 

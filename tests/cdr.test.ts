@@ -269,7 +269,7 @@ describe.skip('CDR storyboard generation (pending: master.docx rewritten)', () =
     // A CDR module is scoped to the reference documents its master file names, so
     // a chunk from another module's document must not be citable -- the same rule
     // the chapter crosswalk enforces for a qualification course.
-    const draft = await call('create_storyboard_draft', { course_id: COURSE });
+    const draft = await call('create_storyboard_draft', { course_id: COURSE, regenerate: true });
     const first = await call('storyboard_next_module', { artifact_id: draft.artifact_id });
     const ownKeys = new Set(first.module.sources.map((s: any) => s.doc_key));
 

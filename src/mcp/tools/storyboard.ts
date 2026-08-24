@@ -61,6 +61,8 @@ import {
 } from '../../storage/artifact-store.js';
 import { config, templateFile } from '../../util/config.js';
 import { computeSourceFingerprint } from '../../storage/source-fingerprint.js';
+import { findReusableStoryboard } from '../../storyboard/reuse.js';
+import { preparedStoryboard } from '../../cdr/prepared.js';
 
 // ---------------------------------------------------------------------------
 // Shared helpers
@@ -518,9 +520,21 @@ const createDraftTool: ToolDefinition = {
     'from the approved documents: modules, unit codes and titles, authoritative durations with ' +
     'provenance, correlation NOS codes, and empty rows/slides of the correct shape. Content ' +
     'fields are left blank for the build loop to fill. Modules the sources ' +
-    'cannot support are marked INSUFFICIENT_SOURCE_CONTENT rather than invented.',
+    'cannot support are marked INSUFFICIENT_SOURCE_CONTENT rather than invented. ' +
+    'STOPS FIRST if this course already has a finished storyboard, returning that document ' +
+    'instead of building a second one -- writing a storyboard is the expensive operation here, ' +
+    'and doing it again for a subject that already has one wastes it. Pass regenerate: true to ' +
+    'build a new one anyway.',
   inputSchema: {
     course_id: z.string(),
+    regenerate: z
+      .boolean()
+      .optional()
+      .describe(
+        'Build a new storyboard even though this course already has a finished one. Defaults ' +
+          'to false, which returns the existing document instead. Set it only when the user has ' +
+          'actually asked for a new one -- not to get past the check.',
+      ),
     timing_strategy: z
       .enum(['part_a_verbatim', 'part_a_minus_30', 'part_a_carve_last_unit'])
       .optional()
@@ -537,6 +551,59 @@ const createDraftTool: ToolDefinition = {
     // rendered to another track's template would come out structurally wrong,
     // and nothing downstream could detect it.
     const templateVersion = templateTrackFor(courseId);
+
+    // ---- Guards, before anything is created ------------------------------
+    //
+    // These live here rather than only in the conversational flow because the
+    // flow is advisory and this is not. A client that reads the tool list and
+    // calls the obviously-named tool for "create a storyboard" never sees the
+    // flow's questions, and every such client would rebuild a subject that
+    // already had a finished document. That is not a failure of the client:
+    // sequencing that matters has to be enforced where it cannot be skipped,
+    // which is the tool itself.
+
+    // A supplied storyboard is a finished document this server did not write and
+    // must not replace with one it did.
+    const supplied = preparedStoryboard(courseId);
+    if (supplied) {
+      return ok({
+        status: 'SUPPLIED_STORYBOARD' as const,
+        course_id: courseId,
+        docx_path: supplied.docx_path,
+        bytes: supplied.bytes,
+        message:
+          `The ${supplied.name} storyboard is supplied as a finished, reviewed document rather ` +
+          'than generated. Give the user the file at docx_path. No draft was created and none ' +
+          'should be: there is nothing here to build.',
+      });
+    }
+
+    if (args.regenerate !== true) {
+      const existing = findReusableStoryboard(courseId, templateVersion);
+      if (existing) {
+        return ok({
+          status: 'ALREADY_EXISTS' as const,
+          course_id: courseId,
+          artifact_id: existing.artifact_id,
+          docx_path: existing.docx_path,
+          module_count: existing.module_count,
+          built_at: existing.created_at,
+          rendered_at: existing.rendered_at,
+          sources_state: existing.verdict.state,
+          ...(existing.verdict.state === 'changed'
+            ? { source_changes: existing.verdict.changes }
+            : {}),
+          message:
+            `This course already has a finished storyboard (${existing.artifact_id}, ` +
+            `${existing.module_count} modules, built ${existing.created_at.slice(0, 10)}, ` +
+            `${existing.verdict_summary}). No draft was created. Give the user the file at ` +
+            'docx_path. Only if they ask for a NEW storyboard, call this tool again with ' +
+            'regenerate: true -- writing one costs a hundred or more model calls, so it is not ' +
+            'something to do because a document already existed.',
+        });
+      }
+    }
+    // ----------------------------------------------------------------------
     const allocation = await loadTiming(courseId);
 
     // Refuse rather than produce a storyboard on untrustworthy timing.

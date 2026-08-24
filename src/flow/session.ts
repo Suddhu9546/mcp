@@ -111,6 +111,13 @@ interface FlowState {
    * re-render, so the terminal step can name it without looking it up again.
    */
   reuse_artifact_id?: string;
+  /**
+   * Set when the user was offered a saved storyboard and asked for a new one
+   * anyway. The build instruction then carries regenerate: true, because the tool
+   * refuses by default -- it has to, since a client that skips these questions
+   * would otherwise rebuild a subject that already had a finished document.
+   */
+  declined_existing?: boolean;
 }
 
 export interface FlowOption {
@@ -636,7 +643,9 @@ function storyboardReadyStep(sessionId: string, state: FlowState): FlowStep {
     next_action:
       'Build it now. Do not ask the user anything further, do not summarise the plan, and do not ' +
       'offer choices -- everything the storyboard needs has been settled. Four steps: ' +
-      '(1) create_storyboard_draft with this course_id. It returns an artifact_id and an EMPTY ' +
+      `(1) create_storyboard_draft with this course_id${
+        state.declined_existing ? ' and regenerate: true' : ''
+      }. It returns an artifact_id and an EMPTY ` +
       'skeleton; showing that skeleton to the user does not answer the request. ' +
       '(2) storyboard_next_module with that artifact_id. ' +
       '(3) LOOP: the result has status WRITE_THIS and one whole module -- write every slot it ' +
@@ -810,11 +819,11 @@ function clearFrom(step: FlowStepName, state: FlowState): FlowState {
       // The track survives: going back from a subject re-asks the subject, not
       // the programme it belongs to.
       drop('subject_id', 'course_id', 'module_number', 'unit_code', 'candidates', 'package_id',
-           'reuse_artifact_id');
+           'reuse_artifact_id', 'declined_existing');
       if (state.flow !== 'storyboard') delete cleared.track;
       return cleared;
     case 'choose_storyboard_source':
-      drop('reuse_artifact_id');
+      drop('reuse_artifact_id', 'declined_existing');
       return cleared;
     case 'choose_module':
       drop('module_number', 'unit_code', 'candidates', 'package_id');
@@ -985,6 +994,7 @@ export async function advanceFlow(sessionId: string, rawChoice: string): Promise
 
       if (picked === 'generate') {
         delete state.reuse_artifact_id;
+        state.declined_existing = true;
         return storyboardReadyStep(sessionId, state);
       }
 
@@ -1026,6 +1036,7 @@ export async function advanceFlow(sessionId: string, rawChoice: string): Promise
         state.subject_id = course.course_id;
         state.course_id = course.course_id;
         delete state.reuse_artifact_id;
+        delete state.declined_existing;
 
         // Offer the saved storyboard, but only when a rendered document is really
         // on disk to hand over. Saved state with no document leaves one answer, and

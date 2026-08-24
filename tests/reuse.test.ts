@@ -203,6 +203,73 @@ function exististsOrFail(p: string): boolean {
   return existsSync(p);
 }
 
+describe('the guard in create_storyboard_draft', () => {
+  /**
+   * The flow can be skipped, so the flow cannot be where this is enforced.
+   *
+   * A client reads the tool list, sees a tool named for creating a storyboard, and
+   * calls it. Nothing about that is wrong -- it is the obvious thing to do -- and
+   * every client that does it used to rebuild a subject that already had a
+   * finished document, because the reuse question lived only in the conversational
+   * flow. Tool-level enforcement is what makes the behaviour the same whichever
+   * client is driving, which is the same property tests/model-independence covers
+   * for the build loop.
+   */
+  beforeAll(async () => {
+    expect((await call('ingest_course_documents', { course_id: COURSE })).__isError).toBe(false);
+    const built = await buildStoryboard(call, COURSE);
+    await call('render_storyboard_docx', { artifact_id: built.artifactId });
+  }, 600_000);
+
+  it('returns the existing storyboard instead of drafting a second one', async () => {
+    const before = findReusableStoryboard(COURSE, templateTrackFor(COURSE))!;
+
+    const res = await call('create_storyboard_draft', { course_id: COURSE });
+    expect(res.__isError).toBe(false);
+    expect(res.status).toBe('ALREADY_EXISTS');
+    expect(res.artifact_id).toBe(before.artifact_id);
+    expect(existsSync(res.docx_path)).toBe(true);
+    expect(res.message).toMatch(/No draft was created/);
+    expect(res.message).toMatch(/regenerate: true/);
+
+    // And no draft was actually created: the newest storyboard is the same one.
+    const after = findReusableStoryboard(COURSE, templateTrackFor(COURSE))!;
+    expect(after.artifact_id).toBe(before.artifact_id);
+  }, 300_000);
+
+  it('builds a new one when regenerate is explicitly set', async () => {
+    const before = findReusableStoryboard(COURSE, templateTrackFor(COURSE))!;
+
+    const res = await call('create_storyboard_draft', { course_id: COURSE, regenerate: true });
+    expect(res.__isError).toBe(false);
+    expect(res.status).toBeUndefined();
+    expect(res.artifact_id).toBeTruthy();
+    expect(res.artifact_id).not.toBe(before.artifact_id);
+  }, 300_000);
+
+  it('refuses to draft over a supplied storyboard, whatever the flag says', async () => {
+    // CDR's document was written outside this server and reviewed as a
+    // deliverable. Generating one to sit beside it helps nobody, and regenerate
+    // must not be a way round that -- there is no build path for this track at all.
+    for (const args of [{ course_id: 'cdr-biochar' }, { course_id: 'cdr-biochar', regenerate: true }]) {
+      const res = await call('create_storyboard_draft', args);
+      expect(res.__isError, JSON.stringify(args)).toBe(false);
+      expect(res.status, JSON.stringify(args)).toBe('SUPPLIED_STORYBOARD');
+      expect(res.artifact_id, JSON.stringify(args)).toBeUndefined();
+      expect(existsSync(res.docx_path)).toBe(true);
+    }
+  }, 300_000);
+
+  it('drafts normally for a subject that has no storyboard yet', async () => {
+    expect((await call('ingest_course_documents', { course_id: 'green-logistics' })).__isError).toBe(false);
+    const res = await call('create_storyboard_draft', { course_id: 'green-logistics' });
+    expect(res.__isError).toBe(false);
+    expect(res.status).toBeUndefined();
+    expect(res.artifact_id).toBeTruthy();
+    expect(res.module_count).toBe(3);
+  }, 300_000);
+});
+
 describe('the reuse question in the flow', () => {
   beforeAll(async () => {
     expect((await call('ingest_course_documents', { course_id: COURSE })).__isError).toBe(false);
@@ -266,6 +333,10 @@ describe('the reuse question in the flow', () => {
     expect(done.done).toBe(true);
     expect(done.data.course_id).toBe(COURSE);
     expect(done.next_action).toMatch(/create_storyboard_draft/);
+    // The tool refuses by default now, so the flow must say so explicitly after
+    // the user has declined the saved one -- otherwise its own guard would stop
+    // the build it just agreed to.
+    expect(done.next_action).toMatch(/regenerate: true/);
   }, 300_000);
 
   it('accepts the answer by number and by the words people use', async () => {

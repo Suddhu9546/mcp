@@ -104,7 +104,7 @@ describe('Entrepreneur track', () => {
     // is exactly where it used to fail.
     for (const subject of ['green-hydrogen', 'solar-pv']) {
       await call('ingest_course_documents', { course_id: subject });
-      const draft = await call('create_storyboard_draft', { course_id: subject });
+      const draft = await call('create_storyboard_draft', { course_id: subject, regenerate: true });
       const work = await call('storyboard_next_module', { artifact_id: draft.artifact_id });
 
       const covered = new Set(
@@ -127,7 +127,7 @@ describe('Entrepreneur track', () => {
     // The template states three-hour modules and heads their Part A "(2.5 hours)",
     // so Parts B and C are spent out of the module's own time. The parts must sum
     // to exactly the module's authoritative duration and no more.
-    const draft = await call('create_storyboard_draft', { course_id: 'green-hydrogen' });
+    const draft = await call('create_storyboard_draft', { course_id: 'green-hydrogen', regenerate: true });
     const state = await call('get_storyboard', { artifact_id: draft.artifact_id });
 
     for (const module of state.modules) {
@@ -148,7 +148,7 @@ describe('Entrepreneur track', () => {
     // that unit's Part A activity_name. It is derived from the state as just
     // written, not from the work order -- the work order was computed while Part A
     // was still blank, which left the column empty in every module.
-    const draft = await call('create_storyboard_draft', { course_id: 'green-hydrogen' });
+    const draft = await call('create_storyboard_draft', { course_id: 'green-hydrogen', regenerate: true });
     const work = await call('storyboard_next_module', { artifact_id: draft.artifact_id });
     const res = await call('storyboard_submit_module', moduleSubmission(draft.artifact_id, work.module));
     expect(res.__isError, res.message).toBe(false);
