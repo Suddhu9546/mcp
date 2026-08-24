@@ -6,7 +6,7 @@
  * always recoverable.
  */
 
-import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { StoryboardState, StoryboardTarget } from '../types/storyboard.js';
 import type { SourceRef } from '../types/source.js';
@@ -22,6 +22,8 @@ export interface ArtifactRecord {
   timing_strategy: TimingStrategy;
   current_version: number;
   status: string;
+  /** JSON SourceFingerprint, absent for artifacts created before the check. */
+  source_fingerprint?: string;
   created_at: string;
   updated_at: string;
 }
@@ -97,6 +99,8 @@ export interface CreateArtifactInput {
   timing_strategy: TimingStrategy;
   state: StoryboardState;
   note?: string;
+  /** JSON SourceFingerprint of the sources this storyboard is written against. */
+  source_fingerprint?: string;
 }
 
 /** Creates an artifact and its version 1. */
@@ -112,9 +116,18 @@ export function createArtifact(input: CreateArtifactInput): ArtifactRecord {
 
     db.prepare(
       `INSERT INTO storyboard_artifacts
-         (artifact_id, course_id, template_version, timing_strategy, current_version, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, 1, 'draft', ?, ?)`,
-    ).run(artifactId, input.course_id, input.template_version, input.timing_strategy, ts, ts);
+         (artifact_id, course_id, template_version, timing_strategy, current_version, status,
+          source_fingerprint, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 1, 'draft', ?, ?, ?)`,
+    ).run(
+      artifactId,
+      input.course_id,
+      input.template_version,
+      input.timing_strategy,
+      input.source_fingerprint ?? null,
+      ts,
+      ts,
+    );
 
     db.prepare(
       'INSERT INTO storyboard_versions (artifact_id, version, state_json, note, created_at) VALUES (?, ?, ?, ?, ?)',
@@ -229,18 +242,37 @@ export function commitVersion(input: CommitInput): { version: number; artifact: 
  * The version history is unaffected: it lives in the database, which is where it
  * is queryable. What is on disk is the deliverable, and there is exactly one of it.
  */
+/** "20260823-174412", for a filename that sorts chronologically. */
+function fileStamp(date: Date): string {
+  const p = (n: number): string => String(n).padStart(2, '0');
+  return (
+    `${date.getFullYear()}${p(date.getMonth() + 1)}${p(date.getDate())}` +
+    `-${p(date.getHours())}${p(date.getMinutes())}${p(date.getSeconds())}`
+  );
+}
+
+/**
+ * Writes a rendered document and records its path against the version.
+ *
+ * Every render is kept. Earlier versions of this function deleted the other .docx
+ * files in the folder so that only one candidate document existed, which read as
+ * tidiness but meant a delivered document could not be produced again: the render
+ * that replaced it left the older version's `docx_path` pointing at a file that
+ * was gone. A storyboard that someone has been sent is not a draft any more, and
+ * deleting it is not this function's decision to make.
+ *
+ * The name carries both the version and the moment: the version says which content
+ * this is, and the timestamp distinguishes two renders of that same content -- for
+ * instance the same storyboard before and after a template change.
+ */
 export function attachDocx(artifactId: string, version: number, bytes: Uint8Array): string {
   const { course_id } = getArtifact(artifactId);
   const dir = path.join(config.paths.artifacts, course_id);
   mkdirSync(dir, { recursive: true });
-  const file = path.join(dir, `${course_id}-storyboard.docx`);
-
-  // Renders of the same course under older naming, and any stale per-version
-  // files, are removed so the folder never holds two candidate documents.
-  for (const stale of readdirSync(dir)) {
-    const full = path.join(dir, stale);
-    if (full !== file && stale.toLowerCase().endsWith('.docx')) rmSync(full, { force: true });
-  }
+  const file = path.join(
+    dir,
+    `${course_id}-storyboard-${artifactId}-v${version}-${fileStamp(new Date())}.docx`,
+  );
 
   writeFileSync(file, bytes);
   getDb()

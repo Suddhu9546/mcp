@@ -17,7 +17,7 @@
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import JSZip from 'jszip';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { runTool } from '../src/mcp/tools/index.js';
 import { buildStoryboard, moduleSubmission } from './helpers/build-storyboard.js';
@@ -63,19 +63,28 @@ describe('Entrepreneur track', () => {
     }
   });
 
-  it('reaches generation in three answers for every subject', async () => {
+  it('reaches generation in three answers, or four when one can be reused', async () => {
     for (const subject of SUBJECTS) {
       const start = await call('start_flow');
       const session = start.session_id;
       await call('flow_choose', { session_id: session, choice: '1' });
       await call('flow_choose', { session_id: session, choice: '1' });
-      const done = await call('flow_choose', { session_id: session, choice: subject });
+      let done = await call('flow_choose', { session_id: session, choice: subject });
+
+      // A subject that has been storyboarded before is offered the saved one
+      // rather than being rebuilt silently, which is one extra question and the
+      // only one. Answering it is what reaches generation.
+      if (done.step === 'choose_storyboard_source') {
+        expect(done.done, subject).toBe(false);
+        expect(done.options.map((o: any) => o.value), subject).toContain('generate');
+        done = await call('flow_choose', { session_id: session, choice: 'generate' });
+      }
 
       expect(done.step, subject).toBe('storyboard_ready');
       expect(done.done, subject).toBe(true);
       expect(done.data.course_id, subject).toBe(subject);
       expect(done.data.track, subject).toBe('entrepreneur');
-      // The subject is the last question: nothing further may be asked.
+      // Once generation is reached, nothing further may be asked.
       expect(done.options, subject).toBeUndefined();
     }
   }, 300_000);
@@ -158,7 +167,7 @@ describe('Entrepreneur track', () => {
     }
   }, 120_000);
 
-  it('closes the document with one alphabetical glossary, and lists it', async () => {
+  it('closes the document with one alphabetical glossary table, and lists it', async () => {
     const built = await buildStoryboard(call, 'agri-residue-aggregator');
     const rendered = await call('render_storyboard_docx', {
       artifact_id: built.artifactId,
@@ -167,56 +176,120 @@ describe('Entrepreneur track', () => {
     expect(rendered.__isError, rendered.message).toBe(false);
 
     const out = await JSZip.loadAsync(readFileSync(rendered.docx_path));
+    const template = await JSZip.loadAsync(readFileSync(templateFile('entrepreneur')));
     const xml = await out.file('word/document.xml')!.async('string');
-    const paras = [...xml.matchAll(/<w:p[ >][\s\S]*?<\/w:p>/g)].map((m) => ({
-      style: (m[0].match(/<w:pStyle w:val="([^"]+)"/) ?? [])[1] ?? '',
-      text: [...m[0].matchAll(/<w:t(?: [^>]*)?>([\s\S]*?)<\/w:t>/g)]
-        .map((t) => t[1])
-        .join('')
-        .replace(/&amp;/g, '&')
-        .trim(),
-    }));
+    const templateXml = await template.file('word/document.xml')!.async('string');
 
-    const heading = paras.findIndex(
-      (p) => p.style === 'Heading1' && /^Glossary of Terms and Abbreviations$/.test(p.text),
+    // The glossary heading closes the document: no module follows it. Last
+    // occurrence, because the first is its line in the table of contents.
+    const at = xml.lastIndexOf('Glossary of Terms and Abbreviations</w:t>');
+    expect(at, 'no glossary heading').toBeGreaterThan(0);
+    const tail = xml.slice(at);
+    expect(/Module \d+:/.test(tail)).toBe(false);
+    // And it is listed in the contents.
+    expect(xml.slice(0, at)).toContain('Glossary of Terms and Abbreviations');
+
+    // Three columns, in the order the reference glossary uses.
+    expect(tail).toContain('Abbreviation');
+    expect(tail).toContain('Full Form');
+    expect(tail).toContain('Definition');
+
+    // Its geometry and header fill come from the template's own three-column
+    // table, not from anything chosen here.
+    const gridOf = (chunk: string) =>
+      [...chunk.matchAll(/<w:gridCol[^>]*w:w="(\d+)"/g)].map((m) => m[1]!);
+    const glossaryGrid = gridOf(tail);
+    expect(glossaryGrid.length, 'the glossary is not a table').toBe(3);
+    // The same three column widths the template's own three-column table uses.
+    expect(templateXml).toContain(
+      `<w:gridCol w:w="${glossaryGrid[0]}"/><w:gridCol w:w="${glossaryGrid[1]}"/>` +
+        `<w:gridCol w:w="${glossaryGrid[2]}"/>`,
     );
-    expect(heading, 'no glossary heading').toBeGreaterThan(0);
+    // The template's header fill, not a colour chosen here.
+    expect(tail).toContain('w:fill="1B4D3E"');
 
-    // It closes the document: nothing but the glossary follows its heading.
-    const after = paras.slice(heading + 1).filter((p) => p.text !== '');
-    expect(after.length).toBeGreaterThan(3);
-    expect(after.some((p) => /^Module \d+:/.test(p.text))).toBe(false);
-
-    // One list, alphabetical, with no term repeated across modules.
-    const terms = after.filter((p) => p.style === 'ListBullet2').map((p) => p.text.split(':')[0]!);
+    // One row per term, alphabetical, with no term repeated across modules.
+    const rows = [...tail.matchAll(/<w:tr[ >][\s\S]*?<\/w:tr>/g)].map((m) => m[0]);
+    const firstCellText = (row: string) => {
+      const cell = row.slice(0, row.indexOf('</w:tc>'));
+      return [...cell.matchAll(/<w:t(?: [^>]*)?>([\s\S]*?)<\/w:t>/g)].map((t) => t[1]).join('').trim();
+    };
+    const terms = rows.map(firstCellText).filter((t) => t !== '' && t !== 'Abbreviation');
     expect(terms.length).toBeGreaterThan(3);
     expect(terms).toEqual([...terms].sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' })));
     expect(new Set(terms.map((t) => t.toLowerCase())).size).toBe(terms.length);
   }, 300_000);
 
-  it('leaves one folder per subject holding one finished document', async () => {
-    // Rebuilding a subject must not accumulate. The folder used to be named for
-    // the artifact and the file for the version, so every draft made a new
-    // directory and every render added a file -- a subject built a few times left
-    // a dozen folders and no way to tell which document was the real one.
+  it('bakes real page numbers into the contents', async () => {
+    // The contents is a field, and a field's page numbers need a layout pass. The
+    // renderer emits an empty cached result and Word resolves it, so the numbers
+    // are in the file rather than waiting for someone to open it -- which is what
+    // a viewer that shows cached results rather than resolving fields needs.
+    //
+    // The suite runs with the refresh off, so this switches it on for one render.
+    const { refreshDocxFields } = await import('../src/docx/field-refresh.js');
+    const built = await buildStoryboard(call, 'agri-residue-aggregator');
+    const rendered = await call('render_storyboard_docx', {
+      artifact_id: built.artifactId,
+      allow_invalid: true,
+    });
+    expect(rendered.__isError, rendered.message).toBe(false);
+
+    const result = await refreshDocxFields(rendered.docx_path);
+    if (!result.refreshed) {
+      // No Word on this machine. The document is still correct, so this is not a
+      // failure -- but say so rather than passing silently.
+      console.warn(`page-number refresh unavailable: ${result.reason}`);
+      return;
+    }
+
+    const out = await JSZip.loadAsync(readFileSync(rendered.docx_path));
+    const xml = await out.file('word/document.xml')!.async('string');
+    const entries = [...xml.matchAll(/<w:pStyle w:val="TOC[12]"\/>[\s\S]*?(?=<w:p[ >]|$)/g)].map((m) =>
+      [...m[0].matchAll(/<w:t(?: [^>]*)?>([\s\S]*?)<\/w:t>/g)].map((t) => t[1]).join('').trim(),
+    );
+    const filled = entries.filter((e) => /\d+$/.test(e));
+    expect(filled.length, `no contents entry carries a page number: ${entries.slice(0, 3)}`)
+      .toBeGreaterThan(3);
+    // The contents itself is on page two, as in the template.
+    expect(entries.find((e) => e.startsWith('Table of Contents'))).toMatch(/2$/);
+  }, 300_000);
+
+  it('keeps one folder per subject and every document rendered into it', async () => {
+    // One folder per subject, named for the subject: the folder used to be named
+    // for the artifact, so a subject built a few times left a dozen directories
+    // and no way to tell which document was the real one.
+    //
+    // But every rendered document is kept. An earlier version deleted the other
+    // .docx files on each render so that only one candidate existed, which meant a
+    // document already sent to someone could not be produced again -- the render
+    // that replaced it left the older version's docx_path pointing at nothing.
+    const subject = 'agri-residue-aggregator';
     const first = await call('render_storyboard_docx', {
-      artifact_id: (await buildStoryboard(call, 'agri-residue-aggregator')).artifactId,
+      artifact_id: (await buildStoryboard(call, subject)).artifactId,
       allow_invalid: true,
     });
     const second = await call('render_storyboard_docx', {
-      artifact_id: (await buildStoryboard(call, 'agri-residue-aggregator')).artifactId,
+      artifact_id: (await buildStoryboard(call, subject)).artifactId,
       allow_invalid: true,
     });
 
-    // Two separate builds, one path.
-    expect(second.docx_path).toBe(first.docx_path);
-    expect(path.basename(second.docx_path)).toBe('agri-residue-aggregator-storyboard.docx');
+    // Two builds, two documents, both still there.
+    expect(second.docx_path).not.toBe(first.docx_path);
+    expect(existsSync(first.docx_path)).toBe(true);
+    expect(existsSync(second.docx_path)).toBe(true);
 
     const dir = path.dirname(second.docx_path);
-    expect(path.basename(dir)).toBe('agri-residue-aggregator');
-    expect(readdirSync(dir).filter((f) => f.toLowerCase().endsWith('.docx'))).toEqual([
-      'agri-residue-aggregator-storyboard.docx',
-    ]);
+    expect(path.dirname(first.docx_path)).toBe(dir);
+    expect(path.basename(dir)).toBe(subject);
+
+    // The name carries the artifact and version, so two files are never
+    // indistinguishable in a downloads folder.
+    for (const file of [first.docx_path, second.docx_path]) {
+      expect(path.basename(file)).toMatch(
+        new RegExp(`^${subject}-storyboard-SB-\\d{4}-\\d{5}-v\\d+-\\d{8}-\\d{6}\\.docx$`),
+      );
+    }
   }, 300_000);
 
   it('builds and renders a storyboard with the template formatting untouched', async () => {

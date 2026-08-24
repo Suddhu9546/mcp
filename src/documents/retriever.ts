@@ -61,6 +61,16 @@ export interface SearchOptions {
    */
   chapter?: number;
   /**
+   * Restrict to several PH/FG chapters at once.
+   *
+   * An Orientation module is a group of consecutive handbook chapters -- the
+   * programme fixes three modules per subject however many chapters the handbook
+   * has -- so its scope is a set rather than a single number. Passing one chapter
+   * here is equivalent to `chapter`; passing an empty array is a configuration
+   * error and matches nothing, exactly as an empty `docKeys` does.
+   */
+  chapters?: readonly number[];
+  /**
    * Restrict to specific reference documents, by doc_key.
    *
    * This is how a CDR module is scoped: its master file names the documents it
@@ -113,6 +123,17 @@ export function chapterForModule(courseId: string, moduleNumber: number): number
   return getCrosswalkEntry(courseId, moduleNumber).source_chapter;
 }
 
+/**
+ * Every PH/FG chapter a storyboard module draws from.
+ *
+ * One chapter for a course whose modules map 1:1 onto the handbook, several for an
+ * Orientation course whose three modules each club consecutive chapters.
+ */
+export function chaptersForModule(courseId: string, moduleNumber: number): number[] {
+  const entry = getCrosswalkEntry(courseId, moduleNumber);
+  return entry.source_chapters ?? [entry.source_chapter];
+}
+
 /** Maps a storyboard module number to the NOS code its QP content sits under. */
 export function nosForModule(courseId: string, moduleNumber: number): string {
   return getCrosswalkEntry(courseId, moduleNumber).nos_code;
@@ -155,6 +176,10 @@ export function searchCourseContent(options: SearchOptions): RetrievedChunk[] {
     scope.push(anyOf(documentTypes.map(documentTypeToken)));
   }
   if (options.chapter !== undefined) scope.push(chapterToken(options.chapter));
+  if (options.chapters !== undefined) {
+    if (options.chapters.length === 0) return [];
+    scope.push(anyOf(options.chapters.map(chapterToken)));
+  }
   if (options.docKeys !== undefined) scope.push(anyOf(options.docKeys.map(docKeyToken)));
   if (options.unitCode !== undefined) scope.push(unitToken(options.unitCode));
   if (options.nosCode !== undefined) scope.push(nosToken(options.nosCode));
@@ -194,6 +219,8 @@ export function listChunksInScope(options: {
   courseId: string;
   documentTypes?: readonly DocumentType[];
   chapter?: number;
+  /** Several chapters at once, for a module that clubs consecutive chapters. */
+  chapters?: readonly number[];
   docKeys?: readonly string[];
   /** Restrict to one unit of the scope, e.g. "1.1". */
   unitCode?: string;
@@ -212,6 +239,11 @@ export function listChunksInScope(options: {
   if (options.chapter !== undefined) {
     sql += ' AND chapter = ?';
     params.push(options.chapter);
+  }
+  if (options.chapters !== undefined) {
+    if (options.chapters.length === 0) return [];
+    sql += ` AND chapter IN (${options.chapters.map(() => '?').join(', ')})`;
+    params.push(...options.chapters);
   }
   if (options.docKeys !== undefined) {
     if (options.docKeys.length === 0) return [];

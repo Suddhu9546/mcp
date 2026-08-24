@@ -173,7 +173,7 @@ function toBatchSource(c: {
  */
 function sourcesFor(state: StoryboardState, module: StoryboardModule): BatchSource[] {
   const scope = moduleScope(state.course_id, module.number);
-  const within = scope.kind === 'chapter' ? { chapter: scope.chapter } : { docKeys: scope.doc_keys };
+  const within = scope.kind === 'chapter' ? { chapters: scope.chapters } : { docKeys: scope.doc_keys };
   const picked = new Map<string, BatchSource>();
 
   // Each unit's own slice first, so every Part A row has material about the unit

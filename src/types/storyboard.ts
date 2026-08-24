@@ -198,6 +198,12 @@ export interface StoryboardModule {
    * chapter 5. Retrieval must scope on this, not on `number`.
    */
   source_chapter: number;
+  /**
+   * Every handbook chapter the module draws from, when it draws from more than
+   * one. Orientation modules club consecutive chapters; absent means the module is
+   * exactly `source_chapter`.
+   */
+  source_chapters?: number[];
   nos_code: string;
   elective?: number;
   part_a: Sourced<PartA>;
@@ -279,6 +285,8 @@ export interface AssessmentBlueprint {
 export interface GlossaryEntry {
   /** The term or abbreviation as the documents write it, e.g. "PEM". */
   term: string;
+  /** What the abbreviation stands for, e.g. "Proton Exchange Membrane". */
+  full_form: string;
   definition: string;
   /** The module that contributed it, so per-module progress is answerable. */
   module_number: number;

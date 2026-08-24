@@ -451,10 +451,27 @@ strapline, and that is what puts the contents on page two. Replacing a paragraph
 text discarded every run in it, the page break included, so the contents rode up
 onto the cover. `setParagraphText` now carries page-break runs across the rewrite.
 
+**The template formats within a paragraph, and so does the output.** A question stem
+is a bold green "1. " followed by a bold stem; an explanation is a bold-italic
+"Explanation: " followed by italic text; a Part A cell is a bold activity name
+followed by a plain description; a script cell is a bold speaker followed by plain
+dialogue. Each is one paragraph holding two differently-formatted runs.
+`setParagraphText` keeps only the first run's properties, so every one of those came
+out uniformly bold -- the label's formatting spread across the whole line.
+`setParagraphParts` maps part N onto run N instead, and inside table cells the
+split is read off the prototype: a cell whose first run is bold and whose later runs
+are not is a label-and-body cell, and its text is divided at the first ": ". The
+decision stays in the template rather than being repeated per column.
+
 **Every storyboard closes with a glossary.** Terms and abbreviations are gathered a
 module at a time, from the sources that use them, so each carries that module's
-citations; the renderer merges them into one Glossary of Terms and Abbreviations,
-deduplicated by term and sorted alphabetically, and lists it in the contents.
+citations; the renderer merges them into one alphabetical Glossary of Terms and
+Abbreviations, deduplicated by term, and lists it in the contents. It renders as an
+Abbreviation / Full Form / Definition table built from the template's own
+three-column table, so its header fill, borders, padding, fonts and column widths
+are the template's. It is the only thing in the output that the template does not
+already contain -- a formatting diff of a generated storyboard against the template
+reports the glossary table and nothing else.
 
 **One folder per subject, holding one document.** A render writes
 `artifacts/<course_id>/<course_id>-storyboard.docx` and removes any earlier render
@@ -622,13 +639,20 @@ citing it. It cannot judge whether a sentence is a fair paraphrase — that
 assessment belongs to the client, and `low_grounding_overlap` is reported as a
 warning rather than an error to reflect that.
 
-**Table of contents page numbers appear when Word opens the file.** The contents is
-a real `TOC` field with a `PAGEREF` per entry, and `w:updateFields` asks Word to
-resolve them on open, which it does. They cannot be computed here -- that needs a
-layout engine -- so each `PAGEREF` ships with an empty cached result. A simple
-viewer that renders cached field results rather than resolving them shows the
-entries and their dot leaders with the numbers blank until the document has been
-opened in Word once.
+**Page numbers need Word, and are resolved at generation time.** The contents is a
+real `TOC` field with a `PAGEREF` per entry, and both are computed from where text
+falls on the page -- a layout pass this server cannot do. So the renderer emits the
+fields with an empty cached result and then hands the finished file to Word once,
+via COM, to update them and save. The numbers are in the file from that point, so a
+viewer that shows cached field results rather than resolving them displays them too.
+
+That step is the one place the pipeline reaches outside itself, and it is
+deliberately last and soft: the byte-faithful document is already on disk before it
+runs, and a machine without Word gets a warning and a document whose page numbers
+fill in the first time it is opened in Word. Set `REFRESH_FIELDS=false` to skip it.
+Word rewrites the package when it saves, so the byte-identity check against the
+template applies to what the renderer wrote, before this runs -- which is what the
+suite asserts, with the refresh switched off.
 
 **Orientation has documents but no crosswalk.** All four Orientation subjects have
 their PDFs on disk, so the video and reading flows serve them today. A storyboard

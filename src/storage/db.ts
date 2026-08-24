@@ -124,6 +124,10 @@ CREATE TABLE IF NOT EXISTS storyboard_artifacts (
   timing_strategy  TEXT NOT NULL,
   current_version  INTEGER NOT NULL DEFAULT 0,
   status           TEXT NOT NULL DEFAULT 'draft',
+  -- What the sources looked like when this storyboard was written, so that
+  -- reusing it can say whether they have moved since. Null for artifacts created
+  -- before the check existed; see storage/source-fingerprint.ts.
+  source_fingerprint TEXT,
   created_at       TEXT NOT NULL,
   updated_at       TEXT NOT NULL
 );
@@ -220,7 +224,26 @@ CREATE TABLE IF NOT EXISTS schema_meta (
   value TEXT NOT NULL
 );`;
 
+/**
+ * Adds a column to an existing table, if it is not already there.
+ *
+ * `CREATE TABLE IF NOT EXISTS` cannot add a column to a table that already
+ * exists, and artifacts are the one thing migration may never drop and rebuild --
+ * they hold authored content that no amount of re-ingesting brings back. So a new
+ * artifact column is added in place, idempotently, and is checked on every open
+ * rather than gated on the schema version: a database at the current version may
+ * still predate the column.
+ */
+function addColumnIfMissing(db: Db, table: string, column: string, definition: string): void {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as unknown as { name: string }[];
+  if (columns.length === 0) return; // table does not exist yet; SCHEMA will create it
+  if (columns.some((c) => c.name === column)) return;
+  db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+}
+
 function migrate(db: Db): void {
+  addColumnIfMissing(db, 'storyboard_artifacts', 'source_fingerprint', 'TEXT');
+
   const row = db.prepare("SELECT value FROM schema_meta WHERE key = 'schema_version'").get() as
     | { value: string }
     | undefined;

@@ -165,6 +165,73 @@ export function setParagraphText(p: Element, text: string): void {
   for (const brk of pageBreaks) p.appendChild(brk);
 }
 
+/** Builds a standalone paragraph holding nothing but a hard page break. */
+export function pageBreakParagraph(doc: Document): Element {
+  const p = doc.createElementNS(W, 'w:p');
+  const run = doc.createElementNS(W, 'w:r');
+  const br = doc.createElementNS(W, 'w:br');
+  br.setAttribute('w:type', 'page');
+  run.appendChild(br);
+  p.appendChild(run);
+  return p;
+}
+
+/**
+ * Fills a paragraph's runs from several strings, one per run, keeping each run's
+ * own character formatting.
+ *
+ * The template formats within a paragraph, not just across paragraphs. A question
+ * stem is a bold green "1. " followed by a bold stem; an explanation is a
+ * bold-italic "Explanation: " followed by italic text; a slide's cues are a bold
+ * "Visual Cues: " followed by italic text. Each of those is one paragraph holding
+ * two differently-formatted runs.
+ *
+ * `setParagraphText` cannot express that: it keeps the first run's properties and
+ * discards the rest, so the label's bold spread across the whole line and every
+ * one of those paragraphs came out uniformly bold. This maps part N onto run N
+ * instead, so the label stays a label and the body stays body.
+ *
+ * Parts beyond the template's run count reuse the last run's formatting, and
+ * surplus runs are removed, so a paragraph always ends up with exactly as many
+ * runs as there are parts.
+ */
+export function setParagraphParts(p: Element, parts: readonly string[]): void {
+  const doc = p.ownerDocument!;
+  const runs = childElements(p, 'r');
+  if (parts.length === 0) return;
+
+  // Captured before any mutation: these are the template's formatting, and they
+  // are the only thing being carried over.
+  const runProps = runs.map((r) => {
+    const rPr = firstChild(r, 'rPr');
+    return rPr ? (rPr.cloneNode(true) as Element) : undefined;
+  });
+  const pageBreaks = runs
+    .filter((r) => descendants(r, 'br').some((br) => br.getAttribute('w:type') === 'page'))
+    .map((r) => r.cloneNode(true) as Element);
+
+  for (const r of runs) p.removeChild(r);
+  for (const hl of childElements(p, 'hyperlink')) p.removeChild(hl);
+
+  parts.forEach((part, i) => {
+    const run = doc.createElementNS(W, 'w:r');
+    // The last run's formatting carries on when there are more parts than runs.
+    const rPr = runProps[i] ?? runProps[runProps.length - 1];
+    if (rPr) run.appendChild(rPr.cloneNode(true) as Element);
+
+    part.split('\n').forEach((line, j) => {
+      if (j > 0) run.appendChild(doc.createElementNS(W, 'w:br'));
+      const t = doc.createElementNS(W, 'w:t');
+      t.setAttribute('xml:space', 'preserve');
+      t.appendChild(doc.createTextNode(line));
+      run.appendChild(t);
+    });
+    p.appendChild(run);
+  });
+
+  for (const brk of pageBreaks) p.appendChild(brk);
+}
+
 /**
  * Replaces a table cell's content with one paragraph per supplied string.
  *
@@ -174,24 +241,63 @@ export function setParagraphText(p: Element, text: string): void {
  */
 export function setCellParagraphs(tc: Element, paragraphs: readonly string[]): void {
   const existing = childElements(tc, 'p');
-  const prototype = existing[0];
-  if (!prototype) {
+  if (!existing[0]) {
     throw new Error('Cannot set text on a table cell that contains no paragraph.');
   }
 
   const lines = paragraphs.length > 0 ? paragraphs : [''];
 
-  // Reuse the first paragraph, clone it for the rest, drop any surplus.
-  setParagraphText(prototype, lines[0]!);
-  for (let i = 1; i < lines.length; i++) {
-    const clone = prototype.cloneNode(true) as Element;
-    setParagraphText(clone, lines[i]!);
-    tc.appendChild(clone);
+  // Paragraph i takes paragraph i's formatting, not paragraph 0's. A Correlation
+  // cell holds a bold NOS code and then a plain list of performance criteria; with
+  // one prototype for the whole cell the second line came out bold too.
+  const protoFor = (i: number) => existing[Math.min(i, existing.length - 1)]!;
+
+  const written: Element[] = [];
+  lines.forEach((line, i) => {
+    const source = protoFor(i);
+    const target = i < existing.length ? source : (source.cloneNode(true) as Element);
+    writeCellParagraph(target, line);
+    written.push(target);
+    if (i >= existing.length) tc.appendChild(target);
+  });
+
+  for (const node of existing) {
+    if (!written.includes(node) && node.parentNode === tc) tc.removeChild(node);
   }
-  for (let i = 1; i < existing.length; i++) {
-    const node = existing[i]!;
-    if (node.parentNode === tc) tc.removeChild(node);
+}
+
+/**
+ * Writes one line into a cell paragraph, honouring the template's run split.
+ *
+ * The template writes most cells as a bold label and a plain body in one
+ * paragraph -- "Solar PV System Explorer: " then what the learner does, "Visual: "
+ * then the shot, "Host (On-Camera): " then the dialogue. Some cells are a single
+ * run and stay uniform: a unit label is bold throughout even though it contains a
+ * colon, and a completion criterion is plain throughout.
+ *
+ * Which of those applies is read off the paragraph itself rather than decided per
+ * column: a prototype whose first run is bold and whose later runs are not is a
+ * label-and-body cell, and the line is split at its first ": " to match. Anything
+ * else is written as one run. That keeps the decision in the template, where it
+ * belongs -- add a column and it formats itself correctly.
+ */
+function writeCellParagraph(p: Element, line: string): void {
+  const runs = childElements(p, 'r').filter((r) => descendants(r, 't').length > 0);
+  const isBold = (r: Element) => {
+    const rPr = firstChild(r, 'rPr');
+    return rPr !== undefined && firstChild(rPr, 'b') !== undefined;
+  };
+  const labelled =
+    runs.length >= 2 && runs[0] !== undefined && isBold(runs[0]) && runs.slice(1).some((r) => !isBold(r));
+
+  if (labelled) {
+    const at = line.indexOf(': ');
+    if (at > 0) {
+      setParagraphParts(p, [line.slice(0, at + 2), line.slice(at + 2)]);
+      return;
+    }
   }
+  setParagraphText(p, line);
 }
 
 /** Convenience for single-paragraph cells. */

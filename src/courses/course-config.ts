@@ -52,8 +52,22 @@ export interface ModuleCrosswalkEntry {
   timing_module: number;
   /** Module title in the Timing Allocation Document. */
   timing_title: string;
-  /** Chapter number in the Participant Handbook and Faculty Guide. */
+  /**
+   * Chapter number in the Participant Handbook and Faculty Guide.
+   *
+   * When the module clubs several chapters this is the first of them, so that a
+   * caller wanting one representative chapter still gets a sensible answer.
+   */
   source_chapter: number;
+  /**
+   * Every chapter the module draws from, when it draws from more than one.
+   *
+   * Present only for Orientation courses. The programme fixes three modules per
+   * subject regardless of how many chapters the handbook has, so consecutive
+   * chapters are clubbed and a module's scope is a set. Absent means the module is
+   * exactly `source_chapter` and nothing else.
+   */
+  source_chapters?: number[];
   /** NOS the module assesses against. */
   nos_code: string;
   /** Elective number, when the module is an elective. */
@@ -125,15 +139,6 @@ export interface CourseConfig {
    * (`solar-pv`) as data instead of a special case in the resolver.
    */
   directory: string;
-  /**
-   * Set while the course is registered but its approved documents have not been
-   * supplied yet. Such a course exists so that dropping its PDFs into
-   * courses/<course_id>/ and ingesting is the whole onboarding procedure; until
-   * then every tool reports it as missing documents rather than pretending it is
-   * usable. The metadata below is a placeholder in that state and must be filled
-   * in from the real Qualification Pack when the documents arrive.
-   */
-  documents_pending?: boolean;
   qp_code: string;
   nsqf_level: string;
   sector: string;
@@ -294,56 +299,6 @@ const BIOFUELS: CourseConfig = {
     '^NSQC Approved \\|\\| Skill Council for Green Jobs \\d+$',
   ],
 };
-
-/**
- * Placeholder registration for a subject whose approved documents have not been
- * supplied yet.
- *
- * The four document filenames are declared up front so that ingestion picks up
- * whichever of them appears on disk and reports the rest as missing. `crosswalk`
- * and `chapter_titles` are left empty on purpose: both are reviewed data that must
- * be read off the real documents, and inventing them would produce citations that
- * look valid while pointing at the wrong chapter. Their absence costs the video
- * flows nothing -- unit headings in the handbook carry their own chapter number,
- * so the handbook outline is derived without either table -- but a storyboard
- * cannot be built until they are filled in.
- */
-function pendingCourse(
-  courseId: string,
-  name: string,
-  track: CourseTrack,
-  occupation: string,
-  directoryName = courseId,
-): CourseConfig {
-  return {
-    course_id: courseId,
-    name,
-    track,
-    directory: `${track}/${directoryName}`,
-    documents_pending: true,
-    qp_code: '(pending)',
-    nsqf_level: '(pending)',
-    sector: 'Green Jobs',
-    sub_sector: '(pending)',
-    occupation,
-    reference_id: '(pending)',
-    subtitle: 'Complete Curriculum Storyboard and Assessment Blueprint',
-    documents: [
-      { document_type: 'QP', file: 'qp.pdf' },
-      { document_type: 'PH', file: 'ph.pdf' },
-      { document_type: 'FG', file: 'fg.pdf' },
-      { document_type: 'TIMING', file: 'timing.pdf' },
-    ],
-    crosswalk: [],
-    chapter_titles: {},
-    chunk_noise_patterns: [
-      '^Participant Handbook$',
-      '^Facilitator Guide$',
-      '^Qualification Pack$',
-      '^NSQC Approved \\|\\| Skill Council for Green Jobs \\d+$',
-    ],
-  };
-}
 
 /**
  * Solar Photovoltaic Entrepreneur.
@@ -660,17 +615,212 @@ const AGRI_RESIDUE_AGGREGATOR: CourseConfig = {
   ],
 };
 
-const PENDING: CourseConfig[] = [
-  pendingCourse('esg', 'Environmental, Social and Governance', 'orientation', 'Orientation', 'esg-fundamentals'),
-  pendingCourse(
-    'ghg',
-    'Greenhouse Gas',
-    'orientation',
-    'Orientation',
-    'ghg-accounting-and-sustainability',
-  ),
-  pendingCourse('green-logistics', 'Green Logistics', 'orientation', 'Orientation'),
-  pendingCourse('biogas', 'Biogas', 'orientation', 'Orientation'),
+/**
+ * How an Orientation subject's handbook chapters are clubbed into its three
+ * modules.
+ *
+ * The Orientation programme is three one-hour modules per subject, whatever its
+ * handbook contains: ESG has three chapters, Biogas has six. So consecutive
+ * chapters are grouped, as evenly as the count allows, with the remainder going
+ * to the earliest groups: 3 -> 1,1,1; 4 -> 2,1,1; 5 -> 2,2,1; 6 -> 2,2,2.
+ *
+ * Expressed as a rule rather than as a table per subject so that a handbook
+ * revision changing the chapter count needs no new grouping decision, and so the
+ * four subjects cannot drift apart.
+ */
+export const ORIENTATION_MODULE_COUNT = 3;
+
+export function groupChaptersIntoModules(chapterCount: number): number[][] {
+  if (chapterCount < ORIENTATION_MODULE_COUNT) {
+    throw new Error(
+      `An Orientation subject needs at least ${ORIENTATION_MODULE_COUNT} handbook chapters to ` +
+        `fill ${ORIENTATION_MODULE_COUNT} modules; this one has ${chapterCount}.`,
+    );
+  }
+  const base = Math.floor(chapterCount / ORIENTATION_MODULE_COUNT);
+  const remainder = chapterCount % ORIENTATION_MODULE_COUNT;
+  const groups: number[][] = [];
+  let next = 1;
+  for (let i = 0; i < ORIENTATION_MODULE_COUNT; i++) {
+    const size = base + (i < remainder ? 1 : 0);
+    groups.push(Array.from({ length: size }, () => next++));
+  }
+  return groups;
+}
+
+interface OrientationDefinition {
+  course_id: string;
+  /** Qualification name as the Model Curriculum or NOS cover page prints it. */
+  name: string;
+  /** Micro-credential or NOS code. Orientation subjects carry exactly one. */
+  code: string;
+  version: string;
+  nsqf_level: string;
+  sector: string;
+  sub_sector: string;
+  occupation: string;
+  directory: string;
+  /** Chapter titles as printed in the Participant Handbook contents. */
+  chapter_titles: Record<number, string>;
+  noise?: string[];
+}
+
+/**
+ * An Orientation course.
+ *
+ * Three differences from a qualification course, all of them consequences of the
+ * programme rather than of the subject:
+ *
+ *   No Timing Allocation Document. Every Orientation subject runs three one-hour
+ *   modules, so there is nothing per-subject to state and no document is issued.
+ *   Durations come from timing/orientation-allocation.ts instead, which is why
+ *   TIMING is absent from `documents` -- declaring it would report every subject
+ *   as missing a file that does not exist.
+ *
+ *   Three modules whatever the handbook's chapter count, clubbed by
+ *   `groupChaptersIntoModules`. A module's scope is therefore a set of chapters,
+ *   carried in `source_chapters`.
+ *
+ *   One code for the whole subject. These are micro-credentials: the Model
+ *   Curriculum maps every module to the same code ("Mapped to: SGJ/MCr-0001"), so
+ *   the correlation column carries that code for all three modules rather than a
+ *   per-module NOS.
+ */
+function orientationCourse(d: OrientationDefinition): CourseConfig {
+  const chapterNumbers = Object.keys(d.chapter_titles)
+    .map(Number)
+    .sort((a, b) => a - b);
+  const groups = groupChaptersIntoModules(chapterNumbers.length);
+
+  return {
+    course_id: d.course_id,
+    name: d.name,
+    track: 'orientation',
+    directory: `orientation/${d.directory}`,
+    qp_code: d.code,
+    nsqf_level: d.nsqf_level,
+    sector: d.sector,
+    sub_sector: d.sub_sector,
+    occupation: d.occupation,
+    reference_id: `${d.code}, Version ${d.version}`,
+    subtitle: 'Complete Curriculum Storyboard and Assessment Blueprint',
+    // No TIMING: see the note above.
+    documents: [
+      { document_type: 'QP', file: 'qp.pdf' },
+      { document_type: 'PH', file: 'ph.pdf' },
+      { document_type: 'FG', file: 'fg.pdf' },
+    ],
+    crosswalk: groups.map((chapters, i) => ({
+      timing_module: i + 1,
+      timing_title: chapters.map((c) => d.chapter_titles[c]!).join(' & '),
+      source_chapter: chapters[0]!,
+      source_chapters: chapters,
+      nos_code: d.code,
+    })),
+    chapter_titles: d.chapter_titles,
+    chunk_noise_patterns: [
+      '^Participant Handbook$',
+      '^Facilitator Guide$',
+      '^Model Curriculum$',
+      '^National Occupational Standards$',
+      '^NSQC Approved \\|\\| Green Jobs \\d+$',
+      '^NSQC Approved \\|\\| Skill Council for Green Jobs \\d+$',
+      ...(d.noise ?? []),
+    ],
+  };
+}
+
+/**
+ * The four Orientation subjects.
+ *
+ * Metadata is read off each subject's Model Curriculum cover and Training
+ * Parameters table, except Biogas's sub-sector and occupation, which its Model
+ * Curriculum omits and its handbook cover states. Chapter titles are taken from
+ * the Participant Handbook contents, because the handbook is what the storyboard
+ * is built and cited from; where the Model Curriculum words a module differently
+ * -- GHG module 3 is "Greenhouse Gas Emissions and Accounting: Scope 1, Scope 2,
+ * and Scope 3" there and "Calculating and reporting GHG Emissions" in the
+ * handbook -- the handbook wins.
+ */
+const ORIENTATION: CourseConfig[] = [
+  orientationCourse({
+    course_id: 'esg',
+    name: 'Fundamentals of ESG Compliance',
+    code: 'SGJ/MCr-0010',
+    version: '1.0',
+    nsqf_level: '4.5',
+    sector: 'Environmental Science',
+    sub_sector: 'Sustainability',
+    occupation: 'Environmental Compliance',
+    directory: 'esg-fundamentals',
+    chapter_titles: {
+      1: 'Introduction to ESG Compliance',
+      2: 'Environmental, Social and Governance Aspect of ESG Compliance',
+      3: 'ESG Risk Management and Reporting',
+    },
+    noise: ['^Fundamentals of ESG Compliance$'],
+  }),
+  orientationCourse({
+    course_id: 'ghg',
+    name: 'GHG Accounting and Sustainability Reporting',
+    code: 'SGJ/MCr-0001',
+    version: '1.0',
+    nsqf_level: '6',
+    sector: 'Environmental Science',
+    sub_sector: 'Sustainability',
+    occupation: 'Environmental Compliance',
+    directory: 'ghg-accounting-and-sustainability',
+    chapter_titles: {
+      1: 'Introduction to the Climate Challenge and Policy Action',
+      2: 'Greening Businesses through Aligning Policy and Action',
+      3: 'Calculating and reporting GHG Emissions',
+      4: 'Introduction to Business Responsibility and Sustainability Reporting (BRSR)',
+    },
+    // The running header is set with a space between every letter, so it does not
+    // match its own plain spelling; both forms are stripped.
+    noise: ['^GHG Accounting & Sustainablity Reporting$', '^(?:[A-Za-z] )+[A-Za-z]$'],
+  }),
+  orientationCourse({
+    course_id: 'green-logistics',
+    name: 'Green Logistics Practices',
+    code: 'SGJ/N4601',
+    version: '1.0',
+    nsqf_level: '4',
+    sector: 'Green Jobs',
+    sub_sector: 'Other Green Jobs',
+    occupation: 'Green Logistics',
+    directory: 'green-logistics',
+    chapter_titles: {
+      1: 'Basics of Climate Change, Environmental Concerns and Renewable Energy',
+      2: 'Introduction to Green Logistics',
+      3: 'Steps required for greening the logistics sector',
+      4: 'Identifying green supply and demand networks',
+      5: 'Perform Health & Safety in Green Logistics',
+    },
+    noise: ['^Green Logistics Practices$'],
+  }),
+  orientationCourse({
+    course_id: 'biogas',
+    name: 'Essentials of Biogas Plant Operations',
+    code: 'SGJ/MCr-0017',
+    version: '1.0',
+    nsqf_level: '4',
+    sector: 'Green Jobs',
+    // The Model Curriculum states only the sector; these two are from the
+    // handbook cover.
+    sub_sector: 'Bioenergy',
+    occupation: 'Operation and Maintenance',
+    directory: 'biogas',
+    chapter_titles: {
+      1: 'Biogas Technology – Foundations and Understanding for Beginners',
+      2: 'Feedstock Management and Pre-treatment',
+      3: 'Biogas Plant Components, Layout, and Ancillary Systems',
+      4: 'Monitoring of Biogas Plants',
+      5: 'Health, Hygiene, and Safety Practices in Biogas Plants',
+      6: 'SCADA Monitoring, Interpretation & Decision-Making in Biogas Plant O&M',
+    },
+    noise: ['^Essentials of Biogas Plant Operations$'],
+  }),
 ];
 
 /**
@@ -723,10 +873,9 @@ const REGISTRY: Record<string, CourseConfig> = {
   [GREEN_HYDROGEN.course_id]: GREEN_HYDROGEN,
   [AGRI_RESIDUE_AGGREGATOR.course_id]: AGRI_RESIDUE_AGGREGATOR,
   ...Object.fromEntries(CDR_COURSES.map((c) => [c.course_id, cdrCourse(c)])),
-  // The four Orientation subjects are registered as placeholders. Each becomes
-  // fully usable by supplying a reviewed crosswalk and chapter title table; their
-  // documents are already on disk.
-  ...Object.fromEntries(PENDING.map((c) => [c.course_id, c])),
+  // The four Orientation subjects. Three one-hour modules each, clubbing handbook
+  // chapters by the programme's own rule rather than by a per-subject decision.
+  ...Object.fromEntries(ORIENTATION.map((c) => [c.course_id, c])),
 };
 
 /** Every course of one track, in registration order. */
@@ -735,6 +884,23 @@ export function listCoursesInTrack(track: CourseTrack): CourseConfig[] {
 }
 
 /** True when the course has the reviewed data a storyboard needs. */
+/**
+ * The template a course renders to.
+ *
+ * Entrepreneur and Orientation share one, because the two programmes differ in
+ * what goes into a storyboard -- three one-hour modules against ten three-hour
+ * ones -- and not at all in how it looks. Filing a second copy under
+ * templates/orientation/ would leave the formatting free to drift between them,
+ * which is the one thing it must not do.
+ *
+ * Lives here rather than beside the renderer because it is a fact about the course,
+ * and both the tool layer and the flow need it.
+ */
+export function templateTrackFor(courseId: string): string {
+  const track = getCourseConfig(courseId).track;
+  return track === 'orientation' ? 'entrepreneur' : track;
+}
+
 export function hasReviewedCrosswalk(courseId: string): boolean {
   const course = REGISTRY[courseId];
   if (!course) return false;

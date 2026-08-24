@@ -246,6 +246,9 @@ export function buildSkeleton(options: BuildSkeletonOptions): StoryboardState {
   // disagree with the template and made the parts sum to half an hour more than
   // the module lasts.
   const strategy: TimingStrategy = options.timingStrategy ?? 'part_a_minus_30';
+  // Orientation states its durations as a programme constant rather than in a
+  // document, which changes what the provenance of a duration may claim.
+  const programmeTiming = course.track === 'orientation';
 
   const wanted = options.modules;
   const timingModules = wanted
@@ -270,6 +273,7 @@ export function buildSkeleton(options: BuildSkeletonOptions): StoryboardState {
           timing_module: tm.number,
           timing_title: tm.title,
           source_chapter: tm.number,
+          source_chapters: undefined,
           nos_code: moduleScope(courseId, tm.number).nos_code,
           no_source_content: undefined,
           elective: undefined,
@@ -295,12 +299,25 @@ export function buildSkeleton(options: BuildSkeletonOptions): StoryboardState {
       duration: {
         minutes: tm.minutes,
         label: hoursLabel(tm.minutes),
-        provenance: { kind: 'timing_document', ref: tm.source, raw: tm.raw_duration },
+        // An Orientation module's hour is a programme constant, not a line in a
+        // document, so it must not claim to have been read from one.
+        provenance: programmeTiming
+          ? {
+              kind: 'template_constant',
+              template_version: templateVersion,
+              note:
+                `Orientation programme constant: ${tm.minutes} minutes per module, ` +
+                `${allocation.modules.length} modules per subject.`,
+            }
+          : { kind: 'timing_document', ref: tm.source, raw: tm.raw_duration },
       },
       duration_label: `Total Duration: ${hoursLabel(tm.minutes)}`,
       description: insufficient ?? '',
       description_sources: [],
       source_chapter: cw.source_chapter,
+      ...(cw.source_chapters && cw.source_chapters.length > 1
+        ? { source_chapters: cw.source_chapters }
+        : {}),
       nos_code: cw.nos_code,
       ...(cw.elective !== undefined ? { elective: cw.elective } : {}),
       part_a: insufficient ?? buildPartA(tm, cw.nos_code, strategy),

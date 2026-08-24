@@ -27,10 +27,14 @@ import {
   childElements,
   descendants,
   firstChild,
+  pageBreakParagraph,
   paragraphStyle,
   parseXml,
   serializeXml,
+  rowCells,
   setCellParagraphs,
+  setCellText,
+  setParagraphParts,
   setParagraphStyle,
   setParagraphText,
   tableRows,
@@ -96,6 +100,21 @@ function fromPrototype(doc: Document, xml: string): Element {
   return sanitizeClone(doc.importNode(node, true) as Element);
 }
 
+/**
+ * Splits a correlation into the template's two paragraphs.
+ *
+ * The cell holds a bold NOS code and then its performance criteria in plain text,
+ * as separate paragraphs -- "SGJ/N0111" over "PC1, PC3, PC4". Content arrives as
+ * one string, conventionally "<NOS> / <PCs>", so the separator is where it splits.
+ * A value with no separator stays a single paragraph rather than being forced into
+ * a shape it does not have.
+ */
+function splitCorrelation(correlation: string): string[] {
+  const at = correlation.indexOf(' / ');
+  if (at < 0) return [correlation];
+  return [correlation.slice(0, at), correlation.slice(at + 3)];
+}
+
 /** Builds one module's block sequence from the template prototypes. */
 function renderModule(
   doc: Document,
@@ -142,8 +161,12 @@ function renderModule(
     module.part_a.rows.map((r) => [
       r.unit_label,
       r.duration.label,
+      // "<Activity>: <what the learner does>" -- the cell splits it into a bold
+      // label and a plain body, as the template's own cells do.
       r.activity_name ? `${r.activity_name}: ${r.interactive_description}` : r.interactive_description,
-      r.correlation,
+      // Two paragraphs in the template: the NOS code in bold, then its
+      // performance criteria in plain text.
+      splitCorrelation(r.correlation),
     ]),
   );
   blocks.push(partATable, spacer());
@@ -163,7 +186,9 @@ function renderModule(
         r.unit_range,
         r.activity_type,
         r.recommended_standard,
-        r.tracking,
+        // The template writes this cell as one or two labelled paragraphs --
+        // "xAPI Verbs: …" over "Data: …" -- so a newline starts a new paragraph.
+        r.tracking.split('\n'),
         r.completion_criteria,
       ]),
     );
@@ -202,11 +227,12 @@ function renderModule(
     blocks.push(partCHeading);
 
     const deckTitle = fromPrototype(doc, proto.part_c_deck_title);
-    setParagraphText(
+    // Two runs in the template: the deck title, then its subtitle.
+    setParagraphParts(
       deckTitle,
       module.part_c.subtitle
-        ? `${module.part_c.deck_title}Subtitle: ${module.part_c.subtitle}`
-        : module.part_c.deck_title,
+        ? [module.part_c.deck_title, `Subtitle: ${module.part_c.subtitle}`]
+        : [module.part_c.deck_title],
     );
     blocks.push(deckTitle);
 
@@ -215,12 +241,14 @@ function renderModule(
       setParagraphText(title, `Slide ${slide.number}: ${slide.title}`);
       blocks.push(title);
 
+      // "Visual Cues: " is bold and the body italic; "Instructor Script: " is
+      // bold and the body plain. Both are one paragraph of two runs.
       const cues = fromPrototype(doc, proto.part_c_visual_cues);
-      setParagraphText(cues, `Visual Cues: ${slide.visual_cues}`);
+      setParagraphParts(cues, ['Visual Cues: ', slide.visual_cues]);
       blocks.push(cues);
 
       const script = fromPrototype(doc, proto.part_c_instructor_script);
-      setParagraphText(script, `Instructor Script: ${slide.instructor_script}`);
+      setParagraphParts(script, ['Instructor Script: ', slide.instructor_script]);
       blocks.push(script);
     }
     blocks.push(spacer());
@@ -559,7 +587,10 @@ export async function renderStoryboardDocx(options: RenderOptions): Promise<Uint
   const anchor = blocks[stop] ?? null;
 
   const rendered: Element[] = [];
-  for (const module of state.modules) {
+  for (const [index, module] of state.modules.entries()) {
+    // Each module starts its own page; the first one already opens right after
+    // the table of contents, so it takes no break of its own.
+    if (index > 0) rendered.push(pageBreakParagraph(doc));
     rendered.push(...renderModule(doc, template.prototypes, module));
   }
 
@@ -644,33 +675,42 @@ function renderAssessment(
     setParagraphText(el, text);
     blocks.push(el);
   };
+  /** For the template's label-then-body paragraphs, which are two runs. */
+  const pushParts = (protoXml: string, parts: readonly string[]) => {
+    const el = fromPrototype(doc, protoXml);
+    setParagraphParts(el, parts);
+    blocks.push(el);
+  };
 
   // --- Assessment Strategy ---------------------------------------------
   push(proto.assessment_subheading, 'Assessment Strategy');
   for (const point of assessment.strategy_points) push(proto.strategy_point, point.text);
 
-  push(
-    proto.assessment_bullet,
-    `Minimum Aggregate Passing % at QP Level: ${assessment.minimum_aggregate_pass_pct}. Every ` +
-      'trainee should score a minimum aggregate passing percentage as specified, to successfully ' +
-      'clear the Qualification Pack assessment.',
-  );
+  pushParts(proto.assessment_label_bullet, [
+    'Minimum Aggregate Passing % at QP Level: ',
+    `${assessment.minimum_aggregate_pass_pct}. Every trainee should score a minimum aggregate ` +
+      'passing percentage as specified, to successfully clear the Qualification Pack assessment.',
+  ]);
 
-  const weightageLine = (row: (typeof assessment.weightage_compulsory)[number]) =>
+  // Each weightage line opens with a bold label -- the heading, or the NOS code --
+  // and continues in plain text, so it takes the labelled prototype.
+  const labelledWeightage = (row: (typeof assessment.weightage_compulsory)[number]) =>
     row.is_total
-      ? `Total: Theory ${row.theory_marks}, Practical ${row.practical_marks}, ` +
-        `Total ${row.total_marks}, Weightage ${row.weightage}.`
-      : `${row.nos_code} ${row.nos_title}: Theory ${row.theory_marks}, ` +
-        `Practical ${row.practical_marks}, Total ${row.total_marks}, Weightage ${row.weightage}.`;
+      ? ['Total: ', `Theory ${row.theory_marks}, Practical ${row.practical_marks}, ` +
+          `Total ${row.total_marks}, Weightage ${row.weightage}.`]
+      : [`${row.nos_code} `, `${row.nos_title}: Theory ${row.theory_marks}, ` +
+          `Practical ${row.practical_marks}, Total ${row.total_marks}, Weightage ${row.weightage}.`];
 
   if (assessment.weightage_compulsory.length > 0) {
-    push(proto.assessment_bullet, 'Assessment Weightage (Compulsory NOS):');
-    for (const row of assessment.weightage_compulsory) push(proto.assessment_bullet, weightageLine(row));
+    pushParts(proto.assessment_label_bullet, ['Assessment Weightage (Compulsory NOS):', '']);
+    for (const row of assessment.weightage_compulsory) {
+      pushParts(proto.assessment_label_bullet, labelledWeightage(row));
+    }
   }
   for (const [name, rows] of Object.entries(assessment.weightage_electives)) {
     if (rows.length === 0) continue;
-    push(proto.assessment_bullet, `Assessment Weightage (${name}):`);
-    for (const row of rows) push(proto.assessment_bullet, weightageLine(row));
+    pushParts(proto.assessment_label_bullet, [`Assessment Weightage (${name}):`, '']);
+    for (const row of rows) pushParts(proto.assessment_label_bullet, labelledWeightage(row));
   }
 
   if (assessment.remarks) push(proto.assessment_bullet, `Remarks: ${assessment.remarks}`);
@@ -698,17 +738,22 @@ function renderAssessment(
 
       // Ordered by the bank-wide question number so numbering reads continuously.
       for (const q of [...questions].sort((a, b) => a.number - b.number)) {
-        push(proto.question_stem, `${q.number}. ${q.stem}`);
+        // The number is bold green and the stem bold; the two labels below are
+        // formatted differently from the text that follows them.
+        pushParts(proto.question_stem, [`${q.number}. `, q.stem]);
         for (const key of ['a', 'b', 'c', 'd'] as const) {
           push(proto.question_option, `${key}) ${q.options[key]}`);
         }
-        push(proto.question_answer, `Correct Answer: ${q.correct_option}) ${q.options[q.correct_option]}`);
-        push(proto.question_explanation, `Explanation: ${q.explanation}`);
+        pushParts(proto.question_answer, [
+          'Correct Answer: ',
+          `${q.correct_option}) ${q.options[q.correct_option]}`,
+        ]);
+        pushParts(proto.question_explanation, ['Explanation: ', q.explanation]);
       }
     }
   }
 
-  renderGlossary(doc, state, proto, push);
+  renderGlossary(doc, state, proto, push, blocks);
 
   const sectEl = bodyBlocks(doc).blocks.find((b) => b.localName === 'sectPr') ?? null;
   for (const el of blocks) {
@@ -724,17 +769,19 @@ function renderAssessment(
  * is where they become one list: merged, deduplicated case-insensitively by term,
  * and sorted alphabetically so the reader can look one up.
  *
- * Rendered as a heading and bullets rather than a table because the template
- * carries no glossary section to clone a table from, and the assessment section it
- * follows is bullets throughout -- so this reads as part of the same document
- * rather than as something bolted on. Abbreviations sort with their letters, which
- * is what a reader scanning for "PEM" expects.
+ * Rendered as a three-column table -- Abbreviation, Full Form, Definition -- built
+ * from the template's own three-column table, so its header fill, borders, cell
+ * padding, fonts and widths are the template's rather than anything chosen here.
+ * The one deliberate difference from that prototype: the second and third columns
+ * are written plain. In its original use those cells open with a bold label, which
+ * a full form and a definition do not have.
  */
 function renderGlossary(
   doc: Document,
   state: StoryboardState,
   proto: AnalyzedTemplate['prototypes'],
   push: (protoXml: string, text: string) => void,
+  blocks: Element[],
 ): void {
   const entries = state.glossary ?? [];
   if (entries.length === 0) return;
@@ -744,16 +791,63 @@ function renderGlossary(
     const key = entry.term.trim().toLowerCase();
     if (!byTerm.has(key)) byTerm.set(key, entry);
   }
-
   const sorted = [...byTerm.values()].sort((a, b) =>
     a.term.localeCompare(b.term, 'en', { sensitivity: 'base' }),
   );
 
+  // The glossary opens its own page, as each module does, rather than running on
+  // from the end of the question bank.
+  blocks.push(pageBreakParagraph(doc));
+
   push(proto.module_heading, 'Glossary of Terms and Abbreviations');
   push(
     proto.module_description,
-    `${sorted.length} technical, financial, regulatory and operational terms and abbreviations ` +
-      "used across this course's approved documents.",
+    'Comprehensive reference of the technical, financial, regulatory and operational terminology ' +
+      "used throughout this storyboard, drawn from the course's approved documents.",
   );
-  for (const entry of sorted) push(proto.assessment_bullet, `${entry.term}: ${entry.definition}`);
+
+  const table = fromPrototype(doc, proto.part_b_table);
+  const header = tableRows(table)[0];
+  if (header) {
+    sanitizeClone(header);
+    const cells = rowCells(header);
+    ['Abbreviation', 'Full Form', 'Definition'].forEach((label, i) => {
+      if (cells[i]) setCellText(cells[i]!, label);
+    });
+  }
+  for (const row of tableRows(table).slice(1)) table.removeChild(row);
+
+  const bodyProto = plainedBodyRow(doc, proto.part_b_body_row);
+  for (const entry of sorted) {
+    table.appendChild(
+      sanitizeClone(cloneRowWithValues(bodyProto, [entry.term, entry.full_form, entry.definition])),
+    );
+  }
+  blocks.push(table, fromPrototype(doc, proto.spacer));
+}
+
+/**
+ * The three-column body row with bold dropped from its second and third cells.
+ *
+ * The prototype's role in the template is a script row, where those cells open
+ * with a bold speaker or shot label. A glossary's full form and definition have no
+ * label, so the bold is removed and everything else -- widths, borders, padding,
+ * font, size -- is left exactly as the template set it. Removing the property also
+ * stops the cell writer treating the text as a labelled one and splitting it at a
+ * colon a definition may well contain.
+ */
+function plainedBodyRow(doc: Document, bodyRowXml: string): Element {
+  const row = fromPrototype(doc, bodyRowXml);
+  rowCells(row)
+    .slice(1)
+    .forEach((tc) => {
+      for (const p of childElements(tc, 'p')) {
+        for (const run of childElements(p, 'r')) {
+          const rPr = firstChild(run, 'rPr');
+          if (!rPr) continue;
+          for (const b of childElements(rPr, 'b')) rPr.removeChild(b);
+        }
+      }
+    });
+  return row;
 }

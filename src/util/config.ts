@@ -26,6 +26,13 @@ function num(key: string, fallback: number): number {
   return n;
 }
 
+/** Reads a boolean flag. Anything but "false"/"0" with the key present is true. */
+function bool(key: string, fallback: boolean): boolean {
+  const v = process.env[key];
+  if (v === undefined || v === '') return fallback;
+  return !['false', '0', 'no', 'off'].includes(v.toLowerCase());
+}
+
 const root = process.cwd();
 const abs = (p: string) => (path.isAbsolute(p) ? p : path.resolve(root, p));
 
@@ -76,6 +83,20 @@ export const config = {
   grounding: {
     minOverlap: num('GROUNDING_MIN_OVERLAP', 0.35),
     minTokenLength: num('GROUNDING_MIN_TOKEN_LENGTH', 4),
+  },
+  render: {
+    /**
+     * Hand the finished .docx to Word once so its table of contents holds real
+     * page numbers.
+     *
+     * Page numbers cannot be computed without laying the document out, so the
+     * renderer emits the field with an empty cached result and Word resolves it.
+     * Doing that at generation time is what makes the numbers visible in viewers
+     * that show cached results rather than resolving fields. Turn it off where
+     * Word is absent or the extra seconds per render are unwelcome -- the
+     * document is correct either way.
+     */
+    refreshFields: bool('REFRESH_FIELDS', true),
   },
   logLevel: str('LOG_LEVEL', 'info'),
 } as const;

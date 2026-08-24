@@ -25,7 +25,9 @@ import { z } from 'zod';
 import path from 'node:path';
 import { DOCUMENT_TYPES, isInsufficientSource, type DocumentType } from '../../types/source.js';
 import type { StoryboardState } from '../../types/storyboard.js';
-import { courseDir, getCourseConfig, listCourses } from '../../courses/course-config.js';
+import { courseDir, getCourseConfig, listCourses,
+  templateTrackFor,
+} from '../../courses/course-config.js';
 import { getCourseDocumentStatus, ingestCourse } from '../../documents/ingest.js';
 import {
   chapterForModule,
@@ -36,9 +38,14 @@ import {
 } from '../../documents/retriever.js';
 import { analyzeTemplate, type AnalyzedTemplate } from '../../docx/template-analyzer.js';
 import { renderStoryboardDocx } from '../../docx/docx-writer.js';
+import { refreshDocxFields } from '../../docx/field-refresh.js';
 import { buildSkeleton } from '../../storyboard/skeleton.js';
 import { validateStoryboard } from '../../storyboard/validator.js';
 import { parseTimingDocument } from '../../timing/timing-parser.js';
+import {
+  buildOrientationAllocation,
+  usesProgrammeTiming,
+} from '../../timing/orientation-allocation.js';
 import { masterAsTimingAllocation, parseMasterFile } from '../../cdr/master-file.js';
 import { withValidatedArithmetic } from '../../timing/timing-validator.js';
 import type { TimingAllocation } from '../../types/timing.js';
@@ -53,6 +60,7 @@ import {
   rollback,
 } from '../../storage/artifact-store.js';
 import { config, templateFile } from '../../util/config.js';
+import { computeSourceFingerprint } from '../../storage/source-fingerprint.js';
 
 // ---------------------------------------------------------------------------
 // Shared helpers
@@ -72,16 +80,26 @@ async function loadTiming(courseId: string): Promise<TimingAllocation> {
   // duration alongside the routing, so the master is the timing authority. Both
   // paths produce the same TimingAllocation, which is what lets the skeleton, the
   // validator and the renderer stay identical across the two kinds of course.
+  // Three ways a course states its durations, all producing the same
+  // TimingAllocation so that the skeleton, the validator and the renderer stay
+  // identical across them:
+  //
+  //   Entrepreneur  a Timing Allocation Document, parsed.
+  //   CDR           a master file, which states durations alongside the routing.
+  //   Orientation   no document at all -- every subject is three one-hour
+  //                 modules, so the programme constant is the whole statement.
   const source =
     course.kind === 'cdr'
       ? await loadMasterAllocation(courseId, course)
-      : await (async () => {
-          const doc = course.documents.find((d) => d.document_type === 'TIMING');
-          if (!doc) {
-            throw new Error(`Course "${courseId}" has no Timing Allocation Document configured.`);
-          }
-          return parseTimingDocument(courseId, path.join(courseDir(courseId), doc.file));
-        })();
+      : usesProgrammeTiming(courseId)
+        ? buildOrientationAllocation(courseId)
+        : await (async () => {
+            const doc = course.documents.find((d) => d.document_type === 'TIMING');
+            if (!doc) {
+              throw new Error(`Course "${courseId}" has no Timing Allocation Document configured.`);
+            }
+            return parseTimingDocument(courseId, path.join(courseDir(courseId), doc.file));
+          })();
 
   const allocation = withValidatedArithmetic(source);
   timingCache.set(courseId, allocation);
@@ -121,11 +139,6 @@ function loadTemplate(track: string): Promise<AnalyzedTemplate> {
   });
   templateCache.set(track, analyzing);
   return analyzing;
-}
-
-/** The template a course renders to: its track's. */
-function templateTrackFor(courseId: string): string {
-  return getCourseConfig(courseId).track;
 }
 
 import type { ToolDefinition } from './result.js';
@@ -555,11 +568,19 @@ const createDraftTool: ToolDefinition = {
       ...(Array.isArray(args.modules) ? { modules: args.modules as number[] } : {}),
     });
 
+    // What the sources looked like at the moment this storyboard was written, so
+    // that offering it back later can say whether they have moved since. A stored
+    // citation is a position in a document rather than a handle on a piece of
+    // text, so this is the only thing that distinguishes a safe reuse from one
+    // that silently cites the wrong paragraph.
+    const fingerprint = computeSourceFingerprint(courseId, templateVersion);
+
     const artifact = createArtifact({
       course_id: courseId,
       template_version: templateVersion,
       timing_strategy: state.timing_strategy,
       state,
+      source_fingerprint: JSON.stringify(fingerprint),
       ...(args.note ? { note: String(args.note) } : {}),
     });
 
@@ -713,6 +734,12 @@ const renderTool: ToolDefinition = {
     const bytes = await renderStoryboardDocx({ template, state });
     const file = attachDocx(artifactId, version, bytes);
 
+    // Last step, and a soft one: the document is already written and correct. This
+    // only settles the table of contents' page numbers, which need a layout pass.
+    const fields = config.render.refreshFields
+      ? await refreshDocxFields(file)
+      : { refreshed: false, reason: 'Field refresh is switched off (REFRESH_FIELDS).' };
+
     return ok({
       artifact_id: artifactId,
       version,
@@ -722,9 +749,10 @@ const renderTool: ToolDefinition = {
       errors: report.summary.errors,
       warnings: report.summary.warnings,
       insufficient_source_modules: report.insufficient_source_modules,
-      note:
-        'The table of contents is a Word field; page numbers refresh when the document is ' +
-        'opened in Word.',
+      page_numbers_resolved: fields.refreshed,
+      note: fields.refreshed
+        ? 'The table of contents carries real page numbers.'
+        : `Page numbers are not in the file yet. ${fields.reason ?? ''}`.trim(),
     });
   },
 };

@@ -2,6 +2,9 @@ node_modules/
 dist/
 data/
 artifacts/
+# The test suite has its own database and artifacts folder; both are rebuilt
+# by the next run and neither belongs in the repository.
+artifacts-test/
 .env
 .env.local
 *.log

@@ -77,12 +77,20 @@ const FIELD_SPEC = {
   description: 'One paragraph introducing the module, drawn from the sources.',
   activity_name: 'Short noun phrase naming the interactive activity, e.g. "Guided Simulation".',
   interactive_description: 'What the learner does in it and what it teaches, two or three sentences.',
-  correlation: 'The NOS code and performance criteria, e.g. "SGJ/N1817 / PC1, PC3".',
+  correlation:
+    'The NOS code, then " / ", then the performance criteria: "SGJ/N1817 / PC1, PC3". The two ' +
+    'halves render as separate lines in the cell, so keep the separator.',
   lms_row:
-    'One row per Part A activity: activity_type copied verbatim from that unit\'s activity_name, ' +
-    'plus recommended_standard, tracking and completion_criteria.',
-  visual: 'What is on screen for this segment: shots, demonstrations, on-screen graphics.',
-  audio: 'The spoken track, attributed to a speaker, e.g. \'Host (On-Camera): "..."\'.',
+    'One entry per row in module.lms_rows, in that order: recommended_standard, tracking and ' +
+    'completion_criteria. Write tracking as a label and a value -- "xAPI Verbs: explored, ' +
+    'identified" or "SCORM: cmi.score.raw" -- with a newline between them if the row needs both ' +
+    'a verbs line and a data line. completion_criteria is a plain sentence with no label.',
+  visual:
+    'What is on screen for this segment, written as a label and a description: "Wide ' +
+    'establishing shot of ...". Whatever precedes the first ": " renders as the label.',
+  audio:
+    'The spoken track, attributed to a speaker, e.g. Host (On-Camera): "...". The speaker ' +
+    'renders as the label and the dialogue after the colon as the body.',
   visual_cues: 'What appears on the slide: headings, bullets, diagrams, poll options.',
   instructor_script: 'What the instructor says while this slide is up.',
   questions:
@@ -90,10 +98,10 @@ const FIELD_SPEC = {
     'The three wrong options are authored, not sourced, and must not assert anything the ' +
     'sources do not state.',
   glossary_terms:
-    'Technical, financial, regulatory and operational terms and abbreviations this module uses, ' +
-    'each with a one-sentence meaning. Write the term as the documents write it. They are merged ' +
-    'with the other modules into one alphabetical glossary at the end of the document, so do not ' +
-    'repeat a term another module has already defined.',
+    'Technical, financial, regulatory and operational terms and abbreviations this module uses. ' +
+    'Each is three fields: the term as the documents write it, its full form, and a ' +
+    'one-sentence definition. They are merged with the other modules into one alphabetical ' +
+    'table at the end of the document, so do not repeat a term another module has defined.',
 } as const;
 
 /** Fields that must carry a citation. The rest are structural or authored. */
@@ -170,7 +178,12 @@ function submissionSkeleton(order: ModuleWorkOrder) {
     ...(order.glossary_terms_needed > 0
       ? {
           glossary_terms: [
-            { term: '<term or abbreviation>', definition: '<meaning>', chunk_ids: ['<chunk_id>'] },
+            {
+              term: '<abbreviation or term>',
+              full_form: '<what it stands for>',
+              definition: '<one sentence>',
+              chunk_ids: ['<chunk_id>'],
+            },
           ],
         }
       : {}),
@@ -325,8 +338,9 @@ const submitModuleTool: ToolDefinition = {
     glossary_terms: z
       .array(
         z.object({
-          term: z.string(),
-          definition: z.string(),
+          term: z.string().describe('The abbreviation or term, as the documents write it.'),
+          full_form: z.string().describe('What it stands for. Repeat the term if it is not an abbreviation.'),
+          definition: z.string().describe('One sentence explaining it.'),
           chunk_ids: z.array(z.string()),
         }),
       )
@@ -623,6 +637,7 @@ const submitModuleTool: ToolDefinition = {
       const added: typeof existing = [];
       for (const [i, raw] of (args.glossary_terms as Record<string, unknown>[]).entries()) {
         const term = String(raw.term ?? '').trim();
+        const fullForm = String(raw.full_form ?? '').trim();
         const definition = String(raw.definition ?? '').trim();
         if (term === '' || definition === '') {
           errors.push(`glossary term ${i + 1}: both term and definition are required.`);
@@ -638,7 +653,15 @@ const submitModuleTool: ToolDefinition = {
           errors.push(`glossary term "${term}": cite at least one chunk_id.`);
           continue;
         }
-        added.push({ term, definition, module_number: moduleNumber, sources: cited });
+        added.push({
+          term,
+          // Not every glossary line is an abbreviation; where it is not, the term
+          // stands in for its own full form rather than leaving the column blank.
+          full_form: fullForm === '' ? term : fullForm,
+          definition,
+          module_number: moduleNumber,
+          sources: cited,
+        });
       }
       if (added.length > 0) {
         state.glossary = [...existing, ...added];

@@ -84,10 +84,74 @@ interface UnitChunkRow {
   ordinal: number;
 }
 
-const UNIT_PREFIX_RE = /^UNIT\s+\d+\.\d+\s*[:\-–]?\s*/i;
+const UNIT_PREFIX_RE = /^UNIT\s*:?\s*\d+\.\d+\s*[:\-–.]?\s*/i;
+
+/**
+ * The printed artefacts that ride along with a unit heading.
+ *
+ * A heading is taken verbatim from the document, which is right, but "verbatim"
+ * in a PDF includes whatever the typesetting put on the same line. Three kinds
+ * recur across the SCGJ handbooks and all three are noise rather than title:
+ *
+ *   A trailing page number, from a contents line whose leader dots did not
+ *   survive extraction -- "Introduction to carbon footprint80", "The
+ *   fundamental concepts of climate change science. 3".
+ *
+ *   A run-on "Unit objectives", from a body heading immediately followed by the
+ *   objectives box -- "Concept of Green Logistics Unit objectives".
+ *
+ *   A soft hyphen left by a line break inside a word -- "International
+ *   Mechanism that supports Low-Car-".
+ *
+ * Stripping them is not rewording: the words kept are the document's own, in its
+ * own order. Left in, they reach the reader as part of a heading, and a Part A row
+ * labelled "... green logistics121" reads as a defect in the storyboard.
+ */
+const TITLE_ARTEFACTS: readonly RegExp[] = [
+  // "Unit objectives" / "Unit Objective(s)" run on at the end.
+  /\s*Unit\s+Objectives?\b.*$/i,
+  // A trailing page number, with or without a space and any leader punctuation
+  // before it. Bounded to 1-3 digits so a figure like "Scope 3" survives when it
+  // is the real end of the title -- see the guard below.
+  /\s*[.\u2022\-]*\s*\d{1,3}\s*$/,
+];
+
+/** A hyphen left dangling by a mid-word line break. */
+const TRAILING_HYPHEN_RE = /\s*-\s*$/;
+
+/**
+ * True when a trailing number is part of the title rather than a page number.
+ *
+ * "Greenhouse Gas Emissions: Scope 1, Scope 2, and Scope 3" ends in a digit that
+ * belongs to it. The distinguishing feature is that the digit completes a phrase
+ * -- the word before it is a word the number qualifies -- so a small allow-list of
+ * those words is checked before the page-number rule is allowed to fire.
+ */
+const NUMBERED_TERM_RE =
+  /\b(scope|tier|level|type|phase|stage|step|scenario|category|part|module|unit|annexure|chapter|figure|table|goal|sdg|no)\s+\d{1,3}$/i;
+
+function cleanUnitTitle(text: string): string {
+  let out = text.trim();
+
+  // Leading punctuation left by an extracted list marker: ". Business
+  // Sustainability Reporting".
+  out = out.replace(/^[.\u2022\-–:]+\s*/, '').trim();
+
+  for (const artefact of TITLE_ARTEFACTS) {
+    if (artefact === TITLE_ARTEFACTS[1] && NUMBERED_TERM_RE.test(out)) continue;
+    const stripped = out.replace(artefact, '').trim();
+    // Never strip away the whole title: a heading that is only a page number is
+    // better shown as it was printed than shown as nothing.
+    if (stripped.length > 0) out = stripped;
+  }
+
+  out = out.replace(TRAILING_HYPHEN_RE, '').trim();
+  // Collapse the runs of spaces PDF extraction leaves mid-line.
+  return out.replace(/\s{2,}/g, ' ');
+}
 
 function stripUnitPrefix(heading: string): string {
-  return heading.replace(UNIT_PREFIX_RE, '').trim();
+  return cleanUnitTitle(heading.replace(UNIT_PREFIX_RE, ''));
 }
 
 /** Chapter number implied by a unit code such as "7.3". */
@@ -193,14 +257,27 @@ export function getPhOutline(courseId: string): PhOutline {
   }
 
   const units: PhUnit[] = [...byUnit.entries()].map(([unitCode, chunks]) => {
-    const pages = chunks.map((c) => c.pdf_page);
-    const printed = chunks.map((c) => c.printed_page).filter((p): p is number => p !== null);
-    // The first chunk carries the heading as it was printed; later chunks of the
-    // same unit repeat it, so taking the first keeps the document's own wording.
-    const heading = chunks[0]!.section;
+    // A unit's chunks normally begin at its body heading, and every one of them
+    // repeats that heading, so the first is the document's own wording.
+    //
+    // Except where the contents page itself parsed as a unit heading. The GHG
+    // handbook sets its contents as a table, so "UNIT 1.2:" and the title landed
+    // in different cells and the page number landed with the marker: the unit's
+    // first chunk is the contents page, titled "7". Taking it would title a unit
+    // after a page number and cite page 6 for every unit in the book.
+    //
+    // So the first chunk carrying a *substantive* heading wins, and the
+    // non-substantive ones are dropped from the unit's page range too -- they are
+    // the contents page, not the unit's material.
+    const substantive = chunks.filter((c) => /[a-z]/i.test(stripUnitPrefix(c.section)));
+    const body = substantive.length > 0 ? substantive : chunks;
+
+    const pages = body.map((c) => c.pdf_page);
+    const printed = body.map((c) => c.printed_page).filter((p): p is number => p !== null);
+    const heading = body[0]!.section;
     return {
       unit_code: unitCode,
-      module_number: chunks[0]!.chapter ?? chapterOf(unitCode),
+      module_number: body[0]!.chapter ?? chapterOf(unitCode),
       title: stripUnitPrefix(heading),
       heading,
       pdf_page_start: Math.min(...pages),
@@ -208,8 +285,8 @@ export function getPhOutline(courseId: string): PhOutline {
       ...(printed.length > 0
         ? { printed_page_start: Math.min(...printed), printed_page_end: Math.max(...printed) }
         : {}),
-      chunk_count: chunks.length,
-      char_count: chunks.reduce((a, c) => a + c.char_count, 0),
+      chunk_count: body.length,
+      char_count: body.reduce((a, c) => a + c.char_count, 0),
     };
   });
 

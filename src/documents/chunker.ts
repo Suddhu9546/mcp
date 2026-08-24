@@ -100,9 +100,47 @@ function matchChapterHeading(
   // Half the expected title's significant words must be present. "Ensure
   // Manufacturing of Biomass pellet" against "Packaging Machine" scores 0.
   const coverage = want.size === 0 ? 0 : hits / want.size;
-  if (coverage < 0.5) return undefined;
+  if (coverage >= 0.5) return { chapter, title: `${chapter}. ${expected}` };
 
-  return { chapter, title: `${chapter}. ${expected}` };
+  // A chapter opener printed as display text can be broken across lines, in which
+  // case the number's own line carries only the first few words and can never
+  // reach half the title. The Biogas handbook sets chapter 6 over four lines --
+  // "6. SCADA Monitoring," / "Interpretation &" / "Decision-Making in" / "Biogas
+  // Plant O&M" -- scoring 2 of 7, so every unit of that chapter went unassigned
+  // and a module scoped to it retrieved nothing.
+  //
+  // So a short line is also accepted when it is a prefix of the expected title.
+  // That is the discriminating test rather than a lower coverage threshold: a
+  // figure caption or an objectives-list item shares words with the chapter title
+  // but does not begin it, and requiring two significant words keeps a bare
+  // "6. The" from matching anything.
+  if (found.size >= 2 && isTitlePrefix(m[2] ?? '', expected)) {
+    return { chapter, title: `${chapter}. ${expected}` };
+  }
+
+  return undefined;
+}
+
+/** Letters and digits only, single-spaced, so punctuation and case cannot differ. */
+function normaliseTitle(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+/**
+ * True when `line` is the opening words of `expected`.
+ *
+ * Compared on normalised text rather than on token sets, because the point is the
+ * *order*: "SCADA Monitoring" opens "SCADA Monitoring, Interpretation & ...", and
+ * "Monitoring of Biogas Plants" does not, even though it shares two words.
+ */
+function isTitlePrefix(line: string, expected: string): boolean {
+  const a = normaliseTitle(line);
+  const b = normaliseTitle(expected);
+  if (a.length === 0 || a.length >= b.length) return false;
+  return b.startsWith(`${a} `);
 }
 
 /**

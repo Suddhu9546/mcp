@@ -41,6 +41,11 @@ describe('model independence', () => {
     let step = await call('flow_choose', { session_id: menu.session_id, choice: 'storyboard' });
     step = await call('flow_choose', { session_id: menu.session_id, choice: 'entrepreneur' });
     step = await call('flow_choose', { session_id: menu.session_id, choice: COURSE });
+    // A subject already storyboarded is offered the saved one first. This test is
+    // about authoring, so it asks for a fresh one.
+    if (step.step === 'choose_storyboard_source') {
+      step = await call('flow_choose', { session_id: menu.session_id, choice: 'generate' });
+    }
     expect(step.step).toBe('storyboard_ready');
     expect(step.done).toBe(true);
 

@@ -25,6 +25,7 @@ import {
   blockKind,
   childElements,
   descendants,
+  firstChild,
   gridSpan,
   paragraphStyle,
   parseXml,
@@ -148,6 +149,14 @@ export interface BlockPrototypes {
   strategy_point: string;
   /** A ListBullet2 bullet, used for weightage lines and the disclosure note. */
   assessment_bullet: string;
+  /**
+   * A bullet that opens with a differently-formatted label.
+   *
+   * Distinct from `assessment_bullet` because the section uses both: a question
+   * option is one plain run, while a weightage or pass-mark line is a bold label
+   * followed by plain text.
+   */
+  assessment_label_bullet: string;
 }
 
 export interface AnalyzedTemplate {
@@ -475,6 +484,24 @@ function extractPrototypes(
   const questionAnswer = need(qTail.find((b) => CORRECT_ANSWER_RE.test(b.text)), 'a "Correct Answer:" paragraph');
   const questionExplanation = need(qTail.find((b) => EXPLANATION_RE.test(b.text)), 'an "Explanation:" paragraph');
   const questionGroupHeading = need(qTail.find((b) => b.style === 'Heading3'), 'a question-bank Heading3');
+
+  /**
+   * A bullet whose lead-in is formatted differently from its body.
+   *
+   * The assessment section has two kinds of ListBullet2: four hundred question
+   * options, whose single run is plain, and eleven statements that open with a
+   * bold label -- "Minimum Aggregate Passing % at QP Level: ", each weightage
+   * line's NOS code. Taking one prototype for both meant the labelled ones lost
+   * their bold, because the prototype came from an option.
+   */
+  const labelledBullet = blocks.find(
+    (b) =>
+      b.kind === 'p' &&
+      b.style.startsWith('ListBullet') &&
+      childElements(b.el, 'r').length >= 2 &&
+      firstChild(childElements(b.el, 'r')[0]!, 'rPr') !== undefined &&
+      firstChild(firstChild(childElements(b.el, 'r')[0]!, 'rPr')!, 'b') !== undefined,
+  );
   const assessmentSubheading = need(
     qTail.find((b) => b.style === 'Heading2'),
     'a Heading2 inside the assessment section',
@@ -516,6 +543,7 @@ function extractPrototypes(
     assessment_subheading: xml(assessmentSubheading),
     strategy_point: xml(strategyPoint),
     assessment_bullet: xml(questionOption),
+    assessment_label_bullet: xml(labelledBullet ?? questionOption),
   };
 }
 

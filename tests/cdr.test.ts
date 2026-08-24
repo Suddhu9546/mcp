@@ -22,6 +22,11 @@ import { runTool } from '../src/mcp/tools/index.js';
 import { buildStoryboard } from './helpers/build-storyboard.js';
 import { courseDir } from '../src/courses/course-config.js';
 import { CDR_COURSES } from '../src/courses/cdr-generated.js';
+import {
+  isPreparedCourse,
+  listPreparedCdrStoryboards,
+  preparedStoryboard,
+} from '../src/cdr/prepared.js';
 import { cdrCourseStatus } from '../src/cdr/catalog.js';
 import { moduleScope } from '../src/courses/module-scope.js';
 import { parseMasterFile, masterAsTimingAllocation } from '../src/cdr/master-file.js';
@@ -139,12 +144,12 @@ describe.skip('CDR master file (pending: master.docx rewritten)', () => {
     const scope = moduleScope('biofuels', 5);
     expect(scope.kind).toBe('chapter');
     if (scope.kind !== 'chapter') throw new Error('unreachable');
-    expect(scope.chapter).toBe(7); // the crosswalk, unchanged
+    expect(scope.chapters).toEqual([7]); // the crosswalk, unchanged
   });
 });
 
 describe('CDR flow', () => {
-  it('reaches CDR as the third programme of the storyboard flow', async () => {
+  it('hands over the supplied CDR storyboard in two answers', async () => {
     const menu = await call('start_flow');
     expect(menu.options.map((o: any) => o.value)).toEqual([
       'storyboard',
@@ -152,18 +157,60 @@ describe('CDR flow', () => {
       'ph_reading',
     ]);
 
-    // CDR is a track of the one storyboard flow, not a menu item of its own: it
-    // produces the same document under the same rules, and differs only in where
-    // each module's sources come from.
+    // CDR is a track of the one storyboard flow, not a menu item of its own.
     const tracks = await call('flow_choose', { session_id: menu.session_id, choice: '1' });
     expect(tracks.step).toBe('choose_track');
 
+    // Its storyboard is a finished, hand-authored document rather than something
+    // this server writes, and there is exactly one CDR course, so the subject
+    // question would have a single answer. Asking it would be a question with no
+    // alternative, so the document is handed over instead.
     const chosen = await call('flow_choose', { session_id: menu.session_id, choice: 'cdr' });
     expect(chosen.flow).toBe('storyboard');
-    expect(chosen.step).toBe('choose_subject');
-    // The CDR list holds CDR courses only; Biofuels is not one of them.
-    expect(chosen.options.map((o: any) => o.value)).toEqual([COURSE]);
+    expect(chosen.step).toBe('storyboard_ready');
+    expect(chosen.done).toBe(true);
+    expect(chosen.options).toBeUndefined();
+
+    expect(chosen.data.course_id).toBe(COURSE);
+    expect(chosen.data.source).toBe('prepared');
+    expect(chosen.data.docx_path).toMatch(/\.docx$/);
+    expect(existsSync(chosen.data.docx_path)).toBe(true);
+    expect(chosen.data.bytes).toBeGreaterThan(0);
+
+    // Nothing may be generated: the document already exists, and for this track
+    // rendering was never even possible -- there is no templates/cdr/ to render
+    // through, so a build would throw rather than produce anything.
+    expect(chosen.next_action).toMatch(/do NOT create a draft/);
+    expect(chosen.next_action).toMatch(/do NOT run the build loop/);
+    expect(chosen.next_action).toMatch(/do NOT render anything/);
+    expect(chosen.next_action).not.toMatch(/create_storyboard_draft with this course_id/);
   }, 60_000);
+
+  it('goes back from the supplied storyboard to the programme it was asked about', async () => {
+    // The subject list was never shown, so "back" must not return to it.
+    const menu = await call('start_flow');
+    await call('flow_choose', { session_id: menu.session_id, choice: 'storyboard' });
+    await call('flow_choose', { session_id: menu.session_id, choice: 'cdr' });
+    const back = await call('flow_choose', { session_id: menu.session_id, choice: 'back' });
+    expect(back.step).toBe('choose_track');
+  }, 60_000);
+
+  it('finds the supplied document without being told its filename', () => {
+    // The document arrives named however whoever produced it chose, so it is found
+    // by directory rather than by a filename held in configuration -- which would
+    // go stale on the next revision.
+    const prepared = preparedStoryboard(COURSE);
+    expect(prepared).toBeDefined();
+    expect(prepared!.course_id).toBe(COURSE);
+    expect(path.basename(prepared!.docx_path)).toMatch(/\.docx$/);
+    expect(existsSync(prepared!.docx_path)).toBe(true);
+
+    expect(listPreparedCdrStoryboards().map((p) => p.course_id)).toEqual([COURSE]);
+    expect(isPreparedCourse(COURSE)).toBe(true);
+    // A generated course is not served this way.
+    expect(isPreparedCourse('biofuels')).toBe(false);
+    expect(preparedStoryboard('biofuels')).toBeUndefined();
+  });
 
   it('names the exact files a course is waiting for rather than a bare "not ready"', () => {
     const definition = CDR_COURSES.find((c) => c.course_id === COURSE)!;

@@ -23,7 +23,20 @@
 import { TRACK_LABELS, listSubjectStatuses, type CourseTrack } from '../catalog/subject-catalog.js';
 import { findPhUnits, getPhOutline, readPhModule, readPhUnit } from '../documents/ph-outline.js';
 import { ingestCourse } from '../documents/ingest.js';
-import { cdrCourseStatus, isCdrCourse } from '../cdr/catalog.js';
+import { isCdrCourse, cdrCourseStatus } from '../cdr/catalog.js';
+import {
+  findReusableStoryboard,
+  hasReusableOffer,
+  reuseOptions,
+  type ReusableStoryboard,
+} from '../storyboard/reuse.js';
+import {
+  isPreparedCourse,
+  listPreparedCdrStoryboards,
+  preparedStoryboard,
+  type PreparedStoryboard,
+} from '../cdr/prepared.js';
+import { templateTrackFor } from '../courses/course-config.js';
 import {
   findStoryboardCourse,
   findTrack,
@@ -71,6 +84,7 @@ export type FlowStepName =
   | 'choose_module'
   | 'choose_unit'
   | 'choose_candidate'
+  | 'choose_storyboard_source'
   | 'storyboard_ready'
   | 'module_ready'
   | 'reading_complete';
@@ -93,6 +107,11 @@ interface FlowState {
   unit_code?: string;
   package_id?: string;
   candidates?: Candidate[];
+  /**
+   * Storyboard flow only. The saved storyboard the user chose to reuse or
+   * re-render, so the terminal step can name it without looking it up again.
+   */
+  reuse_artifact_id?: string;
 }
 
 export interface FlowOption {
@@ -434,6 +453,164 @@ function readingCompleteStep(sessionId: string, state: FlowState): FlowStep {
  * otherwise have to discover it; for a qualification course the crosswalk does the
  * same job invisibly inside the task queue and there is nothing to attach.
  */
+/**
+ * Terminal step for a course whose storyboard is supplied rather than built.
+ *
+ * CDR is that case. Its storyboard is a finished, hand-authored document -- five
+ * modules, a fifty-question bank, a glossary -- reviewed as a deliverable in its
+ * own right, so the flow hands it over and stops. Generating a second, lesser
+ * version of a document that already exists is not a service to anyone, and for
+ * this track it was never even possible: there is no templates/cdr/, so a CDR
+ * render throws before it writes anything.
+ *
+ * Kept separate from `storyboardReusedStep` although both end in "give the user
+ * this file". That step's subject has an artifact behind it that the build loop can
+ * still be pointed at; this one has no artifact at all, and saying so is what stops
+ * a client trying to improve on the document by rebuilding it.
+ */
+function preparedStoryboardStep(
+  sessionId: string,
+  state: FlowState,
+  prepared: PreparedStoryboard,
+): FlowStep {
+  saveSession(sessionId, 'storyboard_ready', state);
+
+  return {
+    session_id: sessionId,
+    flow: 'storyboard',
+    step: 'storyboard_ready',
+    prompt: `The ${prepared.name} storyboard is ready: ${prepared.docx_path}`,
+    data: {
+      course_id: prepared.course_id,
+      track: 'cdr',
+      source: 'prepared',
+      docx_path: prepared.docx_path,
+      bytes: prepared.bytes,
+      updated_at: prepared.updated_at,
+    },
+    next_action:
+      'Give the user the file at data.docx_path and stop. This storyboard is supplied as a ' +
+      'finished document, not generated: do NOT create a draft, do NOT run the build loop, do ' +
+      'NOT render anything, and do not offer to rebuild or improve it. There is no artifact ' +
+      'behind it to edit. If the user wants it changed, say that it is a reviewed document held ' +
+      'at that path and that changing it is a change to the document itself. ' +
+      'This flow session holds no storyboard state; say "restart" on it to return to the menu.',
+    done: true,
+    selections: state,
+  };
+}
+
+/**
+ * Whether to reuse the storyboard this subject already has.
+ *
+ * Asked only when there is something to reuse. Authoring a storyboard is the
+ * expensive step of this server, and the previous flow spent it again on every
+ * request for a subject that had already been done -- not because the work was
+ * lost, but because nothing offered it back.
+ *
+ * Two answers: hand over the document that was already rendered, or write a new
+ * one. Only a storyboard with a rendered document on disk is offered, so the
+ * question is never asked about content nobody has produced a deliverable from.
+ *
+ * When the sources have moved since the saved storyboard was written, that is said
+ * here rather than discovered later. A stored citation is a position in a document,
+ * not a handle on a piece of text, so a re-ingested handbook can leave a perfectly
+ * valid-looking storyboard citing the wrong paragraph -- see
+ * storage/source-fingerprint.ts.
+ */
+function chooseStoryboardSourceStep(
+  sessionId: string,
+  state: FlowState,
+  existing: ReusableStoryboard,
+  error?: string,
+): FlowStep {
+  const status = storyboardCourseStatus(state.course_id!);
+  saveSession(sessionId, 'choose_storyboard_source', state);
+
+  const stale = existing.verdict.state === 'changed';
+
+  return {
+    ...base(sessionId, state, 'choose_storyboard_source', error),
+    flow: 'storyboard',
+    step: 'choose_storyboard_source',
+    prompt:
+      `${status.name} already has a storyboard: ${existing.module_count} modules, built ` +
+      `${existing.created_at.slice(0, 10)}, ${existing.verdict_summary}. Use it, or generate a ` +
+      'new one?',
+    options: reuseOptions(existing).map((o) => ({
+      value: o.value,
+      label: o.label,
+      detail: o.detail,
+    })),
+    data: {
+      course_id: existing.course_id,
+      existing: {
+        artifact_id: existing.artifact_id,
+        version: existing.version,
+        module_count: existing.module_count,
+        built_at: existing.created_at,
+        ...(existing.docx_path ? { docx_path: existing.docx_path } : {}),
+        sources_state: existing.verdict.state,
+        ...(existing.verdict.state === 'changed' ? { source_changes: existing.verdict.changes } : {}),
+        ...(existing.verdict.state === 'unknown' ? { source_note: existing.verdict.reason } : {}),
+      },
+    },
+    next_action:
+      'Show these options and the line above them exactly as given, then wait. Do not ' +
+      'recommend one beyond what the options themselves say, do not begin generating, and do not ' +
+      'call any storyboard tool yet.' +
+      (stale
+        ? ' The source documents have changed since the saved storyboard was written, so its ' +
+          'citations may point at different text than they were written against. Say so plainly ' +
+          'if the user asks which to pick.'
+        : ''),
+    done: false,
+    selections: state,
+  };
+}
+
+/**
+ * Terminal step for reusing the storyboard a subject already has.
+ *
+ * Kept apart from `storyboardReadyStep` because the instruction is the opposite of
+ * that step's: there is nothing to write, and the one failure mode here is a client
+ * that treats a reused storyboard as a starting point and rebuilds it anyway.
+ *
+ * The document handed over is the one that was rendered when the storyboard was
+ * finished. It is not re-rendered here: rendering old state on request would turn
+ * whatever content happens to be in the database into a fresh-looking deliverable,
+ * which is not the same as the document anyone reviewed.
+ */
+function storyboardReusedStep(sessionId: string, state: FlowState): FlowStep {
+  const courseId = state.course_id!;
+  const status = storyboardCourseStatus(courseId);
+  const artifactId = state.reuse_artifact_id!;
+  saveSession(sessionId, 'storyboard_ready', state);
+
+  const existing = findReusableStoryboard(courseId, templateTrackFor(courseId));
+
+  return {
+    session_id: sessionId,
+    flow: 'storyboard',
+    step: 'storyboard_ready',
+    prompt: `Using the saved ${status.name} storyboard (${artifactId}).`,
+    data: {
+      course_id: courseId,
+      artifact_id: artifactId,
+      source: 'saved',
+      ...(existing?.docx_path ? { docx_path: existing.docx_path } : {}),
+    },
+    next_action:
+      'The storyboard already exists and is complete. Give the user the file at data.docx_path ' +
+      'and stop. Do NOT create a draft, do NOT run the build loop, and do NOT re-render: the ' +
+      'document is finished and any generation here would spend the cost this choice exists to ' +
+      'avoid. If the user then wants it changed, submit the affected module through the build ' +
+      'loop against this artifact_id rather than starting again.',
+    done: true,
+    selections: state,
+  };
+}
+
 function storyboardReadyStep(sessionId: string, state: FlowState): FlowStep {
   const courseId = state.course_id!;
   const status = storyboardCourseStatus(courseId);
@@ -521,8 +698,19 @@ function render(sessionId: string, step: FlowStepName, state: FlowState, error?:
       return chooseUnitStep(sessionId, state, error);
     case 'choose_candidate':
       return chooseCandidateStep(sessionId, state, error);
-    case 'storyboard_ready':
-      return storyboardReadyStep(sessionId, state);
+    case 'choose_storyboard_source': {
+      const existing = findReusableStoryboard(state.course_id!, templateTrackFor(state.course_id!));
+      return hasReusableOffer(existing)
+        ? chooseStoryboardSourceStep(sessionId, state, existing!, error)
+        : storyboardReadyStep(sessionId, state);
+    }
+    case 'storyboard_ready': {
+      const supplied = state.course_id ? preparedStoryboard(state.course_id) : undefined;
+      if (supplied) return preparedStoryboardStep(sessionId, state, supplied);
+      return state.reuse_artifact_id
+        ? storyboardReusedStep(sessionId, state)
+        : storyboardReadyStep(sessionId, state);
+    }
     case 'module_ready':
       return moduleReadyStep(sessionId, state);
     case 'reading_complete':
@@ -539,8 +727,15 @@ function previousStep(step: FlowStepName, state: FlowState): FlowStepName {
       return state.flow === 'storyboard' ? 'choose_track' : 'choose_flow';
     case 'choose_module':
     case 'choose_candidate':
-    case 'storyboard_ready':
+    case 'choose_storyboard_source':
       return 'choose_subject';
+    case 'storyboard_ready':
+      // "back" returns to whichever question was actually asked. A supplied
+      // storyboard skipped the subject list entirely, so back from it is the
+      // programme; otherwise it is the reuse choice when there was one, and the
+      // subject when there was not.
+      if (state.course_id !== undefined && isPreparedCourse(state.course_id)) return 'choose_track';
+      return state.reuse_artifact_id !== undefined ? 'choose_storyboard_source' : 'choose_subject';
     case 'choose_unit':
       return 'choose_module';
     case 'reading_complete':
@@ -552,6 +747,51 @@ function previousStep(step: FlowStepName, state: FlowState): FlowStepName {
     default:
       return 'choose_flow';
   }
+}
+
+/**
+ * Resolves what the user said into one of the reuse options.
+ *
+ * Accepts the option's own value, its position in the list they were shown, or the
+ * words people actually use for it. Returns undefined rather than guessing: the
+ * difference between reusing and regenerating is the whole cost of the request, so
+ * an ambiguous answer is re-asked.
+ */
+function matchReuseChoice(
+  choice: string,
+  allowed: readonly string[],
+): 'reuse' | 'generate' | undefined {
+  const key = choice.toLowerCase().replace(/[^a-z0-9]+/g, '');
+  if (key.length === 0) return undefined;
+
+  const index = Number(key);
+  if (Number.isInteger(index) && index >= 1 && index <= allowed.length) {
+    return allowed[index - 1] as 'reuse' | 'generate';
+  }
+
+  const synonyms: Record<string, 'reuse' | 'generate'> = {
+    reuse: 'reuse',
+    use: 'reuse',
+    useit: 'reuse',
+    useexisting: 'reuse',
+    existing: 'reuse',
+    existingone: 'reuse',
+    saved: 'reuse',
+    alreadygenerated: 'reuse',
+    already: 'reuse',
+    generate: 'generate',
+    generatenew: 'generate',
+    // Not "new": that is a global command meaning restart, handled before any
+    // step sees the answer, so an entry here could never fire and would only
+    // mislead the next reader of this table.
+    fresh: 'generate',
+    scratch: 'generate',
+    fromscratch: 'generate',
+    regenerate: 'generate',
+    rebuild: 'generate',
+  };
+  const found = synonyms[key];
+  return found && allowed.includes(found) ? found : undefined;
 }
 
 /** Clears the selections a step is about, so returning to it genuinely re-asks. */
@@ -570,8 +810,12 @@ function clearFrom(step: FlowStepName, state: FlowState): FlowState {
     case 'choose_subject':
       // The track survives: going back from a subject re-asks the subject, not
       // the programme it belongs to.
-      drop('subject_id', 'course_id', 'module_number', 'unit_code', 'candidates', 'package_id');
+      drop('subject_id', 'course_id', 'module_number', 'unit_code', 'candidates', 'package_id',
+           'reuse_artifact_id');
       if (state.flow !== 'storyboard') delete cleared.track;
+      return cleared;
+    case 'choose_storyboard_source':
+      drop('reuse_artifact_id');
       return cleared;
     case 'choose_module':
       drop('module_number', 'unit_code', 'candidates', 'package_id');
@@ -700,8 +944,53 @@ export async function advanceFlow(sessionId: string, rawChoice: string): Promise
         );
       }
       state.track = track;
+
+      // A track whose storyboards are supplied as finished documents asks nothing
+      // further when it holds exactly one: the subject question would have a
+      // single answer, and answering it for the user is better than asking a
+      // question with no alternative. CDR is that track today.
+      if (track === 'cdr') {
+        const prepared = listPreparedCdrStoryboards();
+        if (prepared.length === 1) {
+          state.subject_id = prepared[0]!.course_id;
+          state.course_id = prepared[0]!.course_id;
+          return preparedStoryboardStep(sessionId, state, prepared[0]!);
+        }
+      }
+
       saveSession(sessionId, 'choose_subject', state);
       return chooseStoryboardCourseStep(sessionId, state);
+    }
+
+    case 'choose_storyboard_source': {
+      const courseId = state.course_id!;
+      const existing = findReusableStoryboard(courseId, templateTrackFor(courseId));
+      if (!hasReusableOffer(existing)) {
+        // The saved storyboard vanished between the question and the answer.
+        // Building is the only remaining answer, so it is taken rather than
+        // reported as the user's problem.
+        return storyboardReadyStep(sessionId, state);
+      }
+
+      const allowed = reuseOptions(existing!).map((o) => o.value);
+      const picked = matchReuseChoice(choice, allowed);
+      if (!picked) {
+        return chooseStoryboardSourceStep(
+          sessionId,
+          state,
+          existing!,
+          `"${choice}" is not one of the options. Answer with its number, or with ` +
+            `${allowed.join(', ')}.`,
+        );
+      }
+
+      if (picked === 'generate') {
+        delete state.reuse_artifact_id;
+        return storyboardReadyStep(sessionId, state);
+      }
+
+      state.reuse_artifact_id = existing!.artifact_id;
+      return storyboardReusedStep(sessionId, state);
     }
 
     case 'choose_subject': {
@@ -725,9 +1014,25 @@ export async function advanceFlow(sessionId: string, rawChoice: string): Promise
         }
         // Indexing is the server's job and takes a few seconds once. It happens
         // here rather than being handed back to the user as a chore.
+        // A supplied storyboard is handed over whatever route reached it, so that
+        // naming the subject directly behaves the same as picking it from a list.
+        const supplied = preparedStoryboard(course.course_id);
+        if (supplied) {
+          state.subject_id = course.course_id;
+          state.course_id = course.course_id;
+          return preparedStoryboardStep(sessionId, state, supplied);
+        }
+
         if (course.needs_index) await ingestCourse(course.course_id);
         state.subject_id = course.course_id;
         state.course_id = course.course_id;
+        delete state.reuse_artifact_id;
+
+        // Offer the saved storyboard, but only when a rendered document is really
+        // on disk to hand over. Saved state with no document leaves one answer, and
+        // an option list of one is a worse experience than no question at all.
+        const existing = findReusableStoryboard(course.course_id, templateTrackFor(course.course_id));
+        if (hasReusableOffer(existing)) return chooseStoryboardSourceStep(sessionId, state, existing!);
         return storyboardReadyStep(sessionId, state);
       }
 

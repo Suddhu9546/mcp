@@ -39,7 +39,7 @@ export function moduleSubmission(artifactId: string, module: any): Record<string
   if (module.lms_rows.length > 0) {
     args.lms_rows = module.lms_rows.map(() => ({
       recommended_standard: 'xAPI',
-      tracking: 'Completion and score verbs.',
+      tracking: 'xAPI Verbs: explored, identified\nData: activity opened; steps completed',
       completion_criteria: text,
       chunk_ids: [source.chunk_id],
     }));
@@ -47,7 +47,7 @@ export function moduleSubmission(artifactId: string, module: any): Record<string
   if (module.part_b.length > 0) {
     args.part_b = module.part_b.map((s: any) => ({
       row_id: s.row_id,
-      visual: 'Wide shot of the plant floor.',
+      visual: 'Wide establishing shot: the plant floor and its main equipment.',
       audio: `Host (On-Camera): "${text}"`,
       chunk_ids: [source.chunk_id],
     }));
@@ -62,7 +62,8 @@ export function moduleSubmission(artifactId: string, module: any): Record<string
   }
   if (module.glossary_terms_needed > 0) {
     args.glossary_terms = Array.from({ length: module.glossary_terms_needed }, (_, i) => ({
-      term: `Term M${module.number}-${i + 1}`,
+      term: `TRM${module.number}${i + 1}`,
+      full_form: `Term ${module.number}-${i + 1} Full Form`,
       definition: text.slice(0, 80),
       chunk_ids: [source.chunk_id],
     }));
@@ -123,4 +124,33 @@ export async function buildStoryboard(call: Call, courseId: string): Promise<Bui
   }
 
   return { artifactId: draft.artifact_id, calls, modules, final: res };
+}
+
+/**
+ * Answers the storyboard flow's questions and returns its terminal step.
+ *
+ * There are three questions when a subject has never been storyboarded and four
+ * when it has: the extra one offers the saved storyboard back instead of paying to
+ * write it again. Tests that care about what happens *after* the flow should not
+ * each have to know which case they are in, so this answers the reuse question
+ * with `reuseChoice` -- 'generate' for a test that wants fresh authoring -- and
+ * leaves everything else alone.
+ */
+export async function answerStoryboardFlow(
+  call: Call,
+  track: string,
+  subject: string,
+  reuseChoice: 'reuse' | 'generate' = 'generate',
+): Promise<{ step: any; askedAboutReuse: boolean }> {
+  const menu = await call('start_flow');
+  const session = menu.session_id;
+  await call('flow_choose', { session_id: session, choice: 'storyboard' });
+  await call('flow_choose', { session_id: session, choice: track });
+  let step = await call('flow_choose', { session_id: session, choice: subject });
+
+  const askedAboutReuse = step.step === 'choose_storyboard_source';
+  if (askedAboutReuse) {
+    step = await call('flow_choose', { session_id: session, choice: reuseChoice });
+  }
+  return { step, askedAboutReuse };
 }

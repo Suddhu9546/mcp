@@ -23,8 +23,14 @@ import { getCourseConfig, getCrosswalkEntry } from './course-config.js';
 import type { DocumentType } from '../types/source.js';
 
 export type ModuleScope =
-  /** Sources are a chapter of this course's PH and FG. */
-  | { kind: 'chapter'; chapter: number; nos_code: string }
+  /**
+   * Sources are one or more chapters of this course's PH and FG.
+   *
+   * Usually one: a qualification course's module is a chapter. An Orientation
+   * module is a group of consecutive chapters, because the programme fixes three
+   * modules per subject whatever the handbook's own chapter count is.
+   */
+  | { kind: 'chapter'; chapters: number[]; nos_code: string }
   /** Sources are these specific documents, whole. */
   | { kind: 'documents'; doc_keys: string[]; nos_code: string };
 
@@ -46,16 +52,16 @@ export interface ScopedChunk {
 export function scopeAllows(scope: ModuleScope, chunk: ScopedChunk): boolean {
   if (scope.kind === 'chapter') {
     if (chunk.document_type !== 'PH' && chunk.document_type !== 'FG') return true;
-    return chunk.chapter === undefined || chunk.chapter === scope.chapter;
+    return chunk.chapter === undefined || scope.chapters.includes(chunk.chapter);
   }
   return chunk.doc_key !== undefined && scope.doc_keys.includes(chunk.doc_key);
 }
 
 /** How to describe the scope in a validation message, in the user's terms. */
 export function describeScope(scope: ModuleScope): string {
-  return scope.kind === 'chapter'
-    ? `chapter ${scope.chapter} of the Participant Handbook and Facilitator Guide`
-    : `the reference document(s) ${scope.doc_keys.join(', ')}`;
+  if (scope.kind !== 'chapter') return `the reference document(s) ${scope.doc_keys.join(', ')}`;
+  const plural = scope.chapters.length === 1 ? 'chapter' : 'chapters';
+  return `${plural} ${scope.chapters.join(', ')} of the Participant Handbook and Facilitator Guide`;
 }
 
 /**
@@ -77,7 +83,11 @@ export function moduleScope(courseId: string, moduleNumber: number): ModuleScope
     return { kind: 'documents', doc_keys: routed.doc_keys, nos_code: routed.nos_code ?? '(none)' };
   }
   const crosswalk = getCrosswalkEntry(courseId, moduleNumber);
-  return { kind: 'chapter', chapter: crosswalk.source_chapter, nos_code: crosswalk.nos_code };
+  return {
+    kind: 'chapter',
+    chapters: crosswalk.source_chapters ?? [crosswalk.source_chapter],
+    nos_code: crosswalk.nos_code,
+  };
 }
 
 /** True when this course routes its modules to documents rather than chapters. */

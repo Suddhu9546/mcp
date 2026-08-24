@@ -1,0 +1,253 @@
+/**
+ * Reusing a storyboard instead of paying to write it again.
+ *
+ * The property under test is a cost one, which makes it easy to break without
+ * noticing: every part of a regenerated storyboard is individually correct, so
+ * nothing fails when the server rebuilds a subject it had already done. Only the
+ * bill changes. Hence the assertions here are about *what was not called*.
+ *
+ * The second property is trust. A stored citation is a position in a document --
+ * `<course>:<doc>:p<page>:<ordinal>` -- not a handle on a piece of text, so a
+ * re-ingested handbook can leave a saved storyboard citing the wrong paragraph
+ * while every id still resolves. Reuse is only safe if that is detectable, so the
+ * fingerprint is tested against an actual re-ingestion rather than a mocked one.
+ */
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { describe, it, expect, beforeAll } from 'vitest';
+import { existsSync } from 'node:fs';
+import { runTool } from '../src/mcp/tools/index.js';
+import { buildStoryboard } from './helpers/build-storyboard.js';
+import { findReusableStoryboard, reuseOptions } from '../src/storyboard/reuse.js';
+import {
+  compareSourceFingerprint,
+  computeSourceFingerprint,
+} from '../src/storage/source-fingerprint.js';
+import { templateTrackFor } from '../src/courses/course-config.js';
+import { getArtifact } from '../src/storage/artifact-store.js';
+
+const COURSE = 'biogas';
+
+function json(result: Awaited<ReturnType<typeof runTool>>): any {
+  return { ...JSON.parse(result.content[0]!.text), __isError: result.isError === true };
+}
+const call = async (name: string, args: Record<string, unknown> = {}): Promise<any> =>
+  json(await runTool(name, args));
+
+describe('source fingerprint', () => {
+  beforeAll(async () => {
+    expect((await call('ingest_course_documents', { course_id: COURSE })).__isError).toBe(false);
+  }, 300_000);
+
+  it('is stable across repeated computation over an unchanged index', () => {
+    const a = computeSourceFingerprint(COURSE, 'entrepreneur');
+    const b = computeSourceFingerprint(COURSE, 'entrepreneur');
+    expect(b.digest).toBe(a.digest);
+    expect(compareSourceFingerprint(a, b)).toEqual({ state: 'unchanged' });
+  });
+
+  it('notices a template change without blaming the documents', () => {
+    const built = computeSourceFingerprint(COURSE, 'entrepreneur');
+    const now = computeSourceFingerprint(COURSE, 'some-other-template');
+    const verdict = compareSourceFingerprint(built, now);
+
+    expect(verdict.state).toBe('changed');
+    if (verdict.state !== 'changed') throw new Error('unreachable');
+    expect(verdict.changes).toHaveLength(1);
+    expect(verdict.changes[0]).toMatch(/template changed/i);
+    // The content is fine; only the rendering moved on.
+    expect(verdict.changes[0]).toMatch(/content is unaffected/i);
+  });
+
+  it('notices a document whose indexed size changed', () => {
+    const built = computeSourceFingerprint(COURSE, 'entrepreneur');
+    const tampered = {
+      ...built,
+      digest: 'different',
+      documents: built.documents.map((d) =>
+        d.document_type === 'PH' ? { ...d, chunk_count: d.chunk_count - 5 } : d,
+      ),
+    };
+    const verdict = compareSourceFingerprint(tampered, built);
+
+    expect(verdict.state).toBe('changed');
+    if (verdict.state !== 'changed') throw new Error('unreachable');
+    expect(verdict.changes.join(' ')).toMatch(/PH was re-indexed/);
+    expect(verdict.changes.join(' ')).toMatch(/may now point at different text/);
+  });
+
+  it('reports a renumbering that leaves every total identical', () => {
+    // The silent case: same documents, same counts, different chunk ids. Nothing
+    // downstream can see it, so it must be reported here or not at all.
+    const built = computeSourceFingerprint(COURSE, 'entrepreneur');
+    const renumbered = { ...built, digest: `${built.digest}-shifted` };
+    const verdict = compareSourceFingerprint(renumbered, built);
+
+    expect(verdict.state).toBe('changed');
+    if (verdict.state !== 'changed') throw new Error('unreachable');
+    expect(verdict.changes.join(' ')).toMatch(/chunk identifiers have changed/i);
+  });
+
+  it('says so plainly when an artifact predates fingerprinting', () => {
+    const verdict = compareSourceFingerprint(undefined, computeSourceFingerprint(COURSE, 'entrepreneur'));
+    expect(verdict.state).toBe('unknown');
+  });
+});
+
+describe('finding a storyboard to reuse', () => {
+  beforeAll(async () => {
+    expect((await call('ingest_course_documents', { course_id: COURSE })).__isError).toBe(false);
+  }, 300_000);
+
+  it('offers only generation when nothing has been built', () => {
+    const options = reuseOptions(undefined);
+    expect(options.map((o) => o.value)).toEqual(['generate']);
+  });
+
+  it('offers the completed storyboard, with its sources confirmed unchanged', async () => {
+    const built = await buildStoryboard(call, COURSE);
+    const rendered = await call('render_storyboard_docx', { artifact_id: built.artifactId });
+    expect(rendered.__isError).toBe(false);
+
+    const existing = findReusableStoryboard(COURSE, templateTrackFor(COURSE));
+    expect(existing).toBeDefined();
+    expect(existing!.artifact_id).toBe(built.artifactId);
+    expect(existing!.module_count).toBe(3);
+
+    // The fingerprint was recorded at creation, so a build followed immediately by
+    // a lookup must come back clean. If this fails the fingerprint is being
+    // computed over something that moves on its own.
+    expect(existing!.verdict.state).toBe('unchanged');
+    expect(existing!.verdict_summary).toMatch(/unchanged/);
+
+    // And the document it points at is really there.
+    expect(existing!.docx_path).toBeDefined();
+    expect(exististsOrFail(existing!.docx_path!)).toBe(true);
+
+    const options = reuseOptions(existing);
+    expect(options.map((o) => o.value)).toEqual(['reuse', 'generate']);
+  }, 300_000);
+
+  it('records the fingerprint on the artifact itself', async () => {
+    const built = await buildStoryboard(call, COURSE);
+    const artifact = getArtifact(built.artifactId);
+    expect(artifact.source_fingerprint).toBeTruthy();
+    const parsed = JSON.parse(artifact.source_fingerprint!);
+    expect(parsed.digest).toMatch(/^[0-9a-f]{64}$/);
+    expect(parsed.template_version).toBe(templateTrackFor(COURSE));
+  }, 300_000);
+
+  it('does not offer an unfinished draft', async () => {
+    // A draft with no content is not a deliverable, and offering it as "already
+    // generated" would be the worst of both outcomes.
+    expect((await call('ingest_course_documents', { course_id: 'esg' })).__isError).toBe(false);
+    const draft = await call('create_storyboard_draft', { course_id: 'esg' });
+    expect(draft.__isError).toBe(false);
+
+    const existing = findReusableStoryboard('esg', templateTrackFor('esg'));
+    expect(existing?.artifact_id).not.toBe(draft.artifact_id);
+  }, 300_000);
+});
+
+function exististsOrFail(p: string): boolean {
+  return existsSync(p);
+}
+
+describe('the reuse question in the flow', () => {
+  beforeAll(async () => {
+    expect((await call('ingest_course_documents', { course_id: COURSE })).__isError).toBe(false);
+    // Something to reuse must exist for any of this to be asked.
+    const built = await buildStoryboard(call, COURSE);
+    await call('render_storyboard_docx', { artifact_id: built.artifactId });
+  }, 600_000);
+
+  async function toSubject(): Promise<{ session: string; step: any }> {
+    const menu = await call('start_flow');
+    const session = menu.session_id;
+    await call('flow_choose', { session_id: session, choice: 'storyboard' });
+    await call('flow_choose', { session_id: session, choice: 'orientation' });
+    const step = await call('flow_choose', { session_id: session, choice: COURSE });
+    return { session, step };
+  }
+
+  it('asks before rebuilding a subject that already has one', async () => {
+    const { step } = await toSubject();
+    expect(step.step).toBe('choose_storyboard_source');
+    expect(step.done).toBe(false);
+    expect(step.options.map((o: any) => o.value)).toEqual(['reuse', 'generate']);
+    expect(step.data.existing.module_count).toBe(3);
+    expect(step.data.existing.sources_state).toBe('unchanged');
+  }, 300_000);
+
+  it('hands over the existing document without any generation', async () => {
+    const { session } = await toSubject();
+    const done = await call('flow_choose', { session_id: session, choice: 'reuse' });
+
+    expect(done.step).toBe('storyboard_ready');
+    expect(done.done).toBe(true);
+    expect(done.data.source).toBe('saved');
+    expect(done.data.docx_path).toBeDefined();
+    expect(existsSync(done.data.docx_path)).toBe(true);
+
+    // The instruction must forbid the build loop, or a client will helpfully
+    // rebuild the thing this choice exists to avoid.
+    expect(done.next_action).toMatch(/Do NOT create a draft/);
+    expect(done.next_action).toMatch(/do NOT run the build loop/);
+  }, 300_000);
+
+  it('offers no way to re-render saved content', async () => {
+    // Re-rendering was offered for a while and was removed: it turned whatever
+    // content happened to be in the database into a fresh-looking deliverable,
+    // which is not the same as the document anyone reviewed. Two answers only.
+    const { step } = await toSubject();
+    expect(step.options.map((o: any) => o.value)).not.toContain('rerender');
+
+    const { session } = await toSubject();
+    const refused = await call('flow_choose', { session_id: session, choice: 'rerender' });
+    expect(refused.step).toBe('choose_storyboard_source');
+    expect(refused.done).toBe(false);
+  }, 300_000);
+
+  it('falls through to the build loop when the user wants a new one', async () => {
+    const { session } = await toSubject();
+    const done = await call('flow_choose', { session_id: session, choice: 'generate' });
+
+    expect(done.step).toBe('storyboard_ready');
+    expect(done.done).toBe(true);
+    expect(done.data.course_id).toBe(COURSE);
+    expect(done.next_action).toMatch(/create_storyboard_draft/);
+  }, 300_000);
+
+  it('accepts the answer by number and by the words people use', async () => {
+    for (const answer of ['1', 'use it', 'existing', 'saved', 'reuse'] as const) {
+      const { session } = await toSubject();
+      const done = await call('flow_choose', { session_id: session, choice: answer });
+      expect(done.data?.source, answer).toBe('saved');
+      expect(done.step, answer).toBe('storyboard_ready');
+    }
+    // And the second option is generation, by number and by name. Not "new":
+    // that is a global command meaning restart, and is handled before a step
+    // sees it.
+    for (const answer of ['2', 'generate', 'from scratch'] as const) {
+      const { session } = await toSubject();
+      const done = await call('flow_choose', { session_id: session, choice: answer });
+      expect(done.data?.source, answer).toBeUndefined();
+      expect(done.next_action, answer).toMatch(/create_storyboard_draft/);
+    }
+  }, 300_000);
+
+  it('re-asks rather than guessing at an answer it does not recognise', async () => {
+    const { session } = await toSubject();
+    const again = await call('flow_choose', { session_id: session, choice: 'maybe the second one?' });
+    expect(again.step).toBe('choose_storyboard_source');
+    expect(again.done).toBe(false);
+    expect(again.error ?? again.prompt).toMatch(/not one of the options|Use it, or generate/);
+  }, 300_000);
+
+  it('goes back from the reuse question to the subject list', async () => {
+    const { session } = await toSubject();
+    const back = await call('flow_choose', { session_id: session, choice: 'back' });
+    expect(back.step).toBe('choose_subject');
+  }, 300_000);
+});
