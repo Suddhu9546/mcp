@@ -1,7 +1,7 @@
 # CVC Storyboard MCP
 
 A deterministic **tool layer** for SCGJ educational content: course storyboards as
-DOCX, 1-1.5 minute AI info video scripts per module, and exact Participant Handbook
+DOCX, 2.5-3 minute AI info video scripts per module, and exact Participant Handbook
 readings.
 
 This server contains **no AI model and no AI API key**. It executes operations and
@@ -34,7 +34,7 @@ Deterministic tools
 | Template fidelity | | ✔ |
 | Validation findings | | ✔ |
 | DOCX generation | | ✔ |
-| Scene budgets and presenter consistency | | ✔ |
+| Scene budgets, self-containment and presenter consistency | | ✔ |
 
 ## The three flows
 
@@ -94,22 +94,27 @@ browse" question and no course-type question: a topic typed at any step is resol
 to the unit that holds it, and course type is a label on each subject.
 
 The video flow stops at the background question. Everything below it is settled:
-60-90 seconds, six or seven scenes, and which of the module's units each scene
-introduces. No duration question is asked because there is nothing to choose.
+150-180 seconds, 15-18 scenes of ten seconds, and which slice of which unit each
+scene introduces. No duration question is asked because there is nothing to choose
+— the four hard rules fix it. A scene shorter than ten seconds cannot hold
+twenty-two words, so every scene is ten; 150-180 seconds of those is 15-18 scenes.
 
 Reading goes one level deeper than the module, to the unit, and returns its verbatim
 text. No generation step exists on that path.
 
-**What a video is.** One 60-90 second introduction to a module, as six or seven
-scenes, each a separate generation:
+**What a video is.** One 150-180 second introduction covering the whole module, as
+15-18 scenes, each a separate generation:
 
 | | |
 |---|---|
-| Structure | opening → what the topic is → turn to learning → 2-3 learning areas → hand-over |
-| Scene seconds | 8 / 12 / 8 / 12 each / 10 — 62s with two roadmap scenes, 74s with three |
-| Narration | 11-17 words per 10 seconds, delivered at 120-130 wpm |
+| Structure | opening → what the topic is (×2) → turn to learning → 9-12 learning-area scenes → consolidation → hand-over |
+| Scene seconds | every scene exactly 10s. 15 scenes = 150s, 18 = 180s |
+| Narration | 22-25 words per scene, ~150 wpm, at most 3 sentences |
+| Breathing | 0.3-0.5s between sentences, 0.5s of silence before the cut |
+| Self-contained | every sentence begins **and** ends inside its own scene |
+| Unit coverage | each learning area gets 2-3 consecutive scenes, each with its own slice of that area's text |
 | Each scene carries | purpose, location, visual, presenter action, camera framing and movement, teaching visuals, narration, citations |
-| The server adds | the presenter, attire, voice, pace and speak-once directives — identically, every scene |
+| The server adds | the presenter, attire, voice, pace, pauses and speak-once directives — identically, every scene |
 | Output | the script inline **and** a `.txt` file, plus one ready-to-paste generation prompt per scene |
 
 The presenter comes from a saved **video profile** — gender, age, skin tone,
@@ -507,21 +512,28 @@ Skills), which the handbook defers to an external DGT workbook. It is shown with
 reason and cannot be selected. A test asserts the outline matches the contents page
 unit for unit.
 
-**A video's length is arithmetic, not judgement.** A writer asked for "about ninety
-seconds" reliably produces three minutes, so the seconds are not asked for. The
-structure is fixed — open, say what the topic is, turn to the learning, walk two or
-three learning areas, hand over — and only the roadmap section varies, with how many
-units the module has. Six scenes come to 62 seconds and seven to 74. Each scene
-carries a word band computed from its seconds, and a scene outside its band is a
-validation **error**: over the band the generator cuts the last words off mid-sentence,
-which is not recoverable after rendering.
+**A video's shape is arithmetic with one answer.** Four rules are fixed — 150-180
+seconds, no scene over 10 seconds, 22-25 words a scene, no sentence crossing a scene
+boundary — and a scene shorter than ten seconds cannot hold twenty-two words. So every
+scene is exactly ten seconds and the video is 15-18 of them. Six are the frame and the
+other 9-12 go to the units, two or three apiece, which is what makes it a complete
+module introduction rather than a teaser. A scene outside its word band is a validation
+**error**: over the band the generator cuts the last words off mid-sentence, which is
+not recoverable after rendering.
 
-**The two pace figures in the brief disagree, and the tighter one is enforced.** A
-delivery pace of 120-130 wpm is about 2.1 words a second; a narration budget of 11-17
-words per ten-second scene is 1.1-1.7. The budget is what validation enforces, because
-it is the specific instruction and because the failure modes are not symmetric — a
-short scene lands early, a long one is truncated. The 120-130 wpm figure is carried
-into every generation prompt as the delivery pace, which is what it actually describes.
+**Every scene finishes what it starts.** Each scene is a separate generation and may be
+watched with a beat between clips, so a sentence spanning two of them does not merely
+read awkwardly — it breaks. Validation rejects narration that ends without terminal
+punctuation, ends on a word that promises a continuation (`and`, `so`, `which`, `to`,
+…), or contains a fragment. At most three sentences a scene, because the breath between
+them and the half-second before the cut need somewhere to fit.
+
+**The pace follows from the word count, not the other way round.** Twenty-two to
+twenty-five words inside ten seconds, with a breath between sentences and a beat of
+silence at the end, is about 150 wpm — not the 120-130 an earlier brief asked for. The
+word count and the scene length are the mandatory rules, so the pace is derived from
+them and stated in every prompt. Asking a generator for 130 wpm *and* 25 words in one
+clip simply produces a clip whose last words are cut off.
 
 **The presenter is the same person by construction, not by discipline.** Each scene is
 a separate generation and the generator remembers nothing between calls, so a presenter
@@ -531,6 +543,27 @@ the identical text is stamped into every scene prompt by the server — along wi
 voice, the delivery pace, the 0.5-1 second speech lead-in and the speak-this-line-once
 audio directive. The client is told not to write any of them, and validation reports
 those checks as guaranteed rather than sampled, because they cannot fail.
+
+**On-screen text is spelled out, enumerated and fenced.** Misspelled burned-in text
+is the commonest way a finished clip comes back unusable — the shot looks right, the
+audio is right, and a learner sees `CALORIFC VALUE` in a training video. Every scene
+prompt therefore carries an **ACCURACY** block that names the exact strings permitted
+(the caption, character for character; the teaching visual's labels), forbids all other
+text including invented background lettering on walls, packaging and equipment, pins
+every number and unit to the value given, and — the escape hatch that matters — tells
+the generator that if text cannot be rendered cleanly it should render none, because
+missing text is recoverable and misspelled text is not. It appears on every scene,
+including scenes with no text at all, since those are exactly where invented signage
+slips through. The block adapts to the scene: a scene with a labelled diagram is never
+told "no text may appear", because a prompt that contradicts itself is resolved by the
+generator however it likes.
+
+**The prompt forecloses the errors rather than hoping.** Each composed prompt is
+labelled blocks and a numbered eight-point audio contract, not prose: the spoken line
+quoted in full and marked as the entire audio, the pauses given in seconds, and an
+explicit `DO NOT` list (no second person, no music, no captions, no slow motion, no
+cutting away, no restyling the presenter). A generator does not infer — it fills gaps
+with whatever is statistically nearby, and every gap is a defect waiting to be rendered.
 
 **The topic is the hero.** This is an LMS introduction, not a short film. The spec that
 ships with the plan rules out backstory, character development, drama, conversation and
@@ -622,7 +655,7 @@ tests are skipped with that reason. Nothing else depends on it.
 
 ```bash
 npm run typecheck
-npm test                       # 143 tests
+npm test                       # 155 tests
 npm run flow                   # walk the guided flow by hand in the terminal
 npm run flow -- "<heading>"    # the shortcut flow, from a unit heading
 npm run parse-timing -- biofuels
@@ -636,11 +669,13 @@ scoping, citation validation, question-bank numbering and rejection rules, versi
 conflicts, rollback, and byte-identical preservation of the template's formatting
 parts. The handbook suite covers overlap-free unit reassembly, heading resolution
 and its refusal to guess, and the guided flow's step machine. The video suite covers
-the scene arithmetic (seconds summing exactly, contiguous timecodes, word bands
-derived from seconds, every unit allocated in handbook order), each validation rule
-against a script written to break it, the identity of the presenter block across
-every composed prompt, and the flow's five questions including the five-in-one
-presenter answer.
+the scene arithmetic (every scene ten seconds, seconds summing exactly, contiguous
+timecodes, the fixed 22-25 word band, every unit given two or three consecutive
+scenes with a distinct slice each), each validation rule against a script written to
+break it — including narration left open, ending on a dangling word, holding a
+fragment, or holding more sentences than the breaths fit — the identity of the
+presenter block across every composed prompt, and the flow's five questions
+including the five-in-one presenter answer.
 
 ## Layout
 
@@ -651,7 +686,7 @@ src/
   mcp/tools/flow.ts      start_flow, flow_choose, get_flow -- the entry point
   mcp/tools/storyboard.ts  feature 1, the storyboard's course, timing and render tools
   mcp/tools/storyboard-build.ts  feature 1's build loop: one module out, one back
-  mcp/tools/video-script.ts  feature 2, the 1-1.5 minute info video: plan and submit
+  mcp/tools/video-script.ts  feature 2, the 2.5-3 minute info video: plan and submit
   mcp/tools/reading.ts   feature 3, read_ph_unit
   mcp/tools/catalog.ts   handbook navigation
   catalog/               course types, subjects, and their readiness

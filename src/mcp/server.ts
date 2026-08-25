@@ -26,7 +26,7 @@ It does three separate things. They share no state and no numbering, and mixing
 them produces wrong output.
 
   1. STORYBOARD        A course storyboard and assessment blueprint, as a .docx.
-  2. VIDEO SCRIPT      A 1-1.5 minute AI info video for one handbook module.
+  2. VIDEO SCRIPT      A 2.5-3 minute AI info video for one handbook module.
   3. HANDBOOK READING  One unit of a handbook, word for word.
 
 HOW TO USE THIS SERVER
@@ -118,8 +118,9 @@ Rules:
 
 2. VIDEO SCRIPT
 ---------------
-A 60-90 second educational introduction to one Participant Handbook module, in six
-or seven scenes, for an LMS. Five answers from the user, then generate.
+A 150-180 second educational introduction to one Participant Handbook module, for an
+LMS. Long enough to introduce the WHOLE module: every learning area is named and
+given something concrete. Five answers from the user, then generate.
 
   flow_choose "2"            -> which course: Entrepreneur or Orientation
   flow_choose the course     -> which subject of it
@@ -137,9 +138,9 @@ reused, so later modules are only offered "use saved profile?".
 
 Generation is TWO calls, and no more:
 
-  plan_video_script       the scenes with their seconds, timecodes and word bands,
-                          what each must achieve, the handbook text behind it, the
-                          locked presenter, and the writing rules -- all at once
+  plan_video_script       15-18 scenes of 10 seconds, their 22-25 word band, what
+                          each must achieve, the slice of handbook text behind it,
+                          the locked presenter, and the rules -- all at once
   submit_video_script     all the scenes together. It validates them, composes each
                           scene's AI generation prompt, writes the file and returns
                           the finished script
@@ -147,26 +148,45 @@ Generation is TWO calls, and no more:
 Nothing else needs calling. The flow's final step already carries the plan, so a
 client that followed the flow submits straight from it.
 
+FOUR HARD RULES, all checked and all rejected if broken:
+  1. Every scene is exactly 10 seconds. None may run longer.
+  2. Every scene's narration is 22-25 words. Not fewer, not more.
+  3. Every sentence begins AND ends inside one scene. Never leave a clause or a
+     thought for the next scene to finish, and never open a scene by completing the
+     previous one -- each scene is generated as its own clip, so a sentence that
+     spans two of them breaks. End on a full stop, never on "and", "so", "to" or a
+     comma, and never on a fragment.
+  4. At most 3 sentences a scene, so the breath between them and the half-second
+     before the cut have somewhere to fit.
+
 Rules:
   - The chosen module of the Participant Handbook is the only source of what is
     taught. Add no statistic, price, date, standard, regulation or brand it does
     not state, and take nothing from another module or subject.
   - It is an educational video, not a film. The topic is the hero; the presenter is
     a teacher. No backstory, no drama, no conversation, no cinematic set pieces.
-  - Introduce the key learning areas. Do not try to teach the module in 90 seconds.
-  - Write inside each scene's min_words and max_words, roughly 11-17 words per ten
-    seconds. Over the band, the generator cuts the last words off.
+  - Each learning area gets two or three consecutive scenes and each of those gets
+    its own slice of the area's text. Write each scene from its own slice: the
+    second scene of an area continues it, it does not re-introduce it.
   - Scene 1 opens with a spoken "Namastey".
-  - Do NOT write the presenter's appearance, clothing, voice, accent, pace or the
-    audio-accuracy instructions into any field. The server stamps them into every
-    scene prompt identically, which is what keeps the presenter one person.
+  - Do NOT write the presenter's appearance, clothing, voice, accent, pace, the
+    pause timings or the audio-accuracy instructions into any field. The server
+    stamps them into every scene prompt identically, which is what keeps the
+    presenter one person and every clip's delivery the same.
+  - On-screen spelling is the commonest defect in the finished video. Every scene
+    prompt carries an ACCURACY block naming exactly which text may appear -- the
+    caption and the visual's labels, and nothing else -- and forbidding invented
+    background lettering. That block is built from on_screen_text and
+    educational_visual_elements, so write those as the exact words that should
+    appear. Name a diagram's labels explicitly: "a labelled chart" leaves the
+    generator to invent them, which is where nonsense words come from.
   - Show what is being explained. A scene that could show the equipment, the
     diagram or the reading and shows a generic background has wasted itself.
   - Never mention the handbook, a page, a figure, a unit or module number or a QR
     code in anything a viewer sees or hears. Citations go in "sources".
   - Give the user the file and the per-scene prompts: each one is one generation.
 
-  Only the 1-1.5 minute info video is built. The 15-minute unit video is offered in
+  Only the 2.5-3 minute info video is built. The 15-minute unit video is offered in
   the menu and refused, so the user is told rather than left wondering.
 
 3. HANDBOOK READING

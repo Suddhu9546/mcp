@@ -1,10 +1,12 @@
 /**
- * Types for the 1-1.5 minute AI info video script.
+ * Types for the 2.5-3 minute AI info video script.
  *
- * The feature has one job: turn one Participant Handbook module into a short
- * educational introduction a learner watches before the module itself. It is not
- * a film. The topic is the hero and the presenter is a teacher, so nothing here
- * models plot, character arc or drama -- what it models is a fixed teaching
+ * The feature has one job: turn one Participant Handbook module into an
+ * educational introduction a learner watches before the module itself. Two and a
+ * half to three minutes is long enough to introduce the whole module -- every
+ * learning area named and given something concrete -- rather than tease it. It is
+ * not a film. The topic is the hero and the presenter is a teacher, so nothing
+ * here models plot, character arc or drama; what it models is a fixed teaching
  * structure, a locked presenter, and a word budget per scene.
  *
  * The same division of responsibility as everywhere else in this server applies,
@@ -16,44 +18,88 @@
  *
  * The finished AI video-generation prompt belongs to neither half: it is composed
  * by the server from the authored fields plus the locked presenter, environment,
- * pace and audio-accuracy blocks. Composing it here rather than asking the client
- * to repeat those blocks eighteen times is what makes the presenter provably
+ * pace, pause and audio-accuracy blocks. Composing it here rather than asking the
+ * client to repeat those blocks eighteen times is what makes the presenter provably
  * identical in every scene -- the one thing a viewer notices immediately when it
  * is wrong.
  */
 
 /** The only video type implemented. The 15-minute unit video is a separate build. */
-export const VIDEO_TYPE_INFO = 'info_1_1_5_min' as const;
+export const VIDEO_TYPE_INFO = 'info_2_5_3_min' as const;
 export type VideoType = typeof VIDEO_TYPE_INFO;
 
 // ---------------------------------------------------------------------------
 // Duration and pace
 // ---------------------------------------------------------------------------
 
-export const MIN_TOTAL_SECONDS = 60;
-export const MAX_TOTAL_SECONDS = 90;
-export const MIN_SCENE_COUNT = 6;
-export const MAX_SCENE_COUNT = 7;
+/**
+ * The shape of the video, and why it is the only shape that satisfies the rules.
+ *
+ * Four constraints are fixed and together they leave nothing to choose:
+ *
+ *   the video runs 2.5-3 minutes          150-180 seconds
+ *   no scene runs longer than 10 seconds
+ *   every scene's narration is 22-25 words
+ *   a sentence never crosses a scene boundary
+ *
+ * A scene shorter than ten seconds cannot hold twenty-two words, so every scene is
+ * exactly ten seconds; 150-180 seconds of ten-second scenes is 15-18 of them. That
+ * is what makes this a complete module introduction rather than a teaser: with a
+ * six-scene frame there are nine to twelve scenes left for the units, so each unit
+ * gets two or three of its own instead of a share of one.
+ */
+export const SCENE_SECONDS = 10;
+export const MIN_TOTAL_SECONDS = 150;
+export const MAX_TOTAL_SECONDS = 180;
+export const MIN_SCENE_COUNT = 15;
+export const MAX_SCENE_COUNT = 18;
 
 /**
- * Words per second of narration.
+ * Words per scene: a band, not a rate.
  *
- * The brief states two figures that do not agree: a speaking pace of 120-130 wpm
- * (about 2.1 words a second) and a narration budget of 11-17 words for a ten
- * second scene (1.1-1.7). The budget is the operative one and is what is enforced,
- * because it is the specific instruction under the narration rule and because the
- * two failure modes are not symmetric -- a scene written short simply lands early,
- * while a scene written long has its final words cut off by the generator, which
- * is unrecoverable. The 120-130 wpm figure is carried into every scene prompt as
- * the delivery pace, which is what it describes.
+ * It used to be derived from the seconds. It is stated directly now because the
+ * rule is stated directly -- every scene carries 22 to 25 words -- and because
+ * every scene is the same length, so a rate would only ever produce this one band.
+ *
+ * The band and the ten seconds together fix the delivery pace, and it is faster
+ * than the pace the first brief asked for: twenty-two words spoken inside ten
+ * seconds, with a breath between sentences and a beat of silence at the end, is
+ * about 150 words a minute rather than 120-130. The word count and the scene
+ * length are the mandatory rules, so the pace follows from them; asking a
+ * generator for 130 wpm and 25 words in one clip would simply produce a clip whose
+ * last words are cut off.
  */
-export const WORDS_PER_SECOND_TARGET = 1.4;
-export const WORDS_PER_SECOND_MIN = 1.1;
-export const WORDS_PER_SECOND_MAX = 1.7;
-export const SPEAKING_PACE = '120-130 words per minute, slightly slower than default AI speech';
+export const WORDS_PER_SCENE_MIN = 22;
+export const WORDS_PER_SCENE_MAX = 25;
+export const WORDS_PER_SCENE_TARGET = 23;
+
+export const SPEAKING_PACE =
+  'about 150 words per minute -- measured and clearly articulated, never rushed, but with no ' +
+  'dead air';
 
 /** The generator must have the presenter talking almost at once, in every clip. */
 export const SPEECH_LEAD_IN_SECONDS = '0.5-1 second';
+
+/**
+ * Breathing space.
+ *
+ * A ten-second clip holding twenty-odd words is not a wall of speech. There is a
+ * short pause where one sentence ends and the next begins, and a beat of silence
+ * before the cut -- without them consecutive clips run into each other and the
+ * narration sounds like one unbroken take chopped up, which is exactly what it
+ * must not sound like when every scene is generated separately.
+ */
+export const SENTENCE_PAUSE = 'a natural breath of about 0.3-0.5 seconds';
+export const SCENE_END_PAUSE = 'about 0.5 seconds of silence';
+
+/**
+ * Sentences per scene.
+ *
+ * Twenty-two to twenty-five words is one long sentence or two short ones. Three is
+ * the most that can be said in ten seconds while still pausing between them, and a
+ * scene of four clauses has stopped being one idea.
+ */
+export const MAX_SENTENCES_PER_SCENE = 3;
 
 // ---------------------------------------------------------------------------
 // The video profile: how the presenter looks, and where they are
@@ -155,11 +201,19 @@ export interface EnvironmentLock {
  * areas, and hands over to the module. The roadmap scenes are the only ones whose
  * number varies, and they vary with how many units the module has.
  */
-export type SceneRole = 'opening' | 'topic_introduction' | 'learning_transition' | 'roadmap' | 'closing';
+export type SceneRole =
+  | 'opening'
+  | 'topic_introduction'
+  | 'learning_transition'
+  | 'roadmap'
+  | 'consolidation'
+  | 'closing';
 
 export interface UnitCoverage {
   unit_code: string;
   unit_title: string;
+  /** Which slice of the unit this scene covers, e.g. "2 of 3". */
+  portion: string;
   chunk_ids: string[];
   pdf_pages: number[];
   /** Opening of the allocated handbook text. The whole of it is in `source_text`. */
@@ -183,7 +237,7 @@ export interface PlannedScene {
   target_words: number;
   min_words: number;
   max_words: number;
-  /** Empty on the framing scenes; the roadmap scenes carry the module's units. */
+  /** Empty on the framing scenes; a roadmap scene carries one slice of one unit. */
   units: UnitCoverage[];
   /** The exact handbook text this scene must be built from. */
   source_text: string;
@@ -202,17 +256,20 @@ export interface VideoScriptPlan {
   video_type: VideoType;
   video_type_label: string;
   scene_count: number;
+  scene_seconds: number;
   total_seconds: number;
   total_target_words: number;
-  words_per_second: { target: number; min: number; max: number };
+  words_per_scene: { target: number; min: number; max: number };
   speaking_pace: string;
+  /** The pauses that keep consecutive ten-second clips from running together. */
+  breathing: { between_sentences: string; end_of_scene: string; max_sentences: number };
   profile: VideoProfile;
   character: CharacterLock;
   environment: EnvironmentLock;
   /** Every unit of the module, in handbook order, with where it is covered. */
   module_units: { unit_code: string; unit_title: string; scenes: number[] }[];
   scenes: PlannedScene[];
-  /** Advisory when the module is unusually short or long for 60-90 seconds. */
+  /** Advisory when the module holds too little text for its teaching scenes. */
   coverage_note?: string;
 }
 

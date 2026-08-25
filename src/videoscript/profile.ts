@@ -305,7 +305,7 @@ export function characterLock(profile: VideoProfile): CharacterLock {
 
   const voice_description =
     'Speaks Indian English with a natural Indian accent, clear articulation, warm and ' +
-    'professional, unhurried and confident.';
+    'professional, measured and confident.';
 
   const consistency_clause =
     'Exactly the same person as in every other scene of this video: identical face, identical ' +

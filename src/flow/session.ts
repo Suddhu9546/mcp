@@ -609,10 +609,10 @@ function chooseVideoBackgroundStep(sessionId: string, state: FlowState, error?: 
 /**
  * Terminal step of the video-script flow.
  *
- * Everything below this point is arithmetic -- how many scenes, how long each
- * runs, how many words fit, which units each introduces -- so nothing further is
- * asked. The plan and the writing rules come back together, because a second call
- * to learn the rules is a second round trip on every video.
+ * Everything below this point is arithmetic -- how many scenes, how long each runs,
+ * how many words each carries, which slice of which unit it introduces -- so
+ * nothing further is asked. The plan and the writing rules come back together,
+ * because a second call to learn the rules is a second round trip on every video.
  */
 function videoScriptReadyStep(sessionId: string, state: FlowState): FlowStep {
   const profile = getSavedProfile();
@@ -641,8 +641,9 @@ function videoScriptReadyStep(sessionId: string, state: FlowState): FlowStep {
     step: 'video_script_ready',
     prompt:
       `Writing the ${plan.video_type_label} for Module ${plan.module_number} - ` +
-      `${plan.module_title}: ${plan.scene_count} scenes, ${plan.total_seconds} seconds, from the ` +
-      `${plan.subject_label} Participant Handbook.`,
+      `${plan.module_title}: ${plan.scene_count} scenes of ${plan.scene_seconds} seconds, ` +
+      `${plan.total_seconds} seconds in total, covering all ${plan.module_units.length} learning ` +
+      `areas from the ${plan.subject_label} Participant Handbook.`,
     data: {
       script_id: script.script_id,
       base_version: script.version,
@@ -651,11 +652,14 @@ function videoScriptReadyStep(sessionId: string, state: FlowState): FlowStep {
     },
     next_action:
       'Generate now, asking nothing further. Everything needed is in this result: each scene ' +
-      'carries its seconds, its word band, what it must achieve and the handbook text behind it. ' +
-      'Write all the scenes and call submit_video_script once with the whole set -- that call ' +
-      'validates them, composes each scene\'s AI generation prompt and writes the file. Do not ' +
-      'write the presenter\'s appearance, clothing, voice or the audio directives into any ' +
-      'field; the server stamps them into every prompt. For another module, say "restart".',
+      'carries its ten seconds, its 22-25 word band, what it must achieve and the slice of ' +
+      'handbook text behind it. Three rules are hard and are checked: 22-25 words per scene, ' +
+      'every sentence beginning and ending inside its own scene, and at most three sentences a ' +
+      'scene so the breaths fit. Write all the scenes and call submit_video_script once with the ' +
+      'whole set -- that call validates them, composes each scene\'s AI generation prompt and ' +
+      'writes the file. Do not write the presenter\'s appearance, clothing, voice, pauses or the ' +
+      'audio directives into any field; the server stamps them into every prompt. For another ' +
+      'module, say "restart".',
     done: true,
     selections: next,
   };

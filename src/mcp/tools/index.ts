@@ -4,7 +4,7 @@
  * Each feature owns its own module, and none of them imports another's tools:
  *
  *   flow.ts         the menu and the guided steps -- the entry point
- *   video-script.ts feature 2, the 1-1.5 minute AI info video for one module
+ *   video-script.ts feature 2, the 2.5-3 minute AI info video for one module
  *   reading.ts      feature 3, exact handbook reading
  *   storyboard.ts   feature 1, course storyboard and assessment blueprint
  *   storyboard-build.ts  feature 1's build loop: one module out, one module back

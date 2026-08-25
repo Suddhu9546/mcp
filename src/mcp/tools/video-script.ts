@@ -1,5 +1,5 @@
 /**
- * The video script tools: a 60-90 second info video for one handbook module.
+ * The video script tools: a 150-180 second info video for one handbook module.
  *
  * Six tools, and a finished script is two calls:
  *
@@ -165,13 +165,15 @@ const planTool: ToolDefinition = {
   name: 'plan_video_script',
   title: 'Plan the info video for a module',
   description:
-    'Plans a 60-90 second AI info video for one Participant Handbook module and returns ' +
-    'everything needed to write it in a single call: the six or seven scenes with their seconds, ' +
-    'timecodes and word bands, what each scene must achieve, the handbook text behind it, the ' +
-    'locked presenter and environment, and the writing rules. Nothing further needs fetching -- ' +
-    'write all the scenes and call submit_video_script. The scene count, durations and unit ' +
-    'allocation are computed and are not open to change; the words, visuals and camera are yours ' +
-    'to write. Requires a saved video profile, or one passed inline.',
+    'Plans a 2.5-3 minute AI info video for one Participant Handbook module and returns ' +
+    'everything needed to write it in a single call: 15-18 scenes of exactly 10 seconds each, ' +
+    'with their timecodes and their 22-25 word band, what each scene must achieve, the slice of ' +
+    'handbook text behind it, the locked presenter and environment, and the writing rules. ' +
+    'Nothing further needs fetching -- write all the scenes and call submit_video_script. Each ' +
+    'learning area of the module gets two or three consecutive scenes, so the video introduces ' +
+    'the whole module rather than sampling it. The scene count, durations and allocation are ' +
+    'computed and are not open to change; the words, visuals and camera are yours to write. ' +
+    'Requires a saved video profile, or one passed inline.',
   inputSchema: {
     subject: z
       .string()
@@ -267,7 +269,12 @@ const sceneSchema = z.object({
     .default([])
     .describe('The diagram, equipment, formula or reading shown to explain the point.'),
   continuity: z.string().optional().describe('What carries over from the previous scene.'),
-  narration: z.string().describe('The voiceover, word for word, inside the scene word band.'),
+  narration: z
+    .string()
+    .describe(
+      'The voiceover, word for word: 22-25 words, complete sentences that begin and end in ' +
+        'this scene, ending on a full stop.',
+    ),
   on_screen_text: z.string().optional().describe('Short burned-on text, where it reinforces.'),
   sources: z.array(z.string()).default([]).describe("chunk_ids from this scene's allocation."),
 });
@@ -278,12 +285,14 @@ const submitTool: ToolDefinition = {
   description:
     'Takes all the scenes at once and does everything remaining in one call: validates them ' +
     'against the plan, composes each scene\'s AI video-generation prompt from the authored ' +
-    'fields plus the locked presenter, pace and audio-accuracy blocks, commits a version, ' +
-    'renders the script and writes it to a file. Returns the finished script and the path. If ' +
-    'validation finds errors nothing is committed and the findings come back scene by scene; fix ' +
-    'those scenes and submit again. Do not write the presenter\'s appearance, clothing, voice or ' +
-    'the audio directives into any field -- they are added here identically for every scene, ' +
-    'which is what keeps the presenter the same person throughout.',
+    'fields plus the locked presenter, pace, pause and audio-accuracy blocks, commits a version, ' +
+    'renders the script and writes it to a file. Returns the finished script and the path. ' +
+    'Validation enforces the hard rules: 22-25 words per scene, every sentence beginning and ' +
+    'ending inside its own scene, no scene over 10 seconds. If it finds errors nothing is ' +
+    'committed and the findings come back scene by scene; fix those scenes and submit again. Do ' +
+    'not write the presenter\'s appearance, clothing, voice, pauses or the audio directives into ' +
+    'any field -- they are added here identically for every scene, which is what keeps the ' +
+    'presenter the same person throughout.',
   inputSchema: {
     script_id: z.string().describe('From plan_video_script.'),
     scenes: z.array(sceneSchema).describe('Every scene in the plan, in order.'),

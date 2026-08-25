@@ -21,11 +21,14 @@
 
 import { getChunk } from '../documents/retriever.js';
 import { countWords } from './scene-plan.js';
+import { sentencesOf } from './prompt.js';
 import {
   MAX_SCENE_COUNT,
+  MAX_SENTENCES_PER_SCENE,
   MAX_TOTAL_SECONDS,
   MIN_SCENE_COUNT,
   MIN_TOTAL_SECONDS,
+  SCENE_SECONDS,
   type AuthoredScene,
   type VideoScriptFinding,
   type VideoScriptPlan,
@@ -70,6 +73,56 @@ function repeatedWord(text: string): string | undefined {
 }
 
 const GREETING = /\bnamast[eay]/i;
+
+/**
+ * Words a sentence must not end on.
+ *
+ * Each of them promises something after it, so a scene ending on one is a scene
+ * whose thought finishes in the next clip -- which is the failure this checks for.
+ * The clips are generated separately and may be watched with a beat between them,
+ * so a sentence spanning two of them does not merely read awkwardly; it breaks.
+ */
+const DANGLING_WORDS = new Set([
+  'and', 'or', 'but', 'so', 'because', 'which', 'that', 'with', 'for', 'to', 'of', 'in', 'on',
+  'at', 'by', 'from', 'as', 'if', 'when', 'while', 'the', 'a', 'an', 'this', 'these', 'those',
+  'like', 'such', 'including', 'namely', 'plus', 'then',
+]);
+
+/**
+ * Whether the narration stands on its own.
+ *
+ * Three ways it can fail, and all three are mechanical. It can end without
+ * terminal punctuation, which means the sentence was left open. It can end on a
+ * word that promises a continuation. Or it can contain a fragment -- a "sentence"
+ * of one or two words that is really the tail of the last one or the head of the
+ * next.
+ */
+function selfContainedProblem(narration: string): string | undefined {
+  const text = narration.trim();
+  if (text.length === 0) return undefined;
+
+  if (!/[.!?]["'”’]?$/.test(text)) {
+    return (
+      'it does not end on a full stop, question mark or exclamation mark, so the sentence is ' +
+      'left open for the next scene to finish'
+    );
+  }
+
+  const lastWord = /([\p{L}']+)[^\p{L}']*$/u.exec(text)?.[1]?.toLowerCase();
+  if (lastWord && DANGLING_WORDS.has(lastWord)) {
+    return `it ends on "${lastWord}", which promises something after it`;
+  }
+
+  const sentences = sentencesOf(text);
+  const fragment = sentences.find((sentence, i) => {
+    // A short opener such as "Namastey!" is a complete utterance, not a fragment.
+    if (i === 0 && GREETING.test(sentence)) return false;
+    return countWords(sentence) < 3;
+  });
+  if (fragment) return `"${fragment}" is a fragment rather than a complete sentence`;
+
+  return undefined;
+}
 
 export interface ValidateOptions {
   scriptId: string;
@@ -158,6 +211,7 @@ export function validateVideoScript(options: ValidateOptions): VideoScriptValida
   // --- per-scene checks ---------------------------------------------------
 
   let fitFailures = 0;
+  let selfContainedFailures = 0;
   let emptyFields = 0;
   let leaks = 0;
   let badCitations = 0;
@@ -186,14 +240,17 @@ export function validateVideoScript(options: ValidateOptions): VideoScriptValida
       }
     }
 
-    // Narration fit. The hard one: a scene over its band is cut off mid-word.
+    // Narration fit. Every scene carries 22-25 words in its ten seconds: over the
+    // band the generator cuts the last words off, under it the clip trails into
+    // silence and the next one opens on a dead beat.
     const words = countWords(scene.narration ?? '');
     if (words > planned.max_words) {
       fitFailures += 1;
       error(
         'narration_fit',
-        `Scene ${n} narration is ${words} words for ${planned.seconds}s; the maximum that fits ` +
-          `is ${planned.max_words}.`,
+        `Scene ${n} narration is ${words} words; every scene must carry ` +
+          `${planned.min_words}-${planned.max_words}, and ${planned.max_words} is the most that ` +
+          `fits ${planned.seconds} seconds with breathing space.`,
         n,
         `Cut to about ${planned.target_words} words. The generator truncates the overrun.`,
       );
@@ -201,10 +258,45 @@ export function validateVideoScript(options: ValidateOptions): VideoScriptValida
       fitFailures += 1;
       error(
         'narration_fit',
-        `Scene ${n} narration is ${words} words for ${planned.seconds}s; at least ` +
-          `${planned.min_words} are needed or the scene runs on in silence.`,
+        `Scene ${n} narration is ${words} words; every scene must carry at least ` +
+          `${planned.min_words}.`,
         n,
-        `Aim for about ${planned.target_words} words.`,
+        `Build up to about ${planned.target_words} words from this scene's allocated text.`,
+      );
+    }
+
+    // Every scene finishes what it starts.
+    const problem = selfContainedProblem(scene.narration ?? '');
+    if (problem) {
+      selfContainedFailures += 1;
+      error(
+        'self_contained',
+        `Scene ${n} narration is not self-contained: ${problem}.`,
+        n,
+        'Each scene is generated as its own clip. Rewrite so every sentence begins and ends ' +
+          'inside this scene.',
+      );
+    }
+
+    // Breathing space needs somewhere to go.
+    const sentenceCount = sentencesOf(scene.narration ?? '').length;
+    if (sentenceCount > MAX_SENTENCES_PER_SCENE) {
+      selfContainedFailures += 1;
+      error(
+        'self_contained',
+        `Scene ${n} narration is ${sentenceCount} sentences; at most ${MAX_SENTENCES_PER_SCENE} ` +
+          `fit ${planned.seconds} seconds with a breath between each.`,
+        n,
+        'Combine or cut. Fewer, fuller sentences read better here than many short ones.',
+      );
+    }
+
+    // Ten seconds is the cap the generator is built around.
+    if (planned.seconds > SCENE_SECONDS) {
+      error(
+        'structure',
+        `Scene ${n} is planned at ${planned.seconds}s; no scene may exceed ${SCENE_SECONDS}s.`,
+        n,
       );
     }
 
@@ -298,8 +390,15 @@ export function validateVideoScript(options: ValidateOptions): VideoScriptValida
     'narration_fit',
     fitFailures === 0,
     fitFailures === 0
-      ? `Every scene inside its word band (${plan.words_per_second.min}-${plan.words_per_second.max} words/second).`
-      : `${fitFailures} scene(s) outside their band.`,
+      ? `Every scene carries ${plan.words_per_scene.min}-${plan.words_per_scene.max} words.`
+      : `${fitFailures} scene(s) outside the ${plan.words_per_scene.min}-${plan.words_per_scene.max} word band.`,
+  );
+  record(
+    'self_contained',
+    selfContainedFailures === 0,
+    selfContainedFailures === 0
+      ? `Every scene's sentences begin and end inside it, at most ${MAX_SENTENCES_PER_SCENE} per scene.`
+      : `${selfContainedFailures} scene(s) leave a sentence open or hold too many.`,
   );
   record('audio_accuracy', repeats === 0, repeats === 0 ? 'No duplicated words in narration.' : `${repeats} duplication(s).`);
   record('no_source_leak', leaks === 0, leaks === 0 ? 'Nothing viewer-facing names the source.' : `${leaks} leak(s).`);
@@ -338,8 +437,8 @@ export function validateVideoScript(options: ValidateOptions): VideoScriptValida
   record(
     'delivery_directives',
     true,
-    'Guaranteed: speech lead-in, pace and the speak-once audio directive are stamped into every ' +
-      'scene prompt.',
+    'Guaranteed: the speech lead-in, the pace, the breath between sentences, the pause before ' +
+      'the cut and the speak-once directive are stamped into every scene prompt.',
   );
   record(
     'environment',

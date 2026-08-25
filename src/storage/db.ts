@@ -266,10 +266,39 @@ const REMOVED_TABLES = [
   'video_transcripts',
 ];
 
+/**
+ * Video types that no longer exist.
+ *
+ * A script is keyed on its video type, so renaming a type strands every row
+ * written under the old name: nothing reads them, nothing can reach them, and
+ * they still appear in list_video_scripts as though they were work in progress.
+ * They are deleted on open for the same reason the removed tables are.
+ */
+const RETIRED_VIDEO_TYPES = ['info_1_1_5_min'];
+
+function tableExists(db: Db, table: string): boolean {
+  const row = db
+    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?")
+    .get(table) as { name: string } | undefined;
+  return row !== undefined;
+}
+
 function migrate(db: Db): void {
   addColumnIfMissing(db, 'storyboard_artifacts', 'source_fingerprint', 'TEXT');
   db.exec('DROP INDEX IF EXISTS idx_module_packages_scope');
   for (const table of REMOVED_TABLES) db.exec(`DROP TABLE IF EXISTS ${table}`);
+
+  // Guarded on the table existing: migrate() runs before SCHEMA, so on a fresh
+  // database there is nothing here yet and nothing to clean.
+  if (tableExists(db, 'video_scripts')) {
+    for (const type of RETIRED_VIDEO_TYPES) {
+      db.prepare(
+        'DELETE FROM video_script_versions WHERE script_id IN ' +
+          '(SELECT script_id FROM video_scripts WHERE video_type = ?)',
+      ).run(type);
+      db.prepare('DELETE FROM video_scripts WHERE video_type = ?').run(type);
+    }
+  }
 
   const row = db.prepare("SELECT value FROM schema_meta WHERE key = 'schema_version'").get() as
     | { value: string }

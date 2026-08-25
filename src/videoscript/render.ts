@@ -24,7 +24,8 @@ export function renderVideoScript(state: VideoScriptState): string {
     RULE,
     `${plan.video_type_label.toUpperCase()}`,
     `${plan.subject_label}  |  Module ${plan.module_number} - ${plan.module_title}`,
-    `${plan.scene_count} scenes  |  ${plan.total_seconds} seconds  |  ${plan.track_label}`,
+    `${plan.scene_count} scenes x ${plan.scene_seconds}s  |  ${plan.total_seconds} seconds  |  ` +
+      `${plan.track_label}`,
     `${state.script_id}  v${state.version}`,
     RULE,
     '',
@@ -37,6 +38,13 @@ export function renderVideoScript(state: VideoScriptState): string {
     'SETTING',
     THIN,
     `  ${plan.environment.label}: ${plan.environment.description}`,
+    '',
+    'DELIVERY (identical in every scene)',
+    THIN,
+    `  Pace: ${plan.speaking_pace}`,
+    `  Between sentences: ${plan.breathing.between_sentences}`,
+    `  End of every scene: ${plan.breathing.end_of_scene}`,
+    '  Every sentence begins and ends inside its own scene.',
     '',
   ];
 
@@ -57,7 +65,7 @@ export function renderVideoScript(state: VideoScriptState): string {
     if (scene.on_screen_text) out.push(`ON SCREEN : ${scene.on_screen_text}`);
     out.push(
       '',
-      `VOICEOVER (${scene.narration_word_count} words):`,
+      `VOICEOVER (${scene.narration_word_count} words, complete within this scene):`,
       `  ${scene.narration}`,
       '',
       'AI VIDEO PROMPT:',

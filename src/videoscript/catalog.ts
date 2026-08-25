@@ -147,8 +147,9 @@ export interface VideoTypeOption {
 export const VIDEO_TYPE_OPTIONS: VideoTypeOption[] = [
   {
     value: VIDEO_TYPE_INFO,
-    label: '1-1.5 minute AI Info Video',
-    detail: 'A 60-90 second introduction to the module, in 6-7 scenes',
+    label: '2.5-3 minute AI Info Video',
+    detail:
+      'A 150-180 second introduction covering the whole module, in 15-18 scenes of 10 seconds',
     available: true,
   },
   {
@@ -156,7 +157,7 @@ export const VIDEO_TYPE_OPTIONS: VideoTypeOption[] = [
     label: '15 minute Unit Content Video',
     detail: 'Full unit teaching video',
     available: false,
-    blocker: 'Not implemented yet. Only the 1-1.5 minute info video can be generated today.',
+    blocker: 'Not implemented yet. Only the 2.5-3 minute info video can be generated today.',
   },
 ];
 

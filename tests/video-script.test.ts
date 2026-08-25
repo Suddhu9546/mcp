@@ -75,12 +75,17 @@ describe('the plan', () => {
     plan = (await call('plan_video_script', { subject: COURSE, module_number: MODULE })).plan;
   });
 
-  it('is 6-7 scenes running 60-90 seconds, and the seconds sum exactly', () => {
-    expect(plan.scene_count).toBeGreaterThanOrEqual(6);
-    expect(plan.scene_count).toBeLessThanOrEqual(7);
-    expect(plan.total_seconds).toBeGreaterThanOrEqual(60);
-    expect(plan.total_seconds).toBeLessThanOrEqual(90);
+  it('is 15-18 scenes running 150-180 seconds, and the seconds sum exactly', () => {
+    expect(plan.scene_count).toBeGreaterThanOrEqual(15);
+    expect(plan.scene_count).toBeLessThanOrEqual(18);
+    expect(plan.total_seconds).toBeGreaterThanOrEqual(150);
+    expect(plan.total_seconds).toBeLessThanOrEqual(180);
     expect(plan.scenes.reduce((a: number, s: any) => a + s.seconds, 0)).toBe(plan.total_seconds);
+  });
+
+  it('gives every scene exactly ten seconds, which no scene may exceed', () => {
+    for (const scene of plan.scenes) expect(scene.seconds).toBe(10);
+    expect(plan.scene_seconds).toBe(10);
   });
 
   it('lays the scenes end to end with no gap and no overlap', () => {
@@ -94,31 +99,62 @@ describe('the plan', () => {
 
   it('follows the fixed teaching structure', () => {
     const roles = plan.scenes.map((s: any) => s.role);
-    expect(roles[0]).toBe('opening');
-    expect(roles[1]).toBe('topic_introduction');
-    expect(roles[2]).toBe('learning_transition');
+    expect(roles.slice(0, 4)).toEqual([
+      'opening',
+      'topic_introduction',
+      'topic_introduction',
+      'learning_transition',
+    ]);
+    expect(roles[roles.length - 2]).toBe('consolidation');
     expect(roles[roles.length - 1]).toBe('closing');
-    expect(roles.filter((r: string) => r === 'roadmap').length).toBeGreaterThanOrEqual(2);
+    // Nine to twelve teaching scenes is what a six-scene frame leaves inside
+    // 15-18, and it is what lets every unit have two or three of its own.
+    const roadmap = roles.filter((r: string) => r === 'roadmap').length;
+    expect(roadmap).toBeGreaterThanOrEqual(9);
+    expect(roadmap).toBeLessThanOrEqual(12);
   });
 
-  it('gives every scene a word band matching its seconds', () => {
+  it('gives every scene the same 22-25 word band', () => {
+    expect(plan.words_per_scene).toEqual({ target: 23, min: 22, max: 25 });
     for (const scene of plan.scenes) {
-      expect(scene.min_words).toBe(Math.floor(scene.seconds * 1.1));
-      expect(scene.max_words).toBe(Math.ceil(scene.seconds * 1.7));
-      expect(scene.target_words).toBeGreaterThan(scene.min_words - 1);
-      expect(scene.target_words).toBeLessThan(scene.max_words + 1);
+      expect(scene.min_words).toBe(22);
+      expect(scene.max_words).toBe(25);
+      expect(scene.target_words).toBe(23);
     }
   });
 
-  it('allocates every unit of the module to a roadmap scene, in handbook order', () => {
+  it('carries the breathing spec, which is what stops clips running together', () => {
+    expect(plan.breathing.between_sentences).toMatch(/0\.3-0\.5/);
+    expect(plan.breathing.end_of_scene).toMatch(/0\.5/);
+    expect(plan.breathing.max_sentences).toBe(3);
+  });
+
+  it('gives every unit two or three consecutive scenes, in handbook order', () => {
     for (const unit of plan.module_units) {
-      expect(unit.scenes.length).toBeGreaterThan(0);
+      expect(unit.scenes.length).toBeGreaterThanOrEqual(2);
+      // Consecutive: a unit's scenes are never interleaved with another's.
+      for (let i = 1; i < unit.scenes.length; i++) {
+        expect(unit.scenes[i]).toBe(unit.scenes[i - 1] + 1);
+      }
     }
     const covered = plan.scenes
       .filter((s: any) => s.role === 'roadmap')
-      .flatMap((s: any) => s.units.map((u: any) => u.unit_code));
+      .map((s: any) => s.units[0].unit_code);
     expect(covered).toEqual([...covered].sort());
-    expect(new Set(covered).size).toBe(covered.length);
+  });
+
+  it('gives each scene of a unit its own slice, so the second does not repeat the first', () => {
+    const roadmap = plan.scenes.filter((s: any) => s.role === 'roadmap');
+    for (const scene of roadmap) {
+      expect(scene.units).toHaveLength(1);
+      expect(scene.units[0].portion).toMatch(/^\d+ of \d+$/);
+    }
+    const multi = plan.module_units.find((u: any) => u.scenes.length > 1);
+    expect(multi).toBeDefined();
+    const slices = roadmap
+      .filter((s: any) => s.units[0].unit_code === multi.unit_code)
+      .map((s: any) => s.source_text);
+    expect(new Set(slices).size).toBe(slices.length);
   });
 
   it('attaches the handbook text and the citable chunks to every scene', () => {
@@ -143,10 +179,13 @@ describe('the plan', () => {
 
 // ---------------------------------------------------------------------------
 
-/** A script that passes, written from the plan's own bands. */
+/**
+ * A script that passes: 22-25 words a scene, complete sentences, nothing borrowed
+ * from the next scene.
+ */
 function goodScenes(plan: any) {
   const filler = (words: number) =>
-    ['Namastey', ...Array.from({ length: words - 1 }, (_, i) => `word${i}`)].join(' ');
+    `Namastey. ${Array.from({ length: words - 1 }, (_, i) => `word${i}`).join(' ')}.`;
   return plan.scenes.map((s: any) => ({
     scene_number: s.scene_number,
     educational_purpose: s.educational_purpose,
@@ -183,15 +222,63 @@ describe('validation', () => {
 
   it('rejects narration that overruns its scene, and commits nothing', async () => {
     const scenes = goodScenes(plan);
-    scenes[0].narration = `Namastey ${'word '.repeat(60)}`;
+    scenes[0].narration = `Namastey. ${Array.from({ length: 40 }, (_, i) => `w${i}`).join(' ')}.`;
     const res = await call('submit_video_script', { script_id: scriptId, scenes });
     expect(res.committed).toBe(false);
     expect(res.validation.findings.some((f: any) => f.check === 'narration_fit')).toBe(true);
   });
 
+  it('rejects narration under twenty-two words', async () => {
+    const scenes = goodScenes(plan);
+    scenes[3].narration = 'This scene says far too little to fill ten seconds properly.';
+    const res = await call('submit_video_script', { script_id: scriptId, scenes });
+    expect(res.committed).toBe(false);
+    const fit = res.validation.findings.find((f: any) => f.check === 'narration_fit');
+    expect(fit.message).toMatch(/at least 22/);
+  });
+
+  it('rejects a sentence left open for the next scene to finish', async () => {
+    const cases: [string, RegExp][] = [
+      // No terminal punctuation at all.
+      [`Namastey. ${Array.from({ length: 22 }, (_, i) => `w${i}`).join(' ')}`, /does not end on a full stop/],
+      // Ends on a word that promises a continuation.
+      [`Namastey. ${Array.from({ length: 21 }, (_, i) => `w${i}`).join(' ')} and.`, /promises something after it/],
+    ];
+    for (const [narration, expected] of cases) {
+      const scenes = goodScenes(plan);
+      scenes[1].narration = narration;
+      const res = await call('submit_video_script', { script_id: scriptId, scenes });
+      const finding = res.validation.findings.find((f: any) => f.check === 'self_contained');
+      expect(finding, `"${narration.slice(-30)}" should not be self-contained`).toBeDefined();
+      expect(finding.message).toMatch(expected);
+    }
+  });
+
+  it('rejects a sentence fragment', async () => {
+    const scenes = goodScenes(plan);
+    scenes[2].narration =
+      'Which is why moisture matters so much when the pellets are being formed and cooled. And then.';
+    const res = await call('submit_video_script', { script_id: scriptId, scenes });
+    const finding = res.validation.findings.find((f: any) => f.check === 'self_contained');
+    expect(finding).toBeDefined();
+  });
+
+  it('rejects a scene holding more sentences than the breaths fit', async () => {
+    const scenes = goodScenes(plan);
+    scenes[4].narration =
+      'One two three four. Five six seven eight. Nine ten eleven twelve. Thirteen fourteen fifteen sixteen. Seventeen eighteen nineteen twenty.';
+    const res = await call('submit_video_script', { script_id: scriptId, scenes });
+    const finding = res.validation.findings.find(
+      (f: any) => f.check === 'self_contained' && /sentences/.test(f.message),
+    );
+    expect(finding).toBeDefined();
+  });
+
   it('rejects an opening without the greeting', async () => {
     const scenes = goodScenes(plan);
-    scenes[0].narration = 'Hello everyone and welcome to this short introduction video';
+    scenes[0].narration =
+      'Hello everyone and welcome to this short introduction video about how the whole of this ' +
+      'subject fits together today.';
     const res = await call('submit_video_script', { script_id: scriptId, scenes });
     expect(res.validation.findings.some((f: any) => f.check === 'opening_greeting')).toBe(true);
   });
@@ -199,7 +286,7 @@ describe('validation', () => {
   it('rejects anything viewer-facing that names the handbook, a page or a unit number', async () => {
     for (const leak of ['see page 14 for this', 'as unit 7.2 explains', 'the handbook says so']) {
       const scenes = goodScenes(plan);
-      scenes[1].narration = `Namastey ${leak}`;
+      scenes[1].narration = `Namastey. Please ${leak}, ${Array.from({ length: 14 }, (_, i) => `w${i}`).join(' ')}.`;
       const res = await call('submit_video_script', { script_id: scriptId, scenes });
       expect(
         res.validation.findings.some((f: any) => f.check === 'no_source_leak'),
@@ -210,7 +297,8 @@ describe('validation', () => {
 
   it('rejects a duplicated word, which is what a stuttered line sounds like', async () => {
     const scenes = goodScenes(plan);
-    scenes[2].narration = 'Namastey this is is the part that repeats itself';
+    scenes[2].narration =
+      `Namastey. This is is the part that repeats itself, ${Array.from({ length: 13 }, (_, i) => `w${i}`).join(' ')}.`;
     const res = await call('submit_video_script', { script_id: scriptId, scenes });
     expect(res.validation.findings.some((f: any) => f.check === 'audio_accuracy')).toBe(true);
   });
@@ -244,12 +332,95 @@ describe('the composed generation prompt', () => {
     for (const scene of res.scenes) {
       expect(scene.ai_video_prompt).toContain(character);
       expect(scene.ai_video_prompt).toContain(planned.plan.character.attire_description);
-      expect(scene.ai_video_prompt).toMatch(/begins speaking within 0\.5-1 second/);
-      expect(scene.ai_video_prompt).toMatch(/Speak this line once only/);
+      expect(scene.ai_video_prompt).toMatch(/starts speaking within 0\.5-1 second/);
+      expect(scene.ai_video_prompt).toMatch(/Speak that line once/);
+      // Breathing space is stated in every prompt, at both ends.
+      expect(scene.ai_video_prompt).toMatch(/0\.5 seconds of silence after the final word/);
+      expect(scene.ai_video_prompt).toMatch(/begins and ends inside these 10 seconds/);
+      // The prompt must foreclose the common generator errors explicitly.
+      expect(scene.ai_video_prompt).toMatch(/^DO NOT: /m);
       expect(scene.ai_video_prompt).toContain(scene.narration.trim());
       // The setting is restated every time for the same reason the presenter is.
-      expect(scene.ai_video_prompt).toContain('ENVIRONMENT:');
+      expect(scene.ai_video_prompt).toContain('SETTING:');
     }
+  });
+});
+
+describe('the on-screen accuracy block', () => {
+  let plan: any;
+  let scriptId: string;
+
+  beforeAll(async () => {
+    await call('set_video_profile', PROFILE);
+    const res = await call('plan_video_script', { subject: COURSE, module_number: MODULE });
+    plan = res.plan;
+    scriptId = res.script_id;
+  });
+
+  /** Submits one variant and returns the composed prompts. */
+  async function composed(mutate: (scenes: any[]) => void) {
+    const scenes = goodScenes(plan);
+    mutate(scenes);
+    const res = await call('submit_video_script', { script_id: scriptId, scenes });
+    expect(res.committed, JSON.stringify(res.validation?.findings)).toBe(true);
+    return res.scenes;
+  }
+
+  it('appears in every scene, whether or not the scene shows any text', async () => {
+    const scenes = await composed(() => {});
+    for (const scene of scenes) {
+      expect(scene.ai_video_prompt).toContain('ACCURACY -- this is critical:');
+      expect(scene.ai_video_prompt).toMatch(/correctly spelled/);
+      expect(scene.ai_video_prompt).toMatch(/Missing text is acceptable; misspelled text is not/);
+      expect(scene.ai_video_prompt).toMatch(/^DO NOT: misspell any word on screen/m);
+    }
+  });
+
+  it('names the exact caption as the only permitted text, character for character', async () => {
+    const scenes = await composed((s) => {
+      s[0].on_screen_text = 'Gross Calorific Value';
+      s[0].educational_visual_elements = [];
+    });
+    const prompt = scenes[0].ai_video_prompt;
+    expect(prompt).toContain('the caption "Gross Calorific Value", exactly as written');
+    expect(prompt).toContain('character for character');
+    expect(prompt).toMatch(/Add no other text of any kind/);
+  });
+
+  it('forbids all text outright when the scene shows none', async () => {
+    const scenes = await composed((s) => {
+      s[1].on_screen_text = undefined;
+      s[1].educational_visual_elements = [];
+    });
+    const prompt = scenes[1].ai_video_prompt;
+    expect(prompt).toMatch(/No text of any kind appears in this frame/);
+    expect(prompt).toMatch(/do not invent background lettering/i);
+  });
+
+  it('does not forbid text on a scene whose teaching visual carries labels', async () => {
+    // The contradiction worth guarding: "no text may appear" alongside "the
+    // labels must be spelled correctly" leaves the generator to pick one.
+    const scenes = await composed((s) => {
+      const roadmap = s.findIndex((x: any) => x.educational_visual_elements.length > 0);
+      s[roadmap].on_screen_text = undefined;
+      s[roadmap].educational_visual_elements = ['a moisture meter, labelled Moisture Content'];
+    });
+    const withLabels = scenes.find((x: any) =>
+      x.educational_visual_elements.includes('a moisture meter, labelled Moisture Content'),
+    );
+    expect(withLabels).toBeDefined();
+    expect(withLabels.ai_video_prompt).toContain('the labels on the teaching visual named above');
+    expect(withLabels.ai_video_prompt).not.toMatch(/No text of any kind appears in this frame/);
+  });
+
+  it('permits both the caption and the labels when a scene has both', async () => {
+    const scenes = await composed((s) => {
+      s[0].on_screen_text = 'Moisture matters';
+      s[0].educational_visual_elements = ['a moisture meter showing its reading'];
+    });
+    const prompt = scenes[0].ai_video_prompt;
+    expect(prompt).toContain('the caption "Moisture matters", exactly as written');
+    expect(prompt).toContain('and the labels on the teaching visual named above');
   });
 });
 
@@ -279,6 +450,7 @@ describe('the guided flow', () => {
 
     const types = await call('flow_choose', { session_id: sid, choice: String(MODULE) });
     expect(types.step).toBe('choose_video_type');
+    expect(types.options[0].label).toBe('1. 2.5-3 minute AI Info Video');
     expect(types.options[1].disabled).toBe(true);
 
     const afterType = await call('flow_choose', { session_id: sid, choice: '1' });
@@ -296,7 +468,7 @@ describe('the guided flow', () => {
     expect(ready.step).toBe('video_script_ready');
     expect(ready.done).toBe(true);
     expect(ready.options).toBeUndefined();
-    expect(ready.data.plan.scene_count).toBeGreaterThanOrEqual(6);
+    expect(ready.data.plan.scene_count).toBeGreaterThanOrEqual(15);
     expect(ready.data.spec).toBeDefined();
   });
 
@@ -378,7 +550,9 @@ describe('storage', () => {
     expect(second.script_id).toBe(first.script_id);
 
     const list = await call('list_video_scripts', { subject: COURSE });
-    const forModule = list.scripts.filter((s: any) => s.module_number === MODULE);
+    const forModule = list.scripts.filter(
+      (s: any) => s.module_number === MODULE && s.video_type === first.plan.video_type,
+    );
     expect(forModule).toHaveLength(1);
   });
 

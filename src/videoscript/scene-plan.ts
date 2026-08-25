@@ -1,38 +1,42 @@
 /**
- * Planning the six or seven scenes.
+ * Planning the fifteen to eighteen scenes.
  *
- * Everything below the module is arithmetic, not a choice to put to the user: how
- * many scenes there are, how long each runs, how many words fit it, and which of
- * the module's units it introduces. Doing it here is what makes the structure hold
- * -- a writer asked to produce "about ninety seconds" reliably writes three
- * minutes, and a writer asked to "cover the module" reliably covers the first half
- * of it.
+ * Everything below the module is arithmetic, not a choice to put to the user, and
+ * here the arithmetic has only one answer. Four rules are fixed -- the video runs
+ * 150-180 seconds, no scene exceeds ten seconds, every scene carries 22-25 words,
+ * and no sentence crosses a scene boundary -- and a scene shorter than ten seconds
+ * cannot hold twenty-two words. So every scene is exactly ten seconds, and the
+ * video is fifteen to eighteen of them.
  *
- * The structure is fixed because the job is fixed. An info video opens, says what
- * the topic is and why it matters, turns to what will be learned, walks the key
- * areas, and hands over. Only the roadmap section varies, and it varies with how
- * many units the module has: two roadmap scenes for a small module, three for a
- * larger one, which is what puts the total between sixty and ninety seconds
- * without anyone choosing a duration.
+ * That length is what makes this a complete module introduction. Six scenes are
+ * the frame (greet, say what the topic is in two, turn to the learning, draw the
+ * threads together, hand over) and the nine to twelve that remain go to the units
+ * -- two or three scenes each, rather than several units sharing one. A unit with
+ * three scenes has its text split into three contiguous slices, so the second
+ * scene continues where the first stopped instead of re-introducing the unit.
  *
  * What this planner does NOT do is decide what is taught. It hands each roadmap
- * scene the handbook text for the units it covers and stops there.
+ * scene the handbook text for its slice and stops there.
  */
 
 import { getPhOutline, readPhUnit, UnitNotFoundError } from '../documents/ph-outline.js';
-import type { PhUnitReading } from '../documents/ph-outline.js';
+import type { PhUnitBlock, PhUnitReading } from '../documents/ph-outline.js';
 import { TRACK_LABELS } from '../catalog/subject-catalog.js';
 import type { SubjectEntry } from '../catalog/subject-catalog.js';
 import {
   MAX_SCENE_COUNT,
+  MAX_SENTENCES_PER_SCENE,
   MAX_TOTAL_SECONDS,
   MIN_SCENE_COUNT,
   MIN_TOTAL_SECONDS,
+  SCENE_END_PAUSE,
+  SCENE_SECONDS,
+  SENTENCE_PAUSE,
   SPEAKING_PACE,
   VIDEO_TYPE_INFO,
-  WORDS_PER_SECOND_MAX,
-  WORDS_PER_SECOND_MIN,
-  WORDS_PER_SECOND_TARGET,
+  WORDS_PER_SCENE_MAX,
+  WORDS_PER_SCENE_MIN,
+  WORDS_PER_SCENE_TARGET,
   type PlannedScene,
   type SceneRole,
   type UnitCoverage,
@@ -50,39 +54,33 @@ export class VideoScriptPlanError extends Error {
 }
 
 /**
- * The seconds each role runs.
+ * The frame around the teaching, and the room left inside it.
  *
- * The framing scenes are short because they carry one idea each; the topic
- * introduction and the roadmap scenes are longer because they carry the teaching.
- * Six scenes come to 62 seconds and seven to 74, both inside 60-90 with room for
- * the generator's lead-in.
+ * Six framing scenes and nine to twelve roadmap scenes: 15 scenes is 150 seconds,
+ * 18 is 180, and both ends of that are exactly the 2.5-3 minutes required. How
+ * many roadmap scenes a module gets follows from how many units it has -- two
+ * apiece, floored at nine so a one-unit module still fills the running time and
+ * capped at twelve so an eight-unit module still fits inside three minutes.
  */
-const ROLE_SECONDS: Record<SceneRole, number> = {
-  opening: 8,
-  topic_introduction: 12,
-  learning_transition: 8,
-  roadmap: 12,
-  closing: 10,
-};
+const FRAME_SCENES = 6;
+const MIN_ROADMAP_SCENES = MIN_SCENE_COUNT - FRAME_SCENES;
+const MAX_ROADMAP_SCENES = MAX_SCENE_COUNT - FRAME_SCENES;
+const SCENES_PER_UNIT = 2;
 
-const MIN_ROADMAP_SCENES = 2;
-const MAX_ROADMAP_SCENES = 3;
 const EXCERPT_CHARS = 320;
 
 /**
- * How much of each allocated unit travels with the plan.
+ * How much of each slice travels with the plan.
  *
- * The whole module would make the plan enormous and slow, and a roadmap scene does
- * not need the whole module: it needs to know what the unit is about and one
- * concrete thing from it, which a handbook states in its opening paragraphs. So
- * each unit contributes its opening, bounded, and the plan says so. A writer who
- * wants the rest can call read_ph_unit -- but the point of the bound is that a
- * ninety-second introduction should not need it.
+ * A roadmap scene is twenty-odd words. It does not need the whole unit; it needs
+ * the part of the unit it was allocated. Slicing first and bounding second is what
+ * keeps the plan small enough to arrive in one call while still giving each scene
+ * material the previous scene did not already use.
  */
-const SCENE_SOURCE_CHARS_PER_UNIT = 1800;
+const SCENE_SOURCE_CHARS = 1600;
 
-/** Characters of module text a roadmap scene can reasonably be written from. */
-const THIN_MODULE_CHARS = 1200;
+/** Characters of module text below which the roadmap scenes will struggle. */
+const THIN_MODULE_CHARS = 2000;
 
 function timecode(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -100,50 +98,87 @@ export function countWords(text: string): number {
 // ---------------------------------------------------------------------------
 
 /**
- * The direction for a role, written once.
+ * The rule every scene obeys, restated in every direction.
  *
- * These are instructions to the writer, not narration. They say what the scene
- * must achieve and what it must not become, which is where an info video usually
- * goes wrong: scene 2 starts teaching the first unit, or the closing scene turns
- * into "thank you for watching".
+ * It is repeated rather than stated once at the top of the plan because a writer
+ * works scene by scene, and the constraint that is most often broken -- a sentence
+ * left hanging for the next scene to finish -- is broken exactly at the moment the
+ * writer is looking at one scene's direction and nothing else.
  */
+const SELF_CONTAINED =
+  ' This scene must stand on its own: every sentence starts and finishes inside it. Do not ' +
+  'leave a clause, a list or a thought for the next scene to complete, and do not open by ' +
+  'completing the previous one.';
+
 const ROLE_DIRECTION: Record<Exclude<SceneRole, 'roadmap'>, string> = {
   opening:
-    'Open with a natural spoken "Namastey" and introduce the module by name. The presenter is ' +
-    'speaking within the first second -- no silent establishing beat. The module title appears ' +
-    'on screen as it is spoken. Teach nothing yet.',
+    'Open with a natural spoken "Namastey", then name the module and say in one further ' +
+    'sentence what it is about. The presenter is speaking within the first second -- no silent ' +
+    'establishing beat. The module title appears on screen as it is spoken. Teach nothing yet.',
   topic_introduction:
     'Say what this topic is and why it matters to someone doing this work. Concrete and ' +
-    'practical, not a claim about the industry. Do not begin teaching the first unit here.',
+    'practical -- what it changes for them -- not a claim about the industry. Do not begin ' +
+    'teaching the first unit here.',
   learning_transition:
-    'Turn from what the topic is to what the learner will get from it. One short bridge -- this ' +
-    'scene exists to change direction, not to add information.',
+    'Turn from what the topic is to what the learner will be able to do. One bridge: this scene ' +
+    'changes direction rather than adding information.',
+  consolidation:
+    'Draw the learning areas together: how they connect and why they are taught in this order. ' +
+    'No new fact -- everything here has already been named.',
   closing:
-    'Hand over to the detailed module content in one line, e.g. the sense of "let us go through ' +
-    'this step by step". No new fact, no summary of everything, and not "thank you for watching".',
+    'Hand over to the detailed module content, in the sense of "let us now go through this step ' +
+    'by step". No new fact, no summary of everything, and not "thank you for watching".',
 };
 
-function roadmapDirection(units: UnitCoverage[], position: number, total: number): string {
-  const names = units.map((u) => `"${u.unit_title}"`).join(' and ');
-  const scope =
-    units.length === 1
-      ? `Introduce the learning area ${names}.`
-      : `Introduce the learning areas ${names} as one connected area.`;
+/**
+ * The direction for one roadmap scene.
+ *
+ * A unit gets two or three consecutive scenes, so the direction has to say which
+ * of them this is. Without that, the second scene of a unit re-introduces it and
+ * twenty-five words are spent saying the name again.
+ */
+function roadmapDirection(unit: UnitCoverage, indexInUnit: number, ofUnit: number): string {
+  const first = indexInUnit === 0;
+  const last = indexInUnit === ofUnit - 1;
+
+  if (ofUnit === 1) {
+    return (
+      `Introduce the learning area "${unit.unit_title}": name it, say what it covers, and give ` +
+      'one concrete thing from it that makes it real -- a factor, a step, a piece of equipment, ' +
+      'a figure the handbook states.' +
+      SELF_CONTAINED
+    );
+  }
+  if (first) {
+    return (
+      `Open the learning area "${unit.unit_title}". Name it and say what it covers, and land one ` +
+      'concrete thing from the text allocated here -- an opening that only announces the area ' +
+      `wastes one of the ${ofUnit} scenes it has.` +
+      SELF_CONTAINED
+    );
+  }
+  if (last) {
+    return (
+      `Close the learning area "${unit.unit_title}" on what the learner should take from it, ` +
+      'built from the text allocated here. Do not repeat the area\'s name -- it was named ' +
+      'already; continue from where the previous scene stopped.' +
+      SELF_CONTAINED
+    );
+  }
   return (
-    `${scope} Name what it covers and give the learner one concrete thing that makes it real -- ` +
-    'a factor, a step, a piece of equipment, a number the handbook states. This is the roadmap, ' +
-    `not the lesson: do not attempt to teach the whole area in ${ROLE_SECONDS.roadmap} seconds. ` +
-    (position === total - 1
-      ? 'This is the last roadmap scene, so it should feel like the map is complete.'
-      : 'Leave the learner ready for the next area.')
+    `Continue the learning area "${unit.unit_title}" with the text allocated here -- the next ` +
+    'thing a learner needs to know about it. Do not re-introduce the area; carry on from the ' +
+    'previous scene.' +
+    SELF_CONTAINED
   );
 }
 
 const ROLE_PURPOSE: Record<SceneRole, string> = {
   opening: 'Greet the learner and name the module',
   topic_introduction: 'Establish what the topic is and why it matters',
-  learning_transition: 'Turn towards what the learner will learn',
-  roadmap: 'Introduce a key learning area of the module',
+  learning_transition: 'Turn towards what the learner will be able to do',
+  roadmap: 'Introduce part of a key learning area of the module',
+  consolidation: 'Show how the learning areas fit together',
   closing: 'Hand over to the detailed module content',
 };
 
@@ -152,62 +187,108 @@ const ROLE_PURPOSE: Record<SceneRole, string> = {
 // ---------------------------------------------------------------------------
 
 /**
- * Splits the module's units across the roadmap scenes.
+ * Divides `total` scenes among the units, every unit getting at least one.
  *
- * Contiguous and in handbook order, so a scene never covers unit 1 and unit 4
- * while skipping the two between. Weighted by length with a floor of one unit per
- * scene, because a roadmap scene with nothing allocated has nothing to introduce.
+ * Largest remainder, so the parts sum to exactly the total however the weights
+ * fall -- with nine scenes to place across four units, "roughly proportional"
+ * would quietly produce eight or ten.
  */
-function allocateUnits(units: PhUnitReading[], scenes: number): PhUnitReading[][] {
-  if (scenes >= units.length) {
-    // More scenes than units: each scene takes one unit, and the extra scenes
-    // double up on the longest ones rather than being left empty.
-    const groups: PhUnitReading[][] = units.map((u) => [u]);
-    while (groups.length < scenes) {
-      const longest = groups.reduce(
-        (best, g, i) =>
-          g.reduce((a, u) => a + u.char_count, 0) >
-          groups[best]!.reduce((a, u) => a + u.char_count, 0)
-            ? i
-            : best,
-        0,
-      );
-      groups.splice(longest + 1, 0, [units[Math.min(longest, units.length - 1)]!]);
-    }
-    return groups.slice(0, scenes);
+function allocate(weights: readonly number[], total: number): number[] {
+  const count = weights.length;
+  if (count === 0) return [];
+  if (total < count) {
+    // More units than scenes. Every unit still gets one, which lengthens the
+    // video past its cap -- refused here rather than silently truncating the
+    // module, since a module introduction that drops units is not one.
+    throw new VideoScriptPlanError(
+      `This module has ${count} units and only ${total} scenes are available for them. A ` +
+        `${MIN_TOTAL_SECONDS}-${MAX_TOTAL_SECONDS} second video cannot introduce them all.`,
+    );
   }
 
-  const total = units.reduce((a, u) => a + u.char_count, 0);
-  const groups: PhUnitReading[][] = Array.from({ length: scenes }, () => []);
+  const sum = weights.reduce((a, w) => a + w, 0);
+  const remaining = total - count;
+  const exact = weights.map((w) => (sum === 0 ? remaining / count : (w / sum) * remaining));
+  const floors = exact.map(Math.floor);
+  let left = remaining - floors.reduce((a, f) => a + f, 0);
+
+  const order = exact
+    .map((value, index) => ({ index, fraction: value - Math.floor(value) }))
+    .sort((a, b) => b.fraction - a.fraction || a.index - b.index);
+  const extra = new Array<number>(count).fill(0);
+  for (const { index } of order) {
+    if (left <= 0) break;
+    extra[index] = 1;
+    left -= 1;
+  }
+
+  return floors.map((f, i) => 1 + f + extra[i]!);
+}
+
+interface Slice {
+  text: string;
+  chunkIds: string[];
+  pages: number[];
+  words: number;
+}
+
+/**
+ * Cuts one unit into `parts` contiguous slices.
+ *
+ * By its own blocks rather than by character offset, so a slice always begins at a
+ * paragraph boundary and never mid-sentence -- which matters here more than
+ * usual, because a scene whose source starts mid-clause is a scene whose narration
+ * starts mid-clause.
+ */
+function sliceUnit(unit: PhUnitReading, parts: number): Slice[] {
+  const groups: PhUnitBlock[][] = Array.from({ length: parts }, () => []);
+  const total = unit.blocks.reduce((a, b) => a + b.char_count, 0);
+
   let cumulative = 0;
-  for (const unit of units) {
-    const midpoint = cumulative + unit.char_count / 2;
-    const slot = total === 0 ? 0 : Math.floor((midpoint / total) * scenes);
-    groups[Math.min(slot, scenes - 1)]!.push(unit);
-    cumulative += unit.char_count;
+  for (const block of unit.blocks) {
+    const midpoint = cumulative + block.char_count / 2;
+    const slot = total === 0 ? 0 : Math.floor((midpoint / total) * parts);
+    groups[Math.min(slot, parts - 1)]!.push(block);
+    cumulative += block.char_count;
   }
 
-  // Rounding can leave a group empty. It borrows from the fullest neighbour
-  // rather than being dropped, since the scene exists either way.
+  // Rounding can leave a slice empty. It borrows the nearest block from a
+  // neighbour that has more than one, rather than leaving a scene with nothing
+  // to write from.
   for (let i = 0; i < groups.length; i++) {
     if (groups[i]!.length > 0) continue;
     const donor = groups.findIndex((g) => g.length > 1);
-    if (donor === -1) break;
+    if (donor === -1) {
+      groups[i] = unit.blocks.slice(0, 1);
+      continue;
+    }
     const taken = donor < i ? groups[donor]!.pop()! : groups[donor]!.shift()!;
     groups[i]!.push(taken);
   }
-  return groups;
+
+  return groups.map((blocks) => {
+    const text = blocks.map((b) => b.text).join('\n');
+    return {
+      text: bounded(text, SCENE_SOURCE_CHARS),
+      chunkIds: [...new Set(blocks.map((b) => b.chunk_id))],
+      pages: [...new Set(blocks.map((b) => b.pdf_page))].sort((a, b) => a - b),
+      words: countWords(text),
+    };
+  });
 }
 
-function toCoverage(unit: PhUnitReading): UnitCoverage {
+function toCoverage(unit: PhUnitReading, slice: Slice, index: number, of: number): UnitCoverage {
   return {
     unit_code: unit.unit.unit_code,
     unit_title: unit.unit.title,
-    chunk_ids: unit.chunk_ids,
-    pdf_pages: [...new Set(unit.blocks.map((b) => b.pdf_page))].sort((a, b) => a - b),
+    portion: `${index + 1} of ${of}`,
+    chunk_ids: slice.chunkIds,
+    pdf_pages: slice.pages,
     source_excerpt:
-      unit.text.length > EXCERPT_CHARS ? `${unit.text.slice(0, EXCERPT_CHARS).trimEnd()}...` : unit.text,
-    source_word_count: unit.word_count,
+      slice.text.length > EXCERPT_CHARS
+        ? `${slice.text.slice(0, EXCERPT_CHARS).trimEnd()}...`
+        : slice.text,
+    source_word_count: slice.words,
   };
 }
 
@@ -226,7 +307,7 @@ export interface BuildPlanOptions {
  *
  * Reads the module out of the handbook through the same path as an exact reading,
  * so the words a scene is written from and the words a reviewer can ask to see are
- * the same words. Then lays out the scenes and hands each roadmap scene its units.
+ * the same words. Then lays out the scenes and hands each roadmap scene its slice.
  */
 export function buildVideoScriptPlan(options: BuildPlanOptions): VideoScriptPlan {
   const { subject, moduleNumber, profile } = options;
@@ -250,30 +331,49 @@ export function buildVideoScriptPlan(options: BuildPlanOptions): VideoScriptPlan
   const units = module.units.map((u) => readPhUnit(subject.course_id, u.unit_code));
   const moduleChars = units.reduce((a, u) => a + u.char_count, 0);
 
-  // Two roadmap scenes or three, decided by how much the module holds. A module
-  // with one unit has one area to introduce and gets the shorter shape.
+  // Two scenes per unit, held inside the nine-to-twelve the running time allows.
   const roadmapScenes = Math.min(
     MAX_ROADMAP_SCENES,
-    Math.max(MIN_ROADMAP_SCENES, Math.min(units.length, MAX_ROADMAP_SCENES)),
+    Math.max(MIN_ROADMAP_SCENES, units.length * SCENES_PER_UNIT),
   );
-  const groups = allocateUnits(units, roadmapScenes);
+  const perUnit = allocate(
+    units.map((u) => u.char_count),
+    roadmapScenes,
+  );
+
+  // One entry per roadmap scene, in handbook order: which unit, which slice of it.
+  const roadmap: UnitCoverage[] = [];
+  const roadmapSource: string[] = [];
+  const roadmapPosition: { indexInUnit: number; ofUnit: number }[] = [];
+  units.forEach((unit, u) => {
+    const parts = perUnit[u]!;
+    const slices = sliceUnit(unit, parts);
+    slices.forEach((slice, i) => {
+      roadmap.push(toCoverage(unit, slice, i, parts));
+      roadmapSource.push(`[${unit.unit.unit_code} ${unit.unit.title} - part ${i + 1} of ${parts}]\n${slice.text}`);
+      roadmapPosition.push({ indexInUnit: i, ofUnit: parts });
+    });
+  });
 
   const order: SceneRole[] = [
     'opening',
     'topic_introduction',
+    'topic_introduction',
     'learning_transition',
-    ...(Array.from({ length: roadmapScenes }, () => 'roadmap' as const)),
+    ...Array.from({ length: roadmapScenes }, () => 'roadmap' as const),
+    'consolidation',
     'closing',
   ];
 
+  const overview = moduleOpening(units);
   const scenes: PlannedScene[] = [];
   let cursor = 0;
   let roadmapIndex = 0;
 
   for (const [i, role] of order.entries()) {
-    const seconds = ROLE_SECONDS[role];
-    const covered = role === 'roadmap' ? groups[roadmapIndex] ?? [] : [];
-    const coverage = covered.map(toCoverage);
+    const isRoadmap = role === 'roadmap';
+    const coverage = isRoadmap ? roadmap[roadmapIndex]! : undefined;
+    const position = isRoadmap ? roadmapPosition[roadmapIndex]! : undefined;
 
     scenes.push({
       scene_number: i + 1,
@@ -281,37 +381,27 @@ export function buildVideoScriptPlan(options: BuildPlanOptions): VideoScriptPlan
       role,
       educational_purpose: ROLE_PURPOSE[role],
       role_direction:
-        role === 'roadmap'
-          ? roadmapDirection(coverage, roadmapIndex, roadmapScenes)
-          : ROLE_DIRECTION[role],
-      seconds,
+        coverage && position
+          ? roadmapDirection(coverage, position.indexInUnit, position.ofUnit)
+          : ROLE_DIRECTION[role as Exclude<SceneRole, 'roadmap'>] + SELF_CONTAINED,
+      seconds: SCENE_SECONDS,
       start_seconds: cursor,
-      end_seconds: cursor + seconds,
+      end_seconds: cursor + SCENE_SECONDS,
       start_timecode: timecode(cursor),
-      end_timecode: timecode(cursor + seconds),
-      target_words: Math.round(seconds * WORDS_PER_SECOND_TARGET),
-      min_words: Math.floor(seconds * WORDS_PER_SECOND_MIN),
-      max_words: Math.ceil(seconds * WORDS_PER_SECOND_MAX),
-      units: coverage,
+      end_timecode: timecode(cursor + SCENE_SECONDS),
+      target_words: WORDS_PER_SCENE_TARGET,
+      min_words: WORDS_PER_SCENE_MIN,
+      max_words: WORDS_PER_SCENE_MAX,
+      units: coverage ? [coverage] : [],
       // The framing scenes speak about the module as a whole, so they are given
-      // the module's opening text rather than nothing: "what this is and why it
-      // matters" still has to be grounded in the handbook.
-      source_text:
-        covered.length > 0
-          ? covered
-              .map(
-                (u) =>
-                  `[${u.unit.unit_code} ${u.unit.title}]\n` +
-                  bounded(u.text, SCENE_SOURCE_CHARS_PER_UNIT),
-              )
-              .join('\n\n')
-          : moduleOpening(units),
-      citable_chunk_ids:
-        covered.length > 0 ? covered.flatMap((u) => u.chunk_ids) : units[0]?.chunk_ids ?? [],
+      // its opening text rather than nothing: "what this is and why it matters"
+      // still has to be grounded in the handbook.
+      source_text: isRoadmap ? roadmapSource[roadmapIndex]! : overview,
+      citable_chunk_ids: coverage ? coverage.chunk_ids : units[0]?.chunk_ids ?? [],
     });
 
-    if (role === 'roadmap') roadmapIndex += 1;
-    cursor += seconds;
+    if (isRoadmap) roadmapIndex += 1;
+    cursor += SCENE_SECONDS;
   }
 
   const totalSeconds = cursor;
@@ -322,7 +412,7 @@ export function buildVideoScriptPlan(options: BuildPlanOptions): VideoScriptPlan
     totalSeconds > MAX_TOTAL_SECONDS
   ) {
     // Unreachable with the constants above; asserted so a future edit to the
-    // seconds table cannot quietly produce a video outside the brief.
+    // frame or the caps cannot quietly produce a video outside the brief.
     throw new VideoScriptPlanError(
       `The scene table produced ${scenes.length} scenes of ${totalSeconds}s, outside the required ` +
         `${MIN_SCENE_COUNT}-${MAX_SCENE_COUNT} scenes and ${MIN_TOTAL_SECONDS}-${MAX_TOTAL_SECONDS}s.`,
@@ -348,14 +438,20 @@ export function buildVideoScriptPlan(options: BuildPlanOptions): VideoScriptPlan
     video_type: VIDEO_TYPE_INFO,
     video_type_label: videoTypeLabel(VIDEO_TYPE_INFO),
     scene_count: scenes.length,
+    scene_seconds: SCENE_SECONDS,
     total_seconds: totalSeconds,
     total_target_words: scenes.reduce((a, s) => a + s.target_words, 0),
-    words_per_second: {
-      target: WORDS_PER_SECOND_TARGET,
-      min: WORDS_PER_SECOND_MIN,
-      max: WORDS_PER_SECOND_MAX,
+    words_per_scene: {
+      target: WORDS_PER_SCENE_TARGET,
+      min: WORDS_PER_SCENE_MIN,
+      max: WORDS_PER_SCENE_MAX,
     },
     speaking_pace: SPEAKING_PACE,
+    breathing: {
+      between_sentences: SENTENCE_PAUSE,
+      end_of_scene: SCENE_END_PAUSE,
+      max_sentences: MAX_SENTENCES_PER_SCENE,
+    },
     profile,
     character: characterLock(profile),
     environment: environmentLock(profile.environment),
@@ -365,9 +461,9 @@ export function buildVideoScriptPlan(options: BuildPlanOptions): VideoScriptPlan
       ? {
           coverage_note:
             `This module holds only ${moduleChars} characters of handbook text across ` +
-            `${units.length} unit${units.length === 1 ? '' : 's'}. There may not be enough ` +
-            'material for every roadmap scene to say something distinct; write what the handbook ' +
-            'supports and no more.',
+            `${units.length} unit${units.length === 1 ? '' : 's'}, spread over ${roadmapScenes} ` +
+            'teaching scenes. There may not be enough material for every scene to say something ' +
+            'new; write what the handbook supports and no more, and repeat nothing.',
         }
       : {}),
   };
@@ -377,8 +473,7 @@ export function buildVideoScriptPlan(options: BuildPlanOptions): VideoScriptPlan
  * The module's opening text, for the scenes that speak about it as a whole.
  *
  * The first unit's beginning is where a handbook says what the chapter is about,
- * so it is what grounds "what this topic is and why it matters". Bounded, because
- * the framing scenes need orientation rather than the whole module.
+ * so it is what grounds "what this topic is and why it matters".
  */
 function moduleOpening(units: PhUnitReading[]): string {
   const first = units[0];
