@@ -3,16 +3,23 @@
  * for.
  *
  * Three flows share this machine and never mix. A session records which flow it
- * is in and which step it reached, so a module-content session cannot wander into
- * the reading flow's terminal step, and a reading session can never reach
- * generation at all -- its branch has no generation step to reach.
+ * is in and which step it reached, so a storyboard session cannot wander into the
+ * reading flow's terminal step, and a reading session can never reach the
+ * storyboard build at all -- its branch has no build step to reach.
+ *
+ * The video-script branch is the longest, and every question on it is one the
+ * server genuinely cannot answer: which course, which subject, which module, which
+ * video type, and what the presenter looks like. What it does not ask is anything
+ * derivable -- the duration, the scene count, the units to cover -- and it asks the
+ * five presenter questions in one turn rather than five, because they are one
+ * decision and a ninety-second video should not cost ten round trips to start.
  *
  * The design rule is that the flow asks only for what it cannot work out. It does
- * not ask how the user would like to choose, or which course type, or how long the
- * output should be: the menu is followed by subject, then module, and for reading
- * one more level to the unit. Anything the user types that is not an option is
- * tried as a topic name first, so someone who already knows their topic reaches it
- * by typing it rather than by being offered a mode.
+ * not ask how the user would like to choose or which course type: the menu is
+ * followed by subject, then module, and for reading one more level to the unit.
+ * Anything the user types that is not an option is tried as a topic name first, so
+ * someone who already knows their topic reaches it by typing it rather than by
+ * being offered a mode.
  *
  * State is in SQLite rather than memory, so a session survives a server restart
  * and "where did we get to" is an answerable question. Sessions are cheap:
@@ -20,8 +27,8 @@
  * start_flow opens an independent one.
  */
 
-import { TRACK_LABELS, listSubjectStatuses, type CourseTrack } from '../catalog/subject-catalog.js';
-import { findPhUnits, getPhOutline, readPhModule, readPhUnit } from '../documents/ph-outline.js';
+import { TRACK_LABELS, getSubject, listSubjectStatuses, type CourseTrack } from '../catalog/subject-catalog.js';
+import { findPhUnits, getPhOutline, readPhUnit } from '../documents/ph-outline.js';
 import { ingestCourse } from '../documents/ingest.js';
 import { isCdrCourse, cdrCourseStatus } from '../cdr/catalog.js';
 import {
@@ -48,11 +55,36 @@ import {
   storyboardCourseStatus,
 } from './storyboard-catalog.js';
 import { getDb, nowIso } from '../storage/db.js';
-import { buildModulePlan } from '../video/module-plan.js';
-import { createModulePackage, getModulePackage } from '../video/module-store.js';
-import { renderUnitReading } from '../video/render.js';
+import { renderUnitReading } from '../reading/render.js';
+import {
+  findVideoSubject,
+  findVideoTrack,
+  findVideoType,
+  listVideoSubjects,
+  listVideoTracks,
+  VIDEO_TYPE_OPTIONS,
+} from '../videoscript/catalog.js';
+import {
+  attireChoices,
+  describeProfile,
+  ENVIRONMENT_CHOICES,
+  AGE_CHOICES,
+  DEMOGRAPHIC_CHOICES,
+  GENDER_CHOICES,
+  SKIN_TONE_CHOICES,
+  getSavedProfile,
+  parseCharacterAnswers,
+  resolveChoice,
+  saveProfile,
+  VideoProfileError,
+  type CharacterAnswers,
+} from '../videoscript/profile.js';
+import { buildVideoScriptPlan } from '../videoscript/scene-plan.js';
+import { openVideoScript } from '../videoscript/store.js';
+import { VIDEO_SCRIPT_SPEC } from '../videoscript/spec.js';
+import { VIDEO_TYPE_INFO, type Environment } from '../types/video-script.js';
 
-export type FlowKind = 'storyboard' | 'module_content' | 'ph_reading';
+export type FlowKind = 'storyboard' | 'video_script' | 'ph_reading';
 
 /**
  * Menu answers.
@@ -67,12 +99,12 @@ const FLOW_ALIASES: Record<string, FlowKind> = {
   storyboard: 'storyboard',
   story_board: 'storyboard',
   cdr_storyboard: 'storyboard',
-  '2': 'module_content',
-  video_script: 'module_content',
-  module_content: 'module_content',
-  video_transcript: 'module_content',
-  video: 'module_content',
-  script: 'module_content',
+  '2': 'video_script',
+  video_script: 'video_script',
+  video: 'video_script',
+  script: 'video_script',
+  ai_video: 'video_script',
+  info_video: 'video_script',
   '3': 'ph_reading',
   handbook_reading: 'ph_reading',
   ph_reading: 'ph_reading',
@@ -89,7 +121,14 @@ export type FlowStepName =
   | 'choose_candidate'
   | 'choose_storyboard_source'
   | 'storyboard_ready'
-  | 'module_ready'
+  | 'choose_video_course'
+  | 'choose_video_subject'
+  | 'choose_video_module'
+  | 'choose_video_type'
+  | 'confirm_video_profile'
+  | 'choose_video_character'
+  | 'choose_video_background'
+  | 'video_script_ready'
   | 'reading_complete';
 
 interface Candidate {
@@ -106,9 +145,8 @@ interface FlowState {
   subject_id?: string;
   course_id?: string;
   module_number?: number;
-  /** Reading flow only. The module-content flow stops at the module. */
+  /** Reading flow only. */
   unit_code?: string;
-  package_id?: string;
   candidates?: Candidate[];
   /**
    * Storyboard flow only. The saved storyboard the user chose to reuse or
@@ -122,6 +160,15 @@ interface FlowState {
    */
   reuse_docx_path?: string;
   reuse_rendered_at?: string;
+  /**
+   * Video-script flow only. The presenter answers are held here between the
+   * character question and the background question, because a profile is only
+   * saved once all six are in -- a half-saved profile would be offered back as
+   * "use saved?" on the next run.
+   */
+  character?: CharacterAnswers;
+  video_type?: string;
+  script_id?: string;
   /**
    * Set when the user was offered a saved storyboard and asked for a new one
    * anyway. The build instruction then carries regenerate: true, because the tool
@@ -193,8 +240,8 @@ function loadSession(sessionId: string): SessionRow {
     .get(sessionId) as { session_id: string; step: FlowStepName; state_json: string } | undefined;
   if (!row) {
     throw new FlowError(
-      `No flow session "${sessionId}". Call start_flow to begin, or use the direct tools ` +
-        '(plan_module_content, read_ph_unit), which need no session.',
+      `No flow session "${sessionId}". Call start_flow to begin, or use read_ph_unit, which ` +
+        'needs no session.',
     );
   }
   return { session_id: row.session_id, step: row.step, state: JSON.parse(row.state_json) as FlowState };
@@ -235,7 +282,7 @@ function chooseFlowStep(sessionId: string, state: FlowState, error?: string): Fl
     prompt: GREETING,
     options: [
       { value: 'storyboard', label: '1. Generate storyboard' },
-      { value: 'module_content', label: '2. Generate video script' },
+      { value: 'video_script', label: '2. Generate video script' },
       { value: 'ph_reading', label: '3. Read handbook content' },
     ],
     next_action:
@@ -250,8 +297,8 @@ function chooseFlowStep(sessionId: string, state: FlowState, error?: string): Fl
  *
  * The three tracks are genuinely different documents -- different template,
  * different sources, different module routing -- so this is the first thing the
- * storyboard flow has to know, and it is the only flow that asks it. The content
- * flows do not: a subject carries its own track, and asking would cost a turn to
+ * storyboard flow has to know, and it is the only flow that asks it. The reading
+ * flow does not: a subject carries its own track, and asking would cost a turn to
  * learn something already known.
  */
 function chooseTrackStep(sessionId: string, state: FlowState, error?: string): FlowStep {
@@ -299,17 +346,16 @@ function chooseStoryboardCourseStep(sessionId: string, state: FlowState, error?:
  */
 function chooseSubjectStep(sessionId: string, state: FlowState, error?: string): FlowStep {
   // The storyboard flow has already asked for a track and draws from the course
-  // registry; the content flows draw from the handbook subject catalogue. The two
+  // registry; the reading flow draws from the handbook subject catalogue. The two
   // lists answer different questions about readiness and are never interchanged.
   if (state.flow === 'storyboard') return chooseStoryboardCourseStep(sessionId, state, error);
 
   const ordered = [...listSubjectStatuses()].sort(
     (a, b) => Number(b.selectable) - Number(a.selectable) || Number(b.ready) - Number(a.ready),
   );
-  const verb = state.flow === 'ph_reading' ? 'read from' : 'build a video script for';
   return {
     ...base(sessionId, state, 'choose_subject', error),
-    prompt: `Which subject do you want to ${verb}?`,
+    prompt: 'Which subject do you want to read from?',
     options: ordered.map((s) => ({
       value: s.subject_id,
       label: `${s.code} - ${s.name}`,
@@ -393,46 +439,229 @@ function chooseCandidateStep(sessionId: string, state: FlowState, error?: string
 // Terminal steps -- one per flow, and each flow has exactly one
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// The video-script branch
+// ---------------------------------------------------------------------------
+
 /**
- * Terminal step of the module-content flow.
+ * Which course the video is for.
  *
- * The flow stops at the module because what follows is fixed: 3 minutes of video
- * in eighteen 10-second segments plus a 9-minute deck, covering every unit of the
- * module. There is nothing further to ask, so nothing further is asked.
+ * Two, not three. CDR has no Participant Handbook, and a video is built from one,
+ * so it is not offered here at all rather than offered and then refused.
  */
-function moduleReadyStep(sessionId: string, state: FlowState): FlowStep {
-  // Re-reading a finished session must not plan a second package.
-  const packageState = state.package_id
-    ? getModulePackage(state.package_id)
-    : createModulePackage(
-        buildModulePlan({ reading: readPhModule(state.course_id!, state.module_number!) }),
-      );
+function chooseVideoCourseStep(sessionId: string, state: FlowState, error?: string): FlowStep {
+  const tracks = listVideoTracks();
+  return {
+    ...base(sessionId, state, 'choose_video_course', error),
+    prompt: 'Which course?',
+    options: tracks.map((t, i) => ({
+      value: t.track,
+      label: `${i + 1}. ${t.label}`,
+      detail: `${t.ready_count} of ${t.subject_count} subjects available`,
+    })),
+    next_action: `Show these ${tracks.length} lines and wait. ${ALWAYS_AVAILABLE}`,
+  };
+}
 
-  const next = { ...state, package_id: packageState.package_id };
-  saveSession(sessionId, 'module_ready', next);
+/** The subjects of that course, under the role titles a course author uses. */
+function chooseVideoSubjectStep(sessionId: string, state: FlowState, error?: string): FlowStep {
+  const track = state.track as CourseTrack;
+  const subjects = listVideoSubjects(track);
+  return {
+    ...base(sessionId, state, 'choose_video_subject', error),
+    prompt: `Which ${TRACK_LABELS[track]} subject?`,
+    options: subjects.map((s, i) => ({
+      value: s.subject_id,
+      label: `${i + 1}. ${s.video_label}`,
+      ...(s.selectable ? {} : { disabled: true, blocker: s.blocker! }),
+    })),
+    next_action:
+      'Show these lines and wait. A subject marked unavailable stays in the list with its reason; ' +
+      'do not drop it and do not lead with it. Choosing one that has never been indexed indexes ' +
+      'it first, which takes a few seconds once and needs nothing from the user.',
+  };
+}
 
-  const plan = packageState.plan;
+/**
+ * Which module.
+ *
+ * Read from the handbook itself rather than from any list in code, so a revised
+ * handbook changes this menu by being re-ingested. Every module the handbook
+ * declares is shown, including one with no units, which is shown unselectable
+ * with the reason -- hiding it would misrepresent the handbook being chosen from.
+ */
+function chooseVideoModuleStep(sessionId: string, state: FlowState, error?: string): FlowStep {
+  const outline = getPhOutline(state.course_id!);
+  return {
+    ...base(sessionId, state, 'choose_video_module', error),
+    prompt:
+      `All ${outline.module_count} modules in the ${outline.subject_code ?? outline.course_id} ` +
+      'Participant Handbook. Which one?',
+    options: outline.modules.map((m) => ({
+      value: String(m.module_number),
+      label: `Module ${m.module_number} - ${m.title}`,
+      detail: `${m.unit_count} unit${m.unit_count === 1 ? '' : 's'}${
+        m.has_units ? `: ${m.units.map((u) => u.title).join('; ')}` : ''
+      }`,
+      ...(m.has_units ? {} : { disabled: true, blocker: m.note! }),
+    })),
+    next_action:
+      "Write out every module in this order and let the user reply with a number. This is the " +
+      "handbook's own table of contents, so showing a subset misrepresents it.",
+  };
+}
+
+function chooseVideoTypeStep(sessionId: string, state: FlowState, error?: string): FlowStep {
+  return {
+    ...base(sessionId, state, 'choose_video_type', error),
+    prompt: 'Which video?',
+    options: VIDEO_TYPE_OPTIONS.map((o, i) => ({
+      value: o.value,
+      label: `${i + 1}. ${o.label}`,
+      detail: o.detail,
+      ...(o.available ? {} : { disabled: true, blocker: o.blocker! }),
+    })),
+    next_action: `Show both lines, the unavailable one included, and wait. ${ALWAYS_AVAILABLE}`,
+  };
+}
+
+/**
+ * Offered only when a profile is already saved.
+ *
+ * Asking six configuration questions before every module is the friction that
+ * makes a tool unpleasant to use twice, so the saved answers are shown back and
+ * the user says yes or changes them.
+ */
+function confirmVideoProfileStep(sessionId: string, state: FlowState, error?: string): FlowStep {
+  const profile = getSavedProfile()!;
+  const described = describeProfile(profile);
+  return {
+    ...base(sessionId, state, 'confirm_video_profile', error),
+    prompt: 'Use saved video profile?',
+    options: [
+      { value: 'yes', label: '1. Yes' },
+      { value: 'change', label: '2. Change profile' },
+    ],
+    data: { saved_profile: described },
+    next_action:
+      'Show the saved profile as a short list, then these two lines. Do not re-ask the ' +
+      'configuration questions unless the user picks 2.',
+  };
+}
+
+/**
+ * The five presenter questions, asked together.
+ *
+ * They are one decision -- what the presenter looks like -- so splitting them
+ * across five turns costs four round trips and answers nothing extra. The cost is
+ * that the reply arrives as one string and the order matters, which is why the
+ * prompt states the order and the parser refuses a reply with the wrong number of
+ * parts rather than guessing which answer was omitted.
+ *
+ * Attire is shown as both lists because the gender is chosen in the same reply.
+ */
+function chooseVideoCharacterStep(sessionId: string, state: FlowState, error?: string): FlowStep {
+  const numbered = <T extends string>(cs: { value: T; label: string }[]) =>
+    cs.map((c, i) => `${i + 1}. ${c.label}`).join('  ');
+  return {
+    ...base(sessionId, state, 'choose_video_character', error),
+    prompt:
+      'Answer all five in one reply, in this order, separated by commas: gender, age, skin tone, ' +
+      'demographic appearance, attire.',
+    data: {
+      questions: [
+        { field: 'gender', question: "What should be the presenter's gender?", options: numbered(GENDER_CHOICES) },
+        { field: 'age', question: "What is the presenter's age group?", options: numbered(AGE_CHOICES) },
+        { field: 'skin_tone', question: "What should be the presenter's skin tone?", options: numbered(SKIN_TONE_CHOICES) },
+        {
+          field: 'demographic',
+          question: "What should be the presenter's demographic appearance?",
+          options: numbered(DEMOGRAPHIC_CHOICES),
+        },
+        {
+          field: 'attire',
+          question: "What should be the presenter's attire?",
+          note: 'Use the list for the gender chosen above.',
+          male_options: numbered(attireChoices('male')),
+          female_options: numbered(attireChoices('female')),
+        },
+      ],
+      example: '2, 3, 3, 1, 4',
+    },
+    next_action:
+      'Show all five questions with their numbered options in one message and wait for one ' +
+      'reply. Show both attire lists and say which applies to which gender. Pass the whole reply ' +
+      'through unchanged -- numbers or words both work.',
+  };
+}
+
+function chooseVideoBackgroundStep(sessionId: string, state: FlowState, error?: string): FlowStep {
+  return {
+    ...base(sessionId, state, 'choose_video_background', error),
+    prompt: 'Which environment should the video be set in?',
+    options: ENVIRONMENT_CHOICES.map((c, i) => ({ value: c.value, label: `${i + 1}. ${c.label}` })),
+    next_action:
+      'Show these seven lines and wait. This is the primary setting; individual scenes still ' +
+      'adapt within it where the teaching needs a different visual.',
+  };
+}
+
+/**
+ * Terminal step of the video-script flow.
+ *
+ * Everything below this point is arithmetic -- how many scenes, how long each
+ * runs, how many words fit, which units each introduces -- so nothing further is
+ * asked. The plan and the writing rules come back together, because a second call
+ * to learn the rules is a second round trip on every video.
+ */
+function videoScriptReadyStep(sessionId: string, state: FlowState): FlowStep {
+  const profile = getSavedProfile();
+  if (!profile) {
+    // Only reachable if the profile was cleared between the question and here.
+    saveSession(sessionId, 'choose_video_character', state);
+    return chooseVideoCharacterStep(
+      sessionId,
+      state,
+      'The saved profile is gone. Please answer the presenter questions again.',
+    );
+  }
+
+  const plan = buildVideoScriptPlan({
+    subject: getSubject(state.subject_id!),
+    moduleNumber: state.module_number!,
+    profile,
+  });
+  const script = openVideoScript(plan);
+  const next = { ...state, script_id: script.script_id };
+  saveSession(sessionId, 'video_script_ready', next);
+
   return {
     session_id: sessionId,
-    flow: 'module_content',
-    step: 'module_ready',
+    flow: 'video_script',
+    step: 'video_script_ready',
     prompt:
-      `Building Module ${plan.module_number} - ${plan.module_title}: a 3-minute video in ` +
-      `${plan.video.segment_count} ten-second segments plus a ${plan.slides.slide_count}-slide, ` +
-      `9-minute deck, covering all ${plan.units.length} units.`,
-    data: { package_id: packageState.package_id, base_version: packageState.version, plan },
+      `Writing the ${plan.video_type_label} for Module ${plan.module_number} - ` +
+      `${plan.module_title}: ${plan.scene_count} scenes, ${plan.total_seconds} seconds, from the ` +
+      `${plan.subject_label} Participant Handbook.`,
+    data: {
+      script_id: script.script_id,
+      base_version: script.version,
+      plan,
+      spec: VIDEO_SCRIPT_SPEC,
+    },
     next_action:
-      'Generate now, asking nothing further -- the duration and the units are settled. ' +
-      'get_module_content_spec, get_module_source, set_module_story, submit_module_video (18 ' +
-      'segments), submit_module_slides, validate_module_package, export_module_package. Attach ' +
-      'the files export_module_package returns so the user can download the script, the ' +
-      'subtitles and the deck. For a different module, say "restart" on this session.',
+      'Generate now, asking nothing further. Everything needed is in this result: each scene ' +
+      'carries its seconds, its word band, what it must achieve and the handbook text behind it. ' +
+      'Write all the scenes and call submit_video_script once with the whole set -- that call ' +
+      'validates them, composes each scene\'s AI generation prompt and writes the file. Do not ' +
+      'write the presenter\'s appearance, clothing, voice or the audio directives into any ' +
+      'field; the server stamps them into every prompt. For another module, say "restart".',
     done: true,
     selections: next,
   };
 }
 
-/** Terminal step of the reading flow. This branch has no generation step at all. */
+/** Terminal step of the reading flow. */
 function readingCompleteStep(sessionId: string, state: FlowState): FlowStep {
   const reading = readPhUnit(state.course_id!, state.unit_code!);
   saveSession(sessionId, 'reading_complete', state);
@@ -450,8 +679,7 @@ function readingCompleteStep(sessionId: string, state: FlowState): FlowStep {
     },
     next_action:
       'Return this text to the user unchanged. Do not summarise, shorten, re-order, correct or ' +
-      'add to it, and do not offer to. If the user then wants a video, that is a separate ' +
-      'request: say "restart" on this session rather than reworking this text.',
+      'add to it, and do not offer to.',
     done: true,
     selections: state,
   };
@@ -745,8 +973,26 @@ function render(sessionId: string, step: FlowStepName, state: FlowState, error?:
         ? storyboardReusedStep(sessionId, state)
         : storyboardReadyStep(sessionId, state);
     }
-    case 'module_ready':
-      return moduleReadyStep(sessionId, state);
+    case 'choose_video_course':
+      return chooseVideoCourseStep(sessionId, state, error);
+    case 'choose_video_subject':
+      return chooseVideoSubjectStep(sessionId, state, error);
+    case 'choose_video_module':
+      return chooseVideoModuleStep(sessionId, state, error);
+    case 'choose_video_type':
+      return chooseVideoTypeStep(sessionId, state, error);
+    case 'confirm_video_profile':
+      // The saved profile can vanish between the question and a re-render, and a
+      // "use saved?" step with nothing to reuse is a dead end.
+      return getSavedProfile()
+        ? confirmVideoProfileStep(sessionId, state, error)
+        : chooseVideoCharacterStep(sessionId, state, error);
+    case 'choose_video_character':
+      return chooseVideoCharacterStep(sessionId, state, error);
+    case 'choose_video_background':
+      return chooseVideoBackgroundStep(sessionId, state, error);
+    case 'video_script_ready':
+      return videoScriptReadyStep(sessionId, state);
     case 'reading_complete':
       return readingCompleteStep(sessionId, state);
   }
@@ -774,10 +1020,25 @@ function previousStep(step: FlowStepName, state: FlowState): FlowStepName {
       return 'choose_module';
     case 'reading_complete':
       return 'choose_unit';
-    case 'module_ready':
-      // A typed topic reaches this step without ever showing the module list, so
-      // "back" from it returns to the question that was actually asked.
-      return state.module_number !== undefined ? 'choose_module' : 'choose_subject';
+    case 'choose_video_course':
+      return 'choose_flow';
+    case 'choose_video_subject':
+      return 'choose_video_course';
+    case 'choose_video_module':
+      return 'choose_video_subject';
+    case 'choose_video_type':
+      return 'choose_video_module';
+    case 'confirm_video_profile':
+    case 'choose_video_character':
+      return 'choose_video_type';
+    case 'choose_video_background':
+      return 'choose_video_character';
+    case 'video_script_ready':
+      // "back" returns to whichever profile question was actually asked: the
+      // confirmation when a profile was reused, the background when it was not.
+      return getSavedProfile() && state.character === undefined
+        ? 'confirm_video_profile'
+        : 'choose_video_background';
     default:
       return 'choose_flow';
   }
@@ -789,18 +1050,16 @@ function clearFrom(step: FlowStepName, state: FlowState): FlowState {
   const cleared: FlowState = { ...state };
   const drop = (...keys: (keyof FlowState)[]) => keys.forEach((k) => delete cleared[k]);
 
-  // Going back past a package releases it: choosing again means a new plan rather
-  // than the previous one silently re-shown.
   switch (step) {
     case 'choose_flow':
       return {};
     case 'choose_track':
-      drop('track', 'subject_id', 'course_id', 'module_number', 'unit_code', 'candidates', 'package_id');
+      drop('track', 'subject_id', 'course_id', 'module_number', 'unit_code', 'candidates');
       return cleared;
     case 'choose_subject':
       // The track survives: going back from a subject re-asks the subject, not
       // the programme it belongs to.
-      drop('subject_id', 'course_id', 'module_number', 'unit_code', 'candidates', 'package_id',
+      drop('subject_id', 'course_id', 'module_number', 'unit_code', 'candidates',
            'reuse_artifact_id', 'reuse_docx_path', 'reuse_rendered_at', 'declined_existing');
       if (state.flow !== 'storyboard') delete cleared.track;
       return cleared;
@@ -808,10 +1067,29 @@ function clearFrom(step: FlowStepName, state: FlowState): FlowState {
       drop('reuse_artifact_id', 'reuse_docx_path', 'reuse_rendered_at', 'declined_existing');
       return cleared;
     case 'choose_module':
-      drop('module_number', 'unit_code', 'candidates', 'package_id');
+      drop('module_number', 'unit_code', 'candidates');
       return cleared;
     case 'choose_unit':
-      drop('unit_code', 'package_id');
+      drop('unit_code');
+      return cleared;
+    case 'choose_video_course':
+      drop('track', 'subject_id', 'course_id', 'module_number', 'video_type', 'character', 'script_id');
+      return cleared;
+    case 'choose_video_subject':
+      drop('subject_id', 'course_id', 'module_number', 'video_type', 'character', 'script_id');
+      return cleared;
+    case 'choose_video_module':
+      drop('module_number', 'video_type', 'character', 'script_id');
+      return cleared;
+    case 'choose_video_type':
+      drop('video_type', 'character', 'script_id');
+      return cleared;
+    case 'confirm_video_profile':
+    case 'choose_video_character':
+      drop('character', 'script_id');
+      return cleared;
+    case 'choose_video_background':
+      drop('script_id');
       return cleared;
     default:
       return cleared;
@@ -819,18 +1097,12 @@ function clearFrom(step: FlowStepName, state: FlowState): FlowState {
 }
 
 /**
- * Where the branches part.
- *
- * The module-content flow stops at the module and begins generating; the reading
- * flow goes one level deeper, because "show me what this says" is a question about
- * a unit, not about a whole module.
+ * The reading flow goes one level deeper than the module, because "show me what
+ * this says" is a question about a unit, not about a whole module.
  */
 function moduleChosen(sessionId: string, state: FlowState): FlowStep {
-  if (state.flow === 'ph_reading') {
-    saveSession(sessionId, 'choose_unit', state);
-    return chooseUnitStep(sessionId, state);
-  }
-  return moduleReadyStep(sessionId, state);
+  saveSession(sessionId, 'choose_unit', state);
+  return chooseUnitStep(sessionId, state);
 }
 
 function unitChosen(sessionId: string, state: FlowState): FlowStep {
@@ -876,7 +1148,7 @@ function tryTopic(sessionId: string, state: FlowState, query: string): FlowStep 
   }
 
   applyCandidate(state, candidates[0]!);
-  return state.flow === 'ph_reading' ? unitChosen(sessionId, state) : moduleReadyStep(sessionId, state);
+  return unitChosen(sessionId, state);
 }
 
 /**
@@ -917,9 +1189,17 @@ export async function advanceFlow(sessionId: string, rawChoice: string): Promise
         );
       }
       state.flow = flow;
-      // Only the storyboard needs to know the programme first; the content flows
-      // read it off whichever subject the user picks.
-      const next: FlowStepName = flow === 'storyboard' ? 'choose_track' : 'choose_subject';
+      // Each flow opens on its own first question. The storyboard and the video
+      // script both start with the programme, but they ask different questions
+      // about it -- the storyboard's list includes CDR and is drawn from the
+      // course registry, the video's is drawn from the handbook catalogue -- so
+      // they are separate steps rather than one shared one.
+      const next: FlowStepName =
+        flow === 'storyboard'
+          ? 'choose_track'
+          : flow === 'video_script'
+            ? 'choose_video_course'
+            : 'choose_subject';
       saveSession(sessionId, next, state);
       return render(sessionId, next, state);
     }
@@ -1069,7 +1349,7 @@ export async function advanceFlow(sessionId: string, rawChoice: string): Promise
       state.subject_id = match.subject_id;
       state.course_id = match.course_id;
 
-      // Both content flows continue to the module; the storyboard flow never
+      // The reading flow continues to the module; the storyboard flow never
       // reaches here, having taken its own branch above.
       saveSession(sessionId, 'choose_module', state);
       return chooseModuleStep(sessionId, state);
@@ -1141,11 +1421,159 @@ export async function advanceFlow(sessionId: string, rawChoice: string): Promise
         );
       }
       applyCandidate(state, picked);
-      return state.flow === 'ph_reading' ? unitChosen(sessionId, state) : moduleReadyStep(sessionId, state);
+      return unitChosen(sessionId, state);
+    }
+
+    case 'choose_video_course': {
+      const track = findVideoTrack(choice);
+      if (!track) {
+        return chooseVideoCourseStep(
+          sessionId,
+          state,
+          `"${choice}" is not one of the courses. Answer 1 or 2, or name the course.`,
+        );
+      }
+      state.track = track;
+      saveSession(sessionId, 'choose_video_subject', state);
+      return chooseVideoSubjectStep(sessionId, state);
+    }
+
+    case 'choose_video_subject': {
+      const track = state.track as CourseTrack;
+      const subject = findVideoSubject(track, choice);
+      if (!subject) {
+        return chooseVideoSubjectStep(
+          sessionId,
+          state,
+          `"${choice}" is not one of the ${TRACK_LABELS[track]} subjects. Answer with its number ` +
+            'or its name.',
+        );
+      }
+      if (!subject.selectable) {
+        return chooseVideoSubjectStep(
+          sessionId,
+          state,
+          `${subject.video_label} cannot be used yet. ${subject.blocker}`,
+        );
+      }
+      // Indexing is the server's job and takes a few seconds once.
+      if (subject.needs_index) await ingestCourse(subject.course_id);
+      state.subject_id = subject.subject_id;
+      state.course_id = subject.course_id;
+      saveSession(sessionId, 'choose_video_module', state);
+      return chooseVideoModuleStep(sessionId, state);
+    }
+
+    case 'choose_video_module': {
+      const outline = getPhOutline(state.course_id!);
+      const number = Number(choice.replace(/^module\s*/i, '').trim());
+      const module = Number.isInteger(number)
+        ? outline.modules.find((m) => m.module_number === number)
+        : undefined;
+      if (!module) {
+        return chooseVideoModuleStep(
+          sessionId,
+          state,
+          `"${choice}" is not a module in this handbook. Choose one of ` +
+            `${outline.modules.map((m) => m.module_number).join(', ')}.`,
+        );
+      }
+      if (!module.has_units) {
+        return chooseVideoModuleStep(
+          sessionId,
+          state,
+          `Module ${module.module_number} (${module.title}) has no units in the handbook, so ` +
+            `there is no content to build a video from. ${module.note ?? ''}`.trim(),
+        );
+      }
+      state.module_number = module.module_number;
+      saveSession(sessionId, 'choose_video_type', state);
+      return chooseVideoTypeStep(sessionId, state);
+    }
+
+    case 'choose_video_type': {
+      const type = findVideoType(choice);
+      if (!type) {
+        return chooseVideoTypeStep(sessionId, state, `"${choice}" is not one of the two options.`);
+      }
+      if (!type.available) {
+        return chooseVideoTypeStep(sessionId, state, `${type.label}: ${type.blocker}`);
+      }
+      state.video_type = type.value;
+
+      // A saved profile is offered back rather than re-asked. With none saved
+      // there is nothing to confirm, so the questions come straight away.
+      const next: FlowStepName = getSavedProfile()
+        ? 'confirm_video_profile'
+        : 'choose_video_character';
+      saveSession(sessionId, next, state);
+      return render(sessionId, next, state);
+    }
+
+    case 'confirm_video_profile': {
+      const answer = resolveChoice(choice, [
+        { value: 'yes', label: 'Yes', aliases: ['y', 'use', 'use saved', 'saved', 'keep'] },
+        { value: 'change', label: 'Change profile', aliases: ['no', 'n', 'change', 'new', 'edit'] },
+      ]);
+      if (!answer) {
+        return confirmVideoProfileStep(
+          sessionId,
+          state,
+          `"${choice}" is not one of the options. Answer 1 to use the saved profile or 2 to ` +
+            'change it.',
+        );
+      }
+      if (answer === 'change') {
+        delete state.character;
+        saveSession(sessionId, 'choose_video_character', state);
+        return chooseVideoCharacterStep(sessionId, state);
+      }
+      return videoScriptReadyStep(sessionId, state);
+    }
+
+    case 'choose_video_character': {
+      let answers: CharacterAnswers;
+      try {
+        answers = parseCharacterAnswers(choice);
+      } catch (err) {
+        return chooseVideoCharacterStep(
+          sessionId,
+          state,
+          err instanceof VideoProfileError ? err.message : String(err),
+        );
+      }
+      state.character = answers;
+      saveSession(sessionId, 'choose_video_background', state);
+      return chooseVideoBackgroundStep(sessionId, state);
+    }
+
+    case 'choose_video_background': {
+      const environment = resolveChoice<Environment>(choice, ENVIRONMENT_CHOICES);
+      if (!environment) {
+        return chooseVideoBackgroundStep(
+          sessionId,
+          state,
+          `"${choice}" is not one of the environments. Answer with a number from 1 to ` +
+            `${ENVIRONMENT_CHOICES.length}, or its name.`,
+        );
+      }
+      if (!state.character) {
+        // Reachable only if the session was rewound oddly; re-ask rather than
+        // save half a profile that would be offered back as complete.
+        saveSession(sessionId, 'choose_video_character', state);
+        return chooseVideoCharacterStep(
+          sessionId,
+          state,
+          'The presenter answers are missing. Please answer these five again.',
+        );
+      }
+      // Saved only now, with all six answers in hand.
+      saveProfile({ ...state.character, environment });
+      return videoScriptReadyStep(sessionId, state);
     }
 
     case 'storyboard_ready':
-    case 'module_ready':
+    case 'video_script_ready':
     case 'reading_complete':
       throw new FlowError(
         `This session has finished at step "${session.step}". Say "restart" to begin something ` +

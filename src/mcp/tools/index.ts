@@ -4,11 +4,11 @@
  * Each feature owns its own module, and none of them imports another's tools:
  *
  *   flow.ts         the menu and the guided steps -- the entry point
- *   module.ts       feature 1, module content: video script, subtitles, deck
+ *   video-script.ts feature 2, the 1-1.5 minute AI info video for one module
  *   reading.ts      feature 3, exact handbook reading
- *   storyboard.ts   feature 2, course storyboard and assessment blueprint
+ *   storyboard.ts   feature 1, course storyboard and assessment blueprint
  *   storyboard-build.ts  feature 1's build loop: one module out, one module back
- *   catalog.ts      handbook navigation shared by the reading and content flows
+ *   catalog.ts      handbook navigation, shared
  *   result.ts       the tool shape and the result helpers everything shares
  *
  * The ordering below is the order the client sees, so the flow tools come first
@@ -33,15 +33,15 @@ import type { ToolDefinition, ToolResult } from './result.js';
 import { fail, ok } from './result.js';
 import { FLOW_TOOLS } from './flow.js';
 import { CATALOG_TOOLS } from './catalog.js';
-import { MODULE_TOOLS } from './module.js';
 import { READING_TOOLS } from './reading.js';
+import { VIDEO_SCRIPT_TOOLS } from './video-script.js';
 import { STORYBOARD_TOOLS, loadTemplate, loadTiming } from './storyboard.js';
 import { STORYBOARD_BUILD_TOOLS } from './storyboard-build.js';
 
 export const TOOLS: ToolDefinition[] = [
   ...FLOW_TOOLS,
   ...CATALOG_TOOLS,
-  ...MODULE_TOOLS,
+  ...VIDEO_SCRIPT_TOOLS,
   ...READING_TOOLS,
   ...STORYBOARD_TOOLS,
   ...STORYBOARD_BUILD_TOOLS,

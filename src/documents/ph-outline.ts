@@ -1,7 +1,7 @@
 /**
  * Participant Handbook navigation and verbatim reading.
  *
- * The video flows treat the Participant Handbook as the source of truth, so they
+ * The handbook flows treat the Participant Handbook as the source of truth, so they
  * need three things this file provides and nothing else does:
  *
  *   1. the handbook's own structure -- its modules and units -- derived from the
@@ -320,7 +320,7 @@ export function getPhOutline(courseId: string): PhOutline {
         : {
             note:
               'The handbook declares this module but gives it no units, so there is no unit ' +
-              'text to read or to build a video from.' +
+              'text to read.' +
               (opening ? ` The handbook says: "${opening}"` : ''),
           }),
       units: moduleUnits,
@@ -418,10 +418,9 @@ export class UnitNotFoundError extends Error {
 /**
  * Reads one unit out of the Participant Handbook.
  *
- * This is the single reading path for both video flows and the exact-reading flow.
- * That is deliberate: the transcript is grounded in exactly the text a user can ask
- * to see, so "show me what the handbook actually says" and "make a video from it"
- * can never disagree about what the unit contains.
+ * This is the single reading path into a unit's text. Everything that needs the
+ * handbook's own words goes through it, so no two callers can disagree about what
+ * a unit contains.
  */
 export function readPhUnit(courseId: string, unitCode: string): PhUnitReading {
   const rows = unitChunks(courseId, unitCode);
@@ -491,59 +490,6 @@ export function readPhUnit(courseId: string, unitCode: string): PhUnitReading {
       section: r.section,
       chunk_id: r.chunk_id,
     })),
-    fidelity_note: FIDELITY_NOTE,
-  };
-}
-
-export interface PhModuleReading {
-  course_id: string;
-  subject_id?: string;
-  subject_code?: string;
-  module_number: number;
-  module_title: string;
-  /** Every unit of the module, in handbook order, each read whole. */
-  units: PhUnitReading[];
-  word_count: number;
-  char_count: number;
-  fidelity_note: string;
-}
-
-/**
- * Reads a whole module: every unit in it, in the handbook's order.
- *
- * This is the source for a module content package. Reading the units through the
- * same path as a single-unit reading matters: the 12 minutes of content a learner
- * gets and the text a reviewer can ask to see are then the same words, and no unit
- * of the module can be quietly left out of one or the other.
- */
-export function readPhModule(courseId: string, moduleNumber: number): PhModuleReading {
-  const outline = getPhOutline(courseId);
-  const module = outline.modules.find((m) => m.module_number === moduleNumber);
-  if (!module) {
-    throw new UnitNotFoundError(
-      `Course "${courseId}" has no Participant Handbook module ${moduleNumber}. ` +
-        `It has modules ${outline.modules.map((m) => m.module_number).join(', ')}.`,
-      [],
-    );
-  }
-  if (!module.has_units) {
-    throw new UnitNotFoundError(
-      `Module ${moduleNumber} (${module.title}) has no units in the handbook, so there is ` +
-        `nothing to build content from. ${module.note ?? ''}`.trim(),
-      [],
-    );
-  }
-
-  const units = module.units.map((u) => readPhUnit(courseId, u.unit_code));
-  return {
-    course_id: courseId,
-    ...(outline.subject_id ? { subject_id: outline.subject_id } : {}),
-    ...(outline.subject_code ? { subject_code: outline.subject_code } : {}),
-    module_number: module.module_number,
-    module_title: module.title,
-    units,
-    word_count: units.reduce((a, u) => a + u.word_count, 0),
-    char_count: units.reduce((a, u) => a + u.char_count, 0),
     fidelity_note: FIDELITY_NOTE,
   };
 }

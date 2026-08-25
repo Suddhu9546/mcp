@@ -158,47 +158,56 @@ CREATE TABLE IF NOT EXISTS storyboard_changes (
 
 CREATE INDEX IF NOT EXISTS idx_changes_artifact ON storyboard_changes(artifact_id, version);
 
--- Module content packages: the 3-minute video and 9-minute deck for one handbook
--- module, planned and versioned together because they share one coverage
--- requirement -- between them they must cover every unit of that module.
-CREATE TABLE IF NOT EXISTS module_packages (
-  package_id      TEXT PRIMARY KEY,
+-- The video script feature. Three tables and nothing shared with the storyboard:
+-- the two features have no common state, and giving them common tables is how a
+-- change to one silently becomes a change to the other.
+
+-- The saved presenter and setting. One row: a learner moving between modules of a
+-- course should meet the same instructor, and an operator should answer the six
+-- configuration questions once rather than before every video.
+CREATE TABLE IF NOT EXISTS video_profiles (
+  profile_id  TEXT PRIMARY KEY,
+  gender      TEXT NOT NULL,
+  age_range   TEXT NOT NULL,
+  skin_tone   TEXT NOT NULL,
+  demographic TEXT NOT NULL,
+  attire      TEXT NOT NULL,
+  environment TEXT NOT NULL,
+  created_at  TEXT NOT NULL,
+  updated_at  TEXT NOT NULL
+);
+
+-- One script per module per video type. Keyed that way rather than created per
+-- request, so answering the flow twice for the same module continues the script
+-- that exists instead of leaving an empty row behind each time.
+CREATE TABLE IF NOT EXISTS video_scripts (
+  script_id       TEXT PRIMARY KEY,
   course_id       TEXT NOT NULL,
-  subject_id      TEXT,
+  subject_id      TEXT NOT NULL,
   module_number   INTEGER NOT NULL,
   module_title    TEXT NOT NULL,
+  video_type      TEXT NOT NULL,
   current_version INTEGER NOT NULL DEFAULT 1,
   state_json      TEXT NOT NULL,
   created_at      TEXT NOT NULL,
   updated_at      TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS module_package_versions (
-  package_id TEXT NOT NULL REFERENCES module_packages(package_id),
+CREATE UNIQUE INDEX IF NOT EXISTS idx_video_scripts_scope
+  ON video_scripts(course_id, module_number, video_type);
+
+CREATE TABLE IF NOT EXISTS video_script_versions (
+  script_id  TEXT NOT NULL REFERENCES video_scripts(script_id),
   version    INTEGER NOT NULL,
   state_json TEXT NOT NULL,
   note       TEXT,
   created_at TEXT NOT NULL,
-  PRIMARY KEY (package_id, version)
-);
-
-CREATE INDEX IF NOT EXISTS idx_module_packages_scope ON module_packages(course_id, module_number);
-
--- The presenter and narrator a subject has settled on. A learner taking two modules
--- of one subject should meet the same person, so the first module to choose fixes
--- it and the rest reuse it.
-CREATE TABLE IF NOT EXISTS subject_characters (
-  course_id        TEXT PRIMARY KEY,
-  protagonist_json TEXT NOT NULL,
-  narrator_json    TEXT NOT NULL,
-  established_by   TEXT NOT NULL,
-  created_at       TEXT NOT NULL,
-  updated_at       TEXT NOT NULL
+  PRIMARY KEY (script_id, version)
 );
 
 -- Guided-flow state. Persisted rather than held in memory so a session survives a
 -- server restart, and so the flow a session is in is a recorded fact -- which is
--- what keeps the three flows from being mixed.
+-- what keeps the two flows from being mixed.
 CREATE TABLE IF NOT EXISTS flow_sessions (
   session_id TEXT PRIMARY KEY,
   flow       TEXT,
@@ -241,8 +250,26 @@ function addColumnIfMissing(db: Db, table: string, column: string, definition: s
   db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
 }
 
+/**
+ * Tables left behind by a removed feature.
+ *
+ * Dropped on every open rather than behind a schema version, because a database
+ * written before the feature was removed is still at the current version and would
+ * otherwise keep the tables forever. They hold nothing any code reads, so keeping
+ * them only makes "what does this database contain" a misleading question.
+ */
+const REMOVED_TABLES = [
+  'module_package_versions',
+  'module_packages',
+  'subject_characters',
+  'video_transcript_versions',
+  'video_transcripts',
+];
+
 function migrate(db: Db): void {
   addColumnIfMissing(db, 'storyboard_artifacts', 'source_fingerprint', 'TEXT');
+  db.exec('DROP INDEX IF EXISTS idx_module_packages_scope');
+  for (const table of REMOVED_TABLES) db.exec(`DROP TABLE IF EXISTS ${table}`);
 
   const row = db.prepare("SELECT value FROM schema_meta WHERE key = 'schema_version'").get() as
     | { value: string }
@@ -251,10 +278,6 @@ function migrate(db: Db): void {
   if (found === 0 || found === SCHEMA_VERSION) return;
 
   if (found < SCHEMA_VERSION) {
-    // The ad-hoc single-unit transcript feature was removed; its two tables are
-    // no longer written or read by anything.
-    db.exec('DROP TABLE IF EXISTS video_transcript_versions');
-    db.exec('DROP TABLE IF EXISTS video_transcripts');
     db.exec('DROP TABLE IF EXISTS chunks_fts');
     db.exec('DROP TABLE IF EXISTS chunks');
     // course_documents gained a column and lost a uniqueness constraint, so it is

@@ -178,23 +178,4 @@ describe('model independence', () => {
     expect(done.data.fidelity_note).toMatch(/verbatim/);
   }, 120_000);
 
-  it('reaches module-content generation in two answers, with the plan attached', async () => {
-    const menu = await call('start_flow');
-    await call('flow_choose', { session_id: menu.session_id, choice: 'module_content' });
-    await call('flow_choose', { session_id: menu.session_id, choice: COURSE });
-    const ready = await call('flow_choose', { session_id: menu.session_id, choice: '7' });
-
-    expect(ready.step).toBe('module_ready');
-    expect(ready.done).toBe(true);
-    // Nothing further is asked: the plan is complete on arrival.
-    expect(ready.options).toBeUndefined();
-    expect(ready.data.plan.video.segment_count).toBe(18);
-    expect(ready.data.plan.slides.slide_count).toBeGreaterThan(0);
-
-    // And the generation chain names its own next step at every hop.
-    const planned = await call('plan_module_content', { subject: COURSE, module_number: 7 });
-    expect(planned.next_call.tool).toBe('get_module_content_spec');
-    // The slide count in the guidance must be the plan's, not a hardcoded number.
-    expect(planned.next_step).toContain(`${planned.plan.slides.slide_count} slides`);
-  }, 120_000);
 });

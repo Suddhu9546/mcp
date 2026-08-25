@@ -1,9 +1,9 @@
 /**
- * Handbook navigation, shared by the module-content and reading flows.
+ * Handbook navigation.
  *
  * These tools answer "which subjects exist", "what is in this handbook" and
  * "which unit did the user mean". They generate nothing and belong to no single
- * flow, which is why they live apart from flow.ts, module.ts and reading.ts.
+ * flow, which is why they live apart from flow.ts and reading.ts.
  */
 
 import { z } from 'zod';
@@ -103,9 +103,8 @@ const findUnitTool: ToolDefinition = {
   title: 'Find a unit by heading',
   description:
     'Resolves a unit heading the user typed to the unit, the module and the subject that holds ' +
-    'it, searching every indexed Participant Handbook. This is the entry point for both ' +
-    'shortcut flows: "make a video script for <heading>" and "what does <heading> actually say". ' +
-    'Ranking is deterministic term matching. When `confident` is false the top candidates are ' +
+    'it, searching every indexed Participant Handbook. This is the entry point for the ' +
+    'shortcut "what does <heading> actually say". Ranking is deterministic term matching. When `confident` is false the top candidates are ' +
     'close -- ask the user which they meant rather than picking one.',
   inputSchema: {
     heading: z.string().describe('The unit heading or topic the user named, in their words.'),
@@ -123,9 +122,7 @@ const findUnitTool: ToolDefinition = {
     return ok({
       ...result,
       next_step: result.confident
-        ? 'Confident match. If the user wants content, call plan_module_content for the module ' +
-          'holding this unit -- do not ask them for a duration, it is fixed. If they asked what ' +
-          'the unit says, call read_ph_unit.'
+        ? 'Confident match. If the user asked what the unit says, call read_ph_unit.'
         : 'Ambiguous. Show the candidates and ask the user which unit they mean.',
     });
   },

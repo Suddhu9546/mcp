@@ -2,7 +2,7 @@
  * The shape of a tool and of its result.
  *
  * Extracted so that tool modules for different flows share one definition without
- * importing each other: the storyboard tools and the video tools both depend on
+ * importing each other: the storyboard tools and the reading tools both depend on
  * this file and neither depends on the other.
  */
 
@@ -47,7 +47,7 @@ export function fail(message: string, detail?: unknown): ToolResult {
 /**
  * Returns text rather than JSON, for output a person will read or copy.
  *
- * The video flows deliberately produce no file, so their deliverable is the text in
+ * The reading flow deliberately produces no file, so its deliverable is the text in
  * the result itself; a second content block carries the machine-readable metadata
  * that would otherwise have to be wrapped around it.
  */

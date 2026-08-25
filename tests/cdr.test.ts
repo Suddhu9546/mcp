@@ -153,7 +153,7 @@ describe('CDR flow', () => {
     const menu = await call('start_flow');
     expect(menu.options.map((o: any) => o.value)).toEqual([
       'storyboard',
-      'module_content',
+      'video_script',
       'ph_reading',
     ]);
 

@@ -22,11 +22,11 @@ Deterministic tool layer for SCGJ educational content. This server holds no AI m
 and no credentials: you supply the words, it supplies scoped source material,
 authoritative timing, template handling, validation and files.
 
-It does three separate things. They share no state and no numbering, and mixing them
-produces wrong output.
+It does three separate things. They share no state and no numbering, and mixing
+them produces wrong output.
 
   1. STORYBOARD        A course storyboard and assessment blueprint, as a .docx.
-  2. VIDEO SCRIPT      A video script and slide deck for one handbook module.
+  2. VIDEO SCRIPT      A 1-1.5 minute AI info video for one handbook module.
   3. HANDBOOK READING  One unit of a handbook, word for word.
 
 HOW TO USE THIS SERVER
@@ -118,39 +118,56 @@ Rules:
 
 2. VIDEO SCRIPT
 ---------------
-Two answers from the user -- subject, then module -- then generate.
+A 60-90 second educational introduction to one Participant Handbook module, in six
+or seven scenes, for an LMS. Five answers from the user, then generate.
 
-12 minutes for one module: a 3-minute video in eighteen 10-second segments, plus a
-9-minute deck of as many slides as the module needs, none over 30 seconds. Part 1
-(segments 1-6) orients to the whole module from its stated learning outcomes, Part 2
-(7-15) teaches every unit in handbook order, Part 3 (16-18) consolidates.
+  flow_choose "2"            -> which course: Entrepreneur or Orientation
+  flow_choose the course     -> which subject of it
+  flow_choose the subject    -> which module, read from that subject's handbook
+  flow_choose the module     -> which video type
+  flow_choose the type       -> the presenter, then the background
+                                (or "use saved profile?" when one exists)
 
-  plan_module_content       the parts, the deck size, and per item its story beat,
-                            its unit and its word budget
-  get_module_content_spec   what to write into a segment and into a slide
-  get_module_source         the handbook text behind each slot
-  set_module_story          the film's constants -- BEFORE any segment
-  submit_module_video       all 18 segments together
-  submit_module_slides      every slide the plan asked for
-  validate_module_package   fit, unit coverage, citations, source leaks
-  export_module_package     writes the .txt script, .srt subtitles, .pptx and .txt
-                            deck and returns the paths. GIVE THEM to the user
+The presenter questions are five and are asked in ONE message: gender, age, skin
+tone, demographic appearance, attire, in that order, comma separated. Show all five
+with their numbered options together, show both attire lists and say which gender
+each is for, and pass the user's whole reply through unchanged. Then one more
+question for the background environment. All six are saved as the video profile and
+reused, so later modules are only offered "use saved profile?".
+
+Generation is TWO calls, and no more:
+
+  plan_video_script       the scenes with their seconds, timecodes and word bands,
+                          what each must achieve, the handbook text behind it, the
+                          locked presenter, and the writing rules -- all at once
+  submit_video_script     all the scenes together. It validates them, composes each
+                          scene's AI generation prompt, writes the file and returns
+                          the finished script
+
+Nothing else needs calling. The flow's final step already carries the plan, so a
+client that followed the flow submits straight from it.
 
 Rules:
-  - Only the Participant Handbook grounds the content. Add no statistic, standard,
-    price, date, brand or regulation the units do not state.
-  - Presentation is yours: hooks, analogies, transitions, visual direction, pacing.
-  - Write to each word budget. Ten seconds holds about 23 words and one idea;
-    narration that overruns is cut off by the generator.
-  - Every unit must be covered by the video AND by the deck, in handbook order.
-  - The 18 segments are one film: each continues the last and hands to the next.
-  - Never describe colours, backgrounds or fonts; the deck's design is applied.
-  - The script never mentions its source. No handbook, page, figure, table, unit or
-    module number, and no QR code, in any title, visual, on-screen text or narration.
-  - Deliver both: the script text inline, and the files.
+  - The chosen module of the Participant Handbook is the only source of what is
+    taught. Add no statistic, price, date, standard, regulation or brand it does
+    not state, and take nothing from another module or subject.
+  - It is an educational video, not a film. The topic is the hero; the presenter is
+    a teacher. No backstory, no drama, no conversation, no cinematic set pieces.
+  - Introduce the key learning areas. Do not try to teach the module in 90 seconds.
+  - Write inside each scene's min_words and max_words, roughly 11-17 words per ten
+    seconds. Over the band, the generator cuts the last words off.
+  - Scene 1 opens with a spoken "Namastey".
+  - Do NOT write the presenter's appearance, clothing, voice, accent, pace or the
+    audio-accuracy instructions into any field. The server stamps them into every
+    scene prompt identically, which is what keeps the presenter one person.
+  - Show what is being explained. A scene that could show the equipment, the
+    diagram or the reading and shows a generic background has wasted itself.
+  - Never mention the handbook, a page, a figure, a unit or module number or a QR
+    code in anything a viewer sees or hears. Citations go in "sources".
+  - Give the user the file and the per-scene prompts: each one is one generation.
 
-  Outside the flow, plan_video_transcript writes a single-unit script of a custom
-  length, for a user who asks for exactly that.
+  Only the 1-1.5 minute info video is built. The 15-minute unit video is offered in
+  the menu and refused, so the user is told rather than left wondering.
 
 3. HANDBOOK READING
 -------------------
@@ -158,15 +175,14 @@ Three answers -- subject, module, unit -- then read_ph_unit and return its text
 unchanged.
 
 This is not a generation task. Do not summarise, rewrite, shorten, re-order, correct,
-comment on or add to it, and do not offer to. If the user then wants a video, that is
-feature 2 on a fresh flow, not a rewrite of this text.
+comment on or add to it, and do not offer to.
 
 NUMBERING WARNING
 -----------------
 "Module" means the Participant Handbook's chapter number in features 2 and 3, because
 that is what the user is shown and picks. In feature 1 it means the timing document's
-module number, and for some courses the two disagree. Never carry a module number from
-one feature into another; get_ph_outline reports the timing number separately as
+module number, and for some courses the two disagree. Never carry a module number from one
+feature into another; get_ph_outline reports the timing number separately as
 timing_module.
 `.trim();
 

@@ -16,8 +16,7 @@
     "analyze-template": "tsx scripts/analyze-template.ts",
     "parse-timing": "tsx scripts/parse-timing.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
-    "verify-pptx": "powershell -ExecutionPolicy Bypass -File scripts/verify-pptx.ps1"
+    "test": "vitest run"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",

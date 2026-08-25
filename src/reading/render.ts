@@ -1,11 +1,10 @@
 /**
- * Plain-text rendering.
+ * Plain-text rendering of a handbook unit.
  *
- * The video flows deliberately produce no file. What a user wants at the end of
- * this flow is a script they can select, copy and paste into a teleprompter, an
- * editing timeline or a message -- so the deliverable is text in the tool result,
- * formatted to be read by a person rather than parsed by a machine. The structured
- * state is still available from get_video_transcript for anything that needs it.
+ * What a user wants at the end of the reading flow is text they can select and
+ * copy, so the deliverable is the unit formatted to be read by a person rather
+ * than parsed by a machine. The structured reading is still available from
+ * read_ph_unit for anything that needs it.
  */
 
 import type { PhUnitReading } from '../documents/ph-outline.js';

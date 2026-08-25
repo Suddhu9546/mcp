@@ -1,14 +1,14 @@
 /**
- * Feature 3: exact Participant Handbook reading.
+ * Feature 2: exact Participant Handbook reading.
  *
  * One tool, deliberately. It returns text and takes no generation parameters, so
  * there is no way to ask it to summarise, shorten or restyle what it returns --
- * the separation from the generating features is structural, not advisory.
+ * the separation from the storyboard feature is structural, not advisory.
  */
 
 import { z } from 'zod';
 import { findPhUnits, readPhUnit, UnitNotFoundError } from '../../documents/ph-outline.js';
-import { renderUnitReading } from '../../video/render.js';
+import { renderUnitReading } from '../../reading/render.js';
 import { resolveCourse } from './catalog.js';
 import type { ToolDefinition } from './result.js';
 import { fail, textResult as text } from './result.js';
@@ -23,8 +23,7 @@ const readUnitTool: ToolDefinition = {
     'or comment on it, and do not merge it with anything else. It carries a fidelity_note ' +
     'stating the only two mechanical differences from the printed page (removed running headers ' +
     'and folio numbers, removed indexing overlap); repeat that note if the user asks how exact ' +
-    'this is. If the user afterwards wants a video, that is the separate video flow, not a ' +
-    'rewrite of this text.',
+    'this is.',
   inputSchema: {
     subject: z.string().optional().describe('Subject id, code or course_id. Omit when giving a heading to search.'),
     unit_code: z.string().optional().describe('Unit code such as "7.1". Requires subject.'),

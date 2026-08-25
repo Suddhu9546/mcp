@@ -1,0 +1,204 @@
+============================================================================
+1-1.5 MINUTE AI INFO VIDEO
+Solar Photovoltaic Entrepreneur  |  Module 1 - Introduction to Solar PV Sector in India
+7 scenes  |  74 seconds  |  Entrepreneur
+VS-2026-00002  v2
+============================================================================
+
+PRESENTER (identical in every scene)
+----------------------------------------------------------------------------
+  An Indian woman aged 30 to 40, with medium wheatish skin and North Indian features, neatly groomed, warm and approachable, presenting as a professional instructor
+  Wearing a neatly draped cotton saree with a plain blouse.
+  Speaks Indian English with a natural Indian accent, clear articulation, warm and professional, unhurried and confident.
+
+SETTING
+----------------------------------------------------------------------------
+  Rural: An Indian rural setting: open fields, farm equipment, mud or brick structures and village paths, natural daylight
+
+============================================================================
+SCENE 1  |  OPENING  |  00:00-00:08 (8s)
+============================================================================
+PURPOSE   : Greet the learner and name the module.
+LOCATION  : A village courtyard beside a small rooftop solar installation, open fields behind.
+VISUAL    : The presenter stands in warm morning daylight, a small rooftop solar array visible over her shoulder. The module title appears as a clean lower-third card as she says it.
+CAMERA    : Medium shot, presenter centre-left, chest up, solar panels visible on the right. / Locked off
+TEACHING  : Rooftop solar array in the background
+ON SCREEN : Introduction to Solar PV Sector in India
+
+VOICEOVER (10 words):
+  Namastey. Welcome to Introduction to Solar PV Sector in India.
+
+AI VIDEO PROMPT:
+  SHOT: 8-second continuous shot, scene 1 of an educational explainer video.
+  CHARACTER: An Indian woman aged 30 to 40, with medium wheatish skin and North Indian features, neatly groomed, warm and approachable, presenting as a professional instructor. Wearing a neatly draped cotton saree with a plain blouse. Exactly the same person as in every other scene of this video: identical face, identical hairstyle, identical clothing, identical voice. Do not restyle, re-age or re-dress the presenter.
+  VOICE: Speaks Indian English with a natural Indian accent, clear articulation, warm and professional, unhurried and confident.
+  ENVIRONMENT: A village courtyard beside a small rooftop solar installation, open fields behind.. An Indian rural setting: open fields, farm equipment, mud or brick structures and village paths, natural daylight.
+  ACTION: Greets the learner with a small namaste gesture, then opens a hand towards the panels behind her.
+  SCENE: The presenter stands in warm morning daylight, a small rooftop solar array visible over her shoulder. The module title appears as a clean lower-third card as she says it.
+  CAMERA: Medium shot, presenter centre-left, chest up, solar panels visible on the right.. Locked off.
+  EDUCATIONAL VISUALS: Rooftop solar array in the background. These must be clearly legible and must match what is being said.
+  ON-SCREEN TEXT: "Introduction to Solar PV Sector in India", clean sans-serif, appearing as it is spoken.
+  AUDIO: The presenter begins speaking within 0.5-1 second of the clip starting. Delivery pace: 120-130 words per minute, slightly slower than default AI speech. Spoken audio, word for word, exactly once: "Namastey. Welcome to Introduction to Solar PV Sector in India." Speak this line once only. Do not repeat it, do not stutter, do not restart a phrase, do not duplicate any word, and do not add, drop or reorder words. No filler words. No long pauses at the start or the end.
+  STYLE: realistic Indian educational video, natural lighting, natural expressions, professional but approachable. Not cinematic, not dramatic, no film grading, no slow motion, no music video styling. The subject being taught is the focus; the presenter is the teacher, not the story.
+
+============================================================================
+SCENE 2  |  TOPIC INTRODUCTION  |  00:08-00:20 (12s)
+============================================================================
+PURPOSE   : Establish what the topic is and why it matters to the learner's work.
+LOCATION  : The same courtyard, a step closer to a mounted solar panel on a frame.
+VISUAL    : The presenter beside a single mounted panel catching sunlight, a battery box and a small meter on a bench next to it.
+CAMERA    : Medium shot, presenter left, panel and battery bench right. / Slow push in
+TEACHING  : Single PV panel on a frame; Battery box; Small energy meter
+ON SCREEN : Sunlight to electricity
+
+VOICEOVER (16 words):
+  Solar power runs on sunlight. Knowing how it works, and who funds it, builds your business.
+
+AI VIDEO PROMPT:
+  SHOT: 12-second continuous shot, scene 2 of an educational explainer video.
+  CHARACTER: An Indian woman aged 30 to 40, with medium wheatish skin and North Indian features, neatly groomed, warm and approachable, presenting as a professional instructor. Wearing a neatly draped cotton saree with a plain blouse. Exactly the same person as in every other scene of this video: identical face, identical hairstyle, identical clothing, identical voice. Do not restyle, re-age or re-dress the presenter.
+  VOICE: Speaks Indian English with a natural Indian accent, clear articulation, warm and professional, unhurried and confident.
+  ENVIRONMENT: The same courtyard, a step closer to a mounted solar panel on a frame.. An Indian rural setting: open fields, farm equipment, mud or brick structures and village paths, natural daylight.
+  ACTION: Rests a hand on the panel frame, then indicates the battery box and meter as she speaks.
+  SCENE: The presenter beside a single mounted panel catching sunlight, a battery box and a small meter on a bench next to it.
+  CAMERA: Medium shot, presenter left, panel and battery bench right.. Slow push in.
+  EDUCATIONAL VISUALS: Single PV panel on a frame; Battery box; Small energy meter. These must be clearly legible and must match what is being said.
+  ON-SCREEN TEXT: "Sunlight to electricity", clean sans-serif, appearing as it is spoken.
+  CONTINUITY: Same courtyard and daylight as scene one.
+  AUDIO: The presenter begins speaking within 0.5-1 second of the clip starting. Delivery pace: 120-130 words per minute, slightly slower than default AI speech. Spoken audio, word for word, exactly once: "Solar power runs on sunlight. Knowing how it works, and who funds it, builds your business." Speak this line once only. Do not repeat it, do not stutter, do not restart a phrase, do not duplicate any word, and do not add, drop or reorder words. No filler words. No long pauses at the start or the end.
+  STYLE: realistic Indian educational video, natural lighting, natural expressions, professional but approachable. Not cinematic, not dramatic, no film grading, no slow motion, no music video styling. The subject being taught is the focus; the presenter is the teacher, not the story.
+
+============================================================================
+SCENE 3  |  LEARNING TRANSITION  |  00:20-00:28 (8s)
+============================================================================
+PURPOSE   : Turn the learner towards what they will learn.
+LOCATION  : The courtyard, in front of a plain wall used as a display surface.
+VISUAL    : A simple graphic panel begins to appear on the wall beside the presenter, empty and waiting to be filled.
+CAMERA    : Medium wide, presenter right, display surface left. / Gentle pan left to follow the hand
+TEACHING  : Empty roadmap graphic ready to fill
+
+VOICEOVER (10 words):
+  Let me show you what this module will teach you.
+
+AI VIDEO PROMPT:
+  SHOT: 8-second continuous shot, scene 3 of an educational explainer video.
+  CHARACTER: An Indian woman aged 30 to 40, with medium wheatish skin and North Indian features, neatly groomed, warm and approachable, presenting as a professional instructor. Wearing a neatly draped cotton saree with a plain blouse. Exactly the same person as in every other scene of this video: identical face, identical hairstyle, identical clothing, identical voice. Do not restyle, re-age or re-dress the presenter.
+  VOICE: Speaks Indian English with a natural Indian accent, clear articulation, warm and professional, unhurried and confident.
+  ENVIRONMENT: The courtyard, in front of a plain wall used as a display surface.. An Indian rural setting: open fields, farm equipment, mud or brick structures and village paths, natural daylight.
+  ACTION: Turns towards the display surface and opens a hand towards it.
+  SCENE: A simple graphic panel begins to appear on the wall beside the presenter, empty and waiting to be filled.
+  CAMERA: Medium wide, presenter right, display surface left.. Gentle pan left to follow the hand.
+  EDUCATIONAL VISUALS: Empty roadmap graphic ready to fill. These must be clearly legible and must match what is being said.
+  CONTINUITY: Same presenter position and daylight.
+  AUDIO: The presenter begins speaking within 0.5-1 second of the clip starting. Delivery pace: 120-130 words per minute, slightly slower than default AI speech. Spoken audio, word for word, exactly once: "Let me show you what this module will teach you." Speak this line once only. Do not repeat it, do not stutter, do not restart a phrase, do not duplicate any word, and do not add, drop or reorder words. No filler words. No long pauses at the start or the end.
+  STYLE: realistic Indian educational video, natural lighting, natural expressions, professional but approachable. Not cinematic, not dramatic, no film grading, no slow motion, no music video styling. The subject being taught is the focus; the presenter is the teacher, not the story.
+
+============================================================================
+SCENE 4  |  ROADMAP  |  00:28-00:40 (12s)
+============================================================================
+PURPOSE   : Introduce the learning area Overview of Solar PV Technology.
+LOCATION  : The courtyard beside the mounted panel, battery and a grid pole.
+VISUAL    : A labelled flow appears across the wall: SUNLIGHT to PANEL to BATTERY, and a second arrow from PANEL to GRID, drawn beside the real panel.
+CAMERA    : Medium shot, presenter centre-left, labelled flow on the right. / Locked off
+TEACHING  : Labelled flow: Sunlight, Panel, Battery, Grid; The physical panel and battery box
+ON SCREEN : Solar PV technology
+
+VOICEOVER (17 words):
+  First, solar technology. Panels turn sunlight into electricity, stored in a battery or fed to the grid.
+
+AI VIDEO PROMPT:
+  SHOT: 12-second continuous shot, scene 4 of an educational explainer video.
+  CHARACTER: An Indian woman aged 30 to 40, with medium wheatish skin and North Indian features, neatly groomed, warm and approachable, presenting as a professional instructor. Wearing a neatly draped cotton saree with a plain blouse. Exactly the same person as in every other scene of this video: identical face, identical hairstyle, identical clothing, identical voice. Do not restyle, re-age or re-dress the presenter.
+  VOICE: Speaks Indian English with a natural Indian accent, clear articulation, warm and professional, unhurried and confident.
+  ENVIRONMENT: The courtyard beside the mounted panel, battery and a grid pole.. An Indian rural setting: open fields, farm equipment, mud or brick structures and village paths, natural daylight.
+  ACTION: Traces the flow with her finger, then points at the actual panel and battery as each label lights.
+  SCENE: A labelled flow appears across the wall: SUNLIGHT to PANEL to BATTERY, and a second arrow from PANEL to GRID, drawn beside the real panel.
+  CAMERA: Medium shot, presenter centre-left, labelled flow on the right.. Locked off.
+  EDUCATIONAL VISUALS: Labelled flow: Sunlight, Panel, Battery, Grid; The physical panel and battery box. These must be clearly legible and must match what is being said.
+  ON-SCREEN TEXT: "Solar PV technology", clean sans-serif, appearing as it is spoken.
+  CONTINUITY: The roadmap graphic from scene three now carries its first entry.
+  AUDIO: The presenter begins speaking within 0.5-1 second of the clip starting. Delivery pace: 120-130 words per minute, slightly slower than default AI speech. Spoken audio, word for word, exactly once: "First, solar technology. Panels turn sunlight into electricity, stored in a battery or fed to the grid." Speak this line once only. Do not repeat it, do not stutter, do not restart a phrase, do not duplicate any word, and do not add, drop or reorder words. No filler words. No long pauses at the start or the end.
+  STYLE: realistic Indian educational video, natural lighting, natural expressions, professional but approachable. Not cinematic, not dramatic, no film grading, no slow motion, no music video styling. The subject being taught is the focus; the presenter is the teacher, not the story.
+
+============================================================================
+SCENE 5  |  ROADMAP  |  00:40-00:52 (12s)
+============================================================================
+PURPOSE   : Introduce the learning area covering the business, finance, technology and regulatory landscape.
+LOCATION  : The courtyard, at a bench where a simple chart is propped up.
+VISUAL    : A bar figure on the propped chart shows solar sector employment, with the number 85,900 workers marked clearly.
+CAMERA    : Medium shot, presenter left, chart right, filling the frame. / Slow push in
+TEACHING  : Employment chart marked 85,900 solar sector workers
+ON SCREEN : 85,900 solar workers
+
+VOICEOVER (17 words):
+  Next, the business side. India's solar sector already employs about eighty-five thousand workers, and it keeps growing.
+
+AI VIDEO PROMPT:
+  SHOT: 12-second continuous shot, scene 5 of an educational explainer video.
+  CHARACTER: An Indian woman aged 30 to 40, with medium wheatish skin and North Indian features, neatly groomed, warm and approachable, presenting as a professional instructor. Wearing a neatly draped cotton saree with a plain blouse. Exactly the same person as in every other scene of this video: identical face, identical hairstyle, identical clothing, identical voice. Do not restyle, re-age or re-dress the presenter.
+  VOICE: Speaks Indian English with a natural Indian accent, clear articulation, warm and professional, unhurried and confident.
+  ENVIRONMENT: The courtyard, at a bench where a simple chart is propped up.. An Indian rural setting: open fields, farm equipment, mud or brick structures and village paths, natural daylight.
+  ACTION: Points at the figure on the chart as she names it.
+  SCENE: A bar figure on the propped chart shows solar sector employment, with the number 85,900 workers marked clearly.
+  CAMERA: Medium shot, presenter left, chart right, filling the frame.. Slow push in.
+  EDUCATIONAL VISUALS: Employment chart marked 85,900 solar sector workers. These must be clearly legible and must match what is being said.
+  ON-SCREEN TEXT: "85,900 solar workers", clean sans-serif, appearing as it is spoken.
+  CONTINUITY: Roadmap graphic visible at the frame edge with two entries filled.
+  AUDIO: The presenter begins speaking within 0.5-1 second of the clip starting. Delivery pace: 120-130 words per minute, slightly slower than default AI speech. Spoken audio, word for word, exactly once: "Next, the business side. India's solar sector already employs about eighty-five thousand workers, and it keeps growing." Speak this line once only. Do not repeat it, do not stutter, do not restart a phrase, do not duplicate any word, and do not add, drop or reorder words. No filler words. No long pauses at the start or the end.
+  STYLE: realistic Indian educational video, natural lighting, natural expressions, professional but approachable. Not cinematic, not dramatic, no film grading, no slow motion, no music video styling. The subject being taught is the focus; the presenter is the teacher, not the story.
+
+============================================================================
+SCENE 6  |  ROADMAP  |  00:52-01:04 (12s)
+============================================================================
+PURPOSE   : Introduce grid and off-grid systems, electrical basics and project financing as one connected area.
+LOCATION  : The courtyard wall display, with the grid pole and a small off-grid lamp in shot.
+VISUAL    : Three labelled cards fill the remaining roadmap: GRID AND OFF-GRID, VOLTAGE AND CURRENT, PROJECT FINANCE, each with a small icon beside it.
+CAMERA    : Medium wide, presenter centre, completed roadmap spanning the wall. / Gentle pan across the three cards
+TEACHING  : Three labelled roadmap cards; Grid pole; Off-grid solar lamp
+ON SCREEN : Grid & off-grid | Electrical basics | Finance
+
+VOICEOVER (18 words):
+  Then grid and off-grid systems, basic electrical concepts like voltage and current, and banks that fund your project.
+
+AI VIDEO PROMPT:
+  SHOT: 12-second continuous shot, scene 6 of an educational explainer video.
+  CHARACTER: An Indian woman aged 30 to 40, with medium wheatish skin and North Indian features, neatly groomed, warm and approachable, presenting as a professional instructor. Wearing a neatly draped cotton saree with a plain blouse. Exactly the same person as in every other scene of this video: identical face, identical hairstyle, identical clothing, identical voice. Do not restyle, re-age or re-dress the presenter.
+  VOICE: Speaks Indian English with a natural Indian accent, clear articulation, warm and professional, unhurried and confident.
+  ENVIRONMENT: The courtyard wall display, with the grid pole and a small off-grid lamp in shot.. An Indian rural setting: open fields, farm equipment, mud or brick structures and village paths, natural daylight.
+  ACTION: Places a hand under each card in turn, then indicates the grid pole and the off-grid lamp.
+  SCENE: Three labelled cards fill the remaining roadmap: GRID AND OFF-GRID, VOLTAGE AND CURRENT, PROJECT FINANCE, each with a small icon beside it.
+  CAMERA: Medium wide, presenter centre, completed roadmap spanning the wall.. Gentle pan across the three cards.
+  EDUCATIONAL VISUALS: Three labelled roadmap cards; Grid pole; Off-grid solar lamp. These must be clearly legible and must match what is being said.
+  ON-SCREEN TEXT: "Grid & off-grid | Electrical basics | Finance", clean sans-serif, appearing as it is spoken.
+  CONTINUITY: The roadmap begun in scene three is now complete.
+  AUDIO: The presenter begins speaking within 0.5-1 second of the clip starting. Delivery pace: 120-130 words per minute, slightly slower than default AI speech. Spoken audio, word for word, exactly once: "Then grid and off-grid systems, basic electrical concepts like voltage and current, and banks that fund your project." Speak this line once only. Do not repeat it, do not stutter, do not restart a phrase, do not duplicate any word, and do not add, drop or reorder words. No filler words. No long pauses at the start or the end.
+  STYLE: realistic Indian educational video, natural lighting, natural expressions, professional but approachable. Not cinematic, not dramatic, no film grading, no slow motion, no music video styling. The subject being taught is the focus; the presenter is the teacher, not the story.
+
+============================================================================
+SCENE 7  |  CLOSING  |  01:04-01:14 (10s)
+============================================================================
+PURPOSE   : Hand over to the detailed module content.
+LOCATION  : The courtyard, back at the opening position with the completed roadmap behind.
+VISUAL    : The presenter stands in front of the completed roadmap, panels and fields behind her in soft daylight.
+CAMERA    : Medium shot, presenter centre, roadmap softly out of focus behind. / Locked off
+TEACHING  : Completed four-part roadmap
+
+VOICEOVER (14 words):
+  That is the map. Now let us go through each part, step by step.
+
+AI VIDEO PROMPT:
+  SHOT: 10-second continuous shot, scene 7 of an educational explainer video.
+  CHARACTER: An Indian woman aged 30 to 40, with medium wheatish skin and North Indian features, neatly groomed, warm and approachable, presenting as a professional instructor. Wearing a neatly draped cotton saree with a plain blouse. Exactly the same person as in every other scene of this video: identical face, identical hairstyle, identical clothing, identical voice. Do not restyle, re-age or re-dress the presenter.
+  VOICE: Speaks Indian English with a natural Indian accent, clear articulation, warm and professional, unhurried and confident.
+  ENVIRONMENT: The courtyard, back at the opening position with the completed roadmap behind.. An Indian rural setting: open fields, farm equipment, mud or brick structures and village paths, natural daylight.
+  ACTION: Gestures once towards the completed roadmap, then back to the learner.
+  SCENE: The presenter stands in front of the completed roadmap, panels and fields behind her in soft daylight.
+  CAMERA: Medium shot, presenter centre, roadmap softly out of focus behind.. Locked off.
+  EDUCATIONAL VISUALS: Completed four-part roadmap. These must be clearly legible and must match what is being said.
+  CONTINUITY: Same courtyard and daylight as the opening scene.
+  AUDIO: The presenter begins speaking within 0.5-1 second of the clip starting. Delivery pace: 120-130 words per minute, slightly slower than default AI speech. Spoken audio, word for word, exactly once: "That is the map. Now let us go through each part, step by step." Speak this line once only. Do not repeat it, do not stutter, do not restart a phrase, do not duplicate any word, and do not add, drop or reorder words. No filler words. No long pauses at the start or the end.
+  STYLE: realistic Indian educational video, natural lighting, natural expressions, professional but approachable. Not cinematic, not dramatic, no film grading, no slow motion, no music video styling. The subject being taught is the focus; the presenter is the teacher, not the story.
+
+============================================================================
+END OF SCRIPT  |  7 scenes  |  102 spoken words  |  74s
+============================================================================

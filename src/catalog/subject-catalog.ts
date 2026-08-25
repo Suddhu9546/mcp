@@ -1,11 +1,11 @@
 /**
- * Course-type and subject catalog for the Video Transcript flows.
+ * Course-type and subject catalog for the handbook flows.
  *
  * The storyboard flow is entered with a `course_id` the operator already knows.
- * The video flows are entered by a *person* who thinks in the SCGJ programme's own
+ * The reading flow is entered by a *person* who thinks in the SCGJ programme's own
  * vocabulary -- "Orientation", "ESG", "Solar PV" -- so this file is the one place
  * that maps that vocabulary onto the `course_id` values the rest of the server
- * uses. Nothing else in the video layer hard-codes a subject name.
+ * uses. Nothing else hard-codes a subject name.
  *
  * What is *not* here, deliberately: modules and units. Those are derived from each
  * subject's Participant Handbook at query time (see documents/ph-outline.ts), so a

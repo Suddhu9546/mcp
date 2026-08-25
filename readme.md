@@ -1,7 +1,7 @@
 # CVC Storyboard MCP
 
-A deterministic **tool layer** for SCGJ educational content: per-module video
-scripts and slide decks, course storyboards as DOCX, and exact Participant Handbook
+A deterministic **tool layer** for SCGJ educational content: course storyboards as
+DOCX, 1-1.5 minute AI info video scripts per module, and exact Participant Handbook
 readings.
 
 This server contains **no AI model and no AI API key**. It executes operations and
@@ -19,9 +19,8 @@ Deterministic tools
   source retrieval (BM25)      timing parsing + validation
   template analysis            module crosswalk
   storyboard state + versions  DOCX clone + insert + export
-  handbook outline + reading   learning-outcome extraction
-  three-part video planning    deck sizing + coverage validation
-  10-second segment budgets    PPTX: CVC design + drawn diagrams
+  handbook outline + reading   video profile + character lock
+  scene planning + word budgets  script validation + prompt composition
 ```
 
 | | Client (Gemini / Antigravity) | This server |
@@ -34,8 +33,8 @@ Deterministic tools
 | Authoritative durations | | ✔ |
 | Template fidelity | | ✔ |
 | Validation findings | | ✔ |
-| DOCX and PPTX generation | | ✔ |
-| Segment/slide budgets and unit coverage | | ✔ |
+| DOCX generation | | ✔ |
+| Scene budgets and presenter consistency | | ✔ |
 
 ## The three flows
 
@@ -45,22 +44,33 @@ of one flow cannot produce the output of another.
 ```
                 start_flow   ← "hi", "start", "can we start", "let's get started"
                      │
-     ┌───────────────┼───────────────┐
-     ▼               ▼               ▼
-1 Storyboard   2 Video Script   3 Handbook Reading
-     │               │               │
-     ▼               ▼               ▼
-  programme       subject         subject
-Entrepreneur         │               │
-Orientation          ▼               ▼
-    CDR           module          module
-     │               │               │
-     ▼               ▼               ▼
-  subject      module_ready         unit
-     │         generation begins     │
-     ▼                               ▼
-storyboard_ready                reading_complete
-generation begins
+     ┌───────────────┼───────────────────────────┐
+     ▼               ▼                           ▼
+1 Storyboard   2 Video Script          3 Handbook Reading
+     │               │                           │
+     ▼               ▼                           ▼
+  programme       course                      subject
+Entrepreneur   Entrepreneur                      │
+Orientation    Orientation                       ▼
+    CDR            │                          module
+     │             ▼                             │
+     ▼          subject                          ▼
+  subject          │                            unit
+     │             ▼                             │
+     │          module                           ▼
+     │             │                     reading_complete
+     │             ▼
+     │        video type
+     │             │
+     │             ▼
+     │      presenter ×5 in one answer
+     │             │
+     │             ▼
+     │        background
+     │             │
+     ▼             ▼
+storyboard_ready  video_script_ready
+generation begins  generation begins
 ```
 
 The menu is three lines and nothing else: what each option produces is answered by
@@ -70,8 +80,9 @@ saw a wall of text about choices they had not made yet.
 Only the storyboard asks which programme, and it asks first, because the three
 tracks are genuinely different documents — a different template, different sources,
 different module routing — and everything after that answer depends on it. The
-content flows do not ask: a subject carries its own track, so the question is
-already answered.
+video flow asks its own course question over a different list — two options, not
+three, because CDR has no Participant Handbook and a video is built from one. The
+reading flow does not ask at all: a subject carries its own track.
 
 The subject is the storyboard's last question. Nothing is asked about length,
 modules, format or confirmation, because none of it is open: the course's module
@@ -79,48 +90,38 @@ count comes from its timing document, the shape from its template, and the loop
 that fills it runs without the user.
 
 The flow asks only what it cannot work out. There is no "would you like to type or
-browse" question, no course-type question, and no duration question: a topic typed
-at any step is resolved to the unit that holds it, course type is a label on each
-subject, and a module's output length is fixed.
+browse" question and no course-type question: a topic typed at any step is resolved
+to the unit that holds it, and course type is a label on each subject.
 
-Module content stops at the module. 12 minutes is settled: a 3-minute video as
-18 × 10s segments (60s intro / 90s units / 30s conclusion) plus a 9-minute deck
-sized to the module, no slide over 30s, covering every unit. No unit list is shown
-and nothing further is asked.
+The video flow stops at the background question. Everything below it is settled:
+60-90 seconds, six or seven scenes, and which of the module's units each scene
+introduces. No duration question is asked because there is nothing to choose.
 
-Reading goes one level deeper to the unit and returns its verbatim text. No
-generation step exists on that path.
+Reading goes one level deeper than the module, to the unit, and returns its verbatim
+text. No generation step exists on that path.
 
-**What a module produces.** One package, planned as a whole so the two halves cover
-the module between them:
+**What a video is.** One 60-90 second introduction to a module, as six or seven
+scenes, each a separate generation:
 
-| | Video | Slides |
-|---|---|---|
-| Length | 3:00 | 9:00 |
-| Pieces | 18 segments × 10s, in 3 parts (60s / 90s / 30s) | as many slides as the module needs, none over 30s |
-| Why that shape | the generator produces 10s per generation | a slide holding more than half a minute stops being readable |
-| Each piece carries | story beat, continues-from, narration, scene, visual direction, character/location/object continuity, ends-with, next-starts-with, transition | title, 3–5 bullets, speaker notes, key takeaway, a drawn right-hand visual |
-| Output | text inline **and** a `.txt` file, plus `.srt` subtitles | `.pptx` with notes attached, and a `.txt` |
+| | |
+|---|---|
+| Structure | opening → what the topic is → turn to learning → 2-3 learning areas → hand-over |
+| Scene seconds | 8 / 12 / 8 / 12 each / 10 — 62s with two roadmap scenes, 74s with three |
+| Narration | 11-17 words per 10 seconds, delivered at 120-130 wpm |
+| Each scene carries | purpose, location, visual, presenter action, camera framing and movement, teaching visuals, narration, citations |
+| The server adds | the presenter, attire, voice, pace and speak-once directives — identically, every scene |
+| Output | the script inline **and** a `.txt` file, plus one ready-to-paste generation prompt per scene |
 
-Every segment and slide is told which unit it covers and which portion of it, so no
-unit is skipped — validation reports a unit missing from either half as an error.
+The presenter comes from a saved **video profile** — gender, age, skin tone,
+demographic appearance, attire, background — asked once and reused, so a learner
+taking several modules of a course meets the same instructor.
 
 Say **`restart`** at any step, finished ones included, to clear the session and go
-back to the menu — that is the answer to "we're done with this module, now another
-one". **`back`** changes the previous answer; going back from a package releases it,
-so choosing again plans afresh rather than re-showing the old one. `start_flow` opens
-an independent session whenever you want one.
+back to the menu. **`back`** changes the previous answer. `start_flow` opens an
+independent session whenever you want one.
 
-| | Module Content | Exact PH Reading |
-|---|---|---|
-| Scope | A handbook module, all its units | One unit |
-| Source of truth | The module's units | The unit |
-| AI transformation | Presentation only — narration, visuals, structure | **None** |
-| New facts | Never | Never |
-| Output | Video script text + `.pptx` deck | The unit's own text |
-
-**Shortcut.** A user who names a topic skips the menus: `plan_module_content` takes
-a `topic` and builds the module that holds it; `read_ph_unit` takes a heading.
+**Shortcut.** A user who names a topic skips the menus: `read_ph_unit` takes a
+heading, and `plan_video_script` takes a subject and a module directly.
 
 **Subjects.** Nine across three programmes. Each reports exactly what it is
 waiting for, and the flow offers only the ones it can serve.
@@ -248,7 +249,7 @@ stdio.
 
 | Tool | Purpose |
 |---|---|
-| `start_flow` | The three-option menu; returns a `session_id` |
+| `start_flow` | The two-option menu; returns a `session_id` |
 | `flow_choose` | Answer the current step; also `back` and `restart` |
 | `get_flow` | Re-render the current step (resume after a restart) |
 
@@ -261,24 +262,14 @@ stdio.
 | `find_ph_unit` | Resolve a unit heading the user typed, across subjects |
 | `get_ph_unit_source` | A unit's text split into citable blocks, for writing |
 
-**Module content package** (the main flow)
+**Video script** (two calls from plan to finished script)
 
 | Tool | Purpose |
 |---|---|
-| `plan_module_content` | The three parts, the deck size, the handbook's learning outcomes, and per-item beats and allocations |
-| `set_module_story` | The film's constants: protagonist, locations, look, narrator, acts |
-| `get_module_content_spec` | What to write into a segment and into a slide |
-| `get_module_source` | The handbook text behind the package, or behind one slot |
-| `submit_module_video` | The 18 segments |
-| `submit_module_slides` | The 14 slides |
-| `validate_module_package` | Fit, unit coverage, citations, source leaks |
-| `get_module_video_script` | Copy-ready segments, one per generation, with the story bible |
-| `get_module_subtitles` | Progressive typewriter subtitle track, SRT or cues |
-| `get_module_slides` | The deck as text |
-| `render_module_pptx` | The deck as `.pptx`: CVC design, drawn diagrams, speaker notes |
-| `export_module_package` | Every deliverable written as a file, with paths to attach |
-| `get_module_package` / `list_module_packages` / `get_module_package_history` | Read state and versions |
-| `get_module_units` | The units behind a module — for your orientation, not a user menu |
+| `get_video_profile` / `set_video_profile` | The saved presenter and background, or the six questions to ask |
+| `plan_video_script` | The scenes, their seconds and word bands, what each must achieve, the handbook text behind them, the locked presenter, and the writing rules — all in one call |
+| `submit_video_script` | All the scenes at once: validates, composes each scene's generation prompt, commits a version, writes the file |
+| `get_video_script` / `list_video_scripts` / `get_video_script_history` | Read state and versions |
 
 **Exact reading**
 
@@ -309,18 +300,13 @@ list_courses → ingest_course_documents → get_course_manifest
   → validate_storyboard → render_storyboard_docx
 ```
 
-Module content:
+Video script — five answers from the user, then two calls:
 
 ```
-start_flow → flow_choose ×3            (menu → subject → module; stops there)
-  → plan_module_content                 18 segments + 14 slides, unit by unit
-  → get_module_content_spec → get_module_source
-  → set_module_story                    the film's constants, before any segment
-  → submit_module_video + submit_module_slides
-  → validate_module_package
-  → export_module_package               script .txt + subtitles .srt + deck .pptx/.txt
-  → get_module_video_script             the same script inline, to read or copy
-  → render_module_pptx                  the deck, as a .pptx file
+start_flow → flow_choose ×5      (menu → course → subject → module → type,
+                                  then the presenter and background questions)
+  → plan_video_script             scenes, budgets, handbook text, presenter, rules
+  → submit_video_script           validates, composes the prompts, writes the file
 ```
 
 Exact reading:
@@ -513,11 +499,6 @@ chapter, and measures lexical overlap between the field and the text it cites.
 **Insufficient source.** Where the approved documents cannot support content, the
 result is `INSUFFICIENT_SOURCE_CONTENT`, never invented material.
 
-**Video duration is arithmetic, not judgement.** A model asked for "about two
-minutes" reliably writes three. So the duration is divided into scenes here, each
-scene gets a word budget at a stated speaking rate, and validation reports the
-script's actual read time. Scene seconds always sum to exactly what was requested.
-
 **The outline is the handbook's own contents.** Modules and units are read from the
 indexed handbook, and unit titles are taken from its table of contents, which is the
 one place every title is printed complete. Every module the handbook declares is
@@ -526,92 +507,55 @@ Skills), which the handbook defers to an external DGT workbook. It is shown with
 reason and cannot be selected. A test asserts the outline matches the contents page
 unit for unit.
 
-**The script never mentions its source.** The rendered script is what a user copies,
-so it carries no page numbers, citations or word-count annotations — and the content
-may not either. A handbook name, page or figure number, unit or module number, QR
-code or qualification code appearing in a title, visual, on-screen text or narration
-is a validation **error**: the viewer has none of those in front of them. Citations
-stay in `scenes[].sources`, and `format: "production"` renders them back for a
-reviewer.
+**A video's length is arithmetic, not judgement.** A writer asked for "about ninety
+seconds" reliably produces three minutes, so the seconds are not asked for. The
+structure is fixed — open, say what the topic is, turn to the learning, walk two or
+three learning areas, hand over — and only the roadmap section varies, with how many
+units the module has. Six scenes come to 62 seconds and seven to 74. Each scene
+carries a word band computed from its seconds, and a scene outside its band is a
+validation **error**: over the band the generator cuts the last words off mid-sentence,
+which is not recoverable after rendering.
 
-**A module package covers every unit.** The plan allocates all 18 segments and all
-14 slides across the module's units in handbook order, proportional to length with a
-floor of one item per unit, and the parts always sum to exactly 18 and 14. A unit
-that neither the video nor the deck cites is a validation error, not a warning — a
-well-written script gives no hint that a unit was skipped.
+**The two pace figures in the brief disagree, and the tighter one is enforced.** A
+delivery pace of 120-130 wpm is about 2.1 words a second; a narration budget of 11-17
+words per ten-second scene is 1.1-1.7. The budget is what validation enforces, because
+it is the specific instruction and because the failure modes are not symmetric — a
+short scene lands early, a long one is truncated. The 120-130 wpm figure is carried
+into every generation prompt as the delivery pace, which is what it actually describes.
 
-**The video is one film in three parts.** Part 1 (segments 1–6, 60s) orients the
-learner to the whole module, built from the learning outcomes the handbook itself
-states — extracted from its "Key Learning Outcomes" page, or from the units' own
-objectives where a module states none. Part 2 (7–15, 90s) teaches every unit in
-handbook order, and the plan flags the segment that opens each unit so it names the
-unit rather than announcing it. Part 3 (16–18, 30s) consolidates. Each segment is
-assigned its beat before anything is written. A story bible (`set_module_story`) fixes the protagonist, three to six
-locations, the light, the camera language and the narrator, because each clip is
-generated blind to the others and continuity survives only where it is written down.
-Segments then carry `continues_from` / `ends_with` / `next_segment_starts_with`, and
-validation checks the chain: a segment whose opening shares nothing with the previous
-segment's ending is a **continuity break** error. It also checks the protagonist is
-named in every segment, that locations come from the bible, that graphics stay under
-a fifth of the film, and that the last shot returns to the first.
+**The presenter is the same person by construction, not by discipline.** Each scene is
+a separate generation and the generator remembers nothing between calls, so a presenter
+described afresh per scene comes back as a different face, in different clothes, with a
+different voice. The description is therefore written once from the saved profile and
+the identical text is stamped into every scene prompt by the server — along with the
+voice, the delivery pace, the 0.5-1 second speech lead-in and the speak-this-line-once
+audio directive. The client is told not to write any of them, and validation reports
+those checks as guaranteed rather than sampled, because they cannot fail.
 
-**The deck has its own design, and it is not the video's.** A warm cream page, deep
-green type, one green accent, hairline borders, generous space — defined once in
-[`src/pptx/design.ts`](src/pptx/design.ts) and applied to every slide. The
-composition is fixed: unit label, title under an accent rule, teaching cues left,
-visual right.
+**The topic is the hero.** This is an LMS introduction, not a short film. The spec that
+ships with the plan rules out backstory, character development, drama, conversation and
+cinematic set pieces, and the composed prompt says so to the generator too. The
+presenter holds, points at and demonstrates things; that is the whole of their role.
 
-**The right-hand visual is drawn, not decorated.** A slide's visual is specified as
-a type plus ordered labels, and the labelled types (process, workflow, lifecycle,
-comparison, components, relationship, cause/effect, measurement) are rendered as
-real editable PowerPoint shapes — rounded cards with arrows between them — rather
-than a stock image. Half the slide teaches instead of filling space.
+**A video script never mentions its source.** No handbook, page, figure, table, unit
+number, module number, QR code or qualification code may appear in narration, on-screen
+text, the visual description, the location or the presenter's action — the viewer has
+none of those in front of them. It is an error, not a warning, and citations stay in
+each scene's `sources`.
 
-**The presenter is locked per subject.** The first module to choose a character
-fixes it; later modules of the same subject reuse them, and changing them needs an
-explicit flag. A learner taking two modules of one subject meets the same person.
+**Every teaching scene is grounded in its own allocation.** A roadmap scene must cite
+chunk_ids, they must resolve in that subject's handbook, and they must belong to the
+units allocated to that scene — a citation borrowed from another part of the module is
+an error. The framing scenes cite nothing, because they speak about the module rather
+than from a passage of it.
 
-**The .pptx is validated before it is written.** PowerPoint's only complaint about
-an invalid package is "the file or directory is corrupted and unreadable", naming no
-part — so [`src/pptx/validate.ts`](src/pptx/validate.ts) checks the finished bytes on
-every render and throws rather than writing a file that will not open. It checks:
-every part well-formed and free of control characters, an explicit content-type
-Override of the right type for every PresentationML part, every relationship
-resolving, presentation r:ids declared, slide count matching slide parts, unique
-shape ids, no zip directory entries, and **one theme part per master** — the defect
-that was making PowerPoint refuse the deck.
+**A duplicated word is caught before it is spoken.** "the the" in a narration line is
+what a stuttering generation sounds like, and written into the script it is guaranteed
+rather than likely, so it is an error.
 
-Only PowerPoint can prove a file opens without a repair prompt, so there is a
-command for that:
-
-```bash
-npm run verify-pptx -- artifacts/MP-2026-00001/module-1-deck-v4.pptx
-```
-
-It opens the file read-only over COM, reports slide count, page size and how many
-slides carry notes, and exits non-zero if PowerPoint refuses it. Add `-Preview` to
-export the first three slides as PNGs.
-
-**Every generation produces files, not just text.** `export_module_package` writes
-the video script (`.txt`), the subtitle track (`.srt`) and the deck (`.pptx` and
-`.txt`) under `artifacts/<package_id>/`, named `module-1-video-script-v4.txt` so two
-downloads are distinguishable in a folder, and returns the paths for the client to
-attach to the conversation. The text still comes back inline as well — an
-eighteen-segment script runs past 20KB, which is more than anyone should have to
-select out of a chat window.
-
-**Subtitles are generated, not written.** `get_module_subtitles` builds a
-progressive word-by-word typewriter reveal from the narration, timed across each
-segment's ten seconds, as SRT or cues. Word timing is estimated from word length —
-there's no audio to align against — so it's a starting point an editor nudges.
-
-**Ten seconds is a hard limit.** The generator produces ten seconds per generation,
-so narration that overruns is cut off rather than compressed. Segment narration
-longer than its band is an error; shorter is a warning about dead air.
-
-**A video is grounded in one unit.** Every scene must cite chunks that resolve, come
-from the Participant Handbook, and belong to *that unit*. A citation from another
-unit is a validation error, not a warning.
+**One script per module, not one per request.** The store is keyed on course, module
+and video type, so answering the flow twice for the same module continues the script
+that exists. The previous feature keyed on nothing and left a hundred empty rows behind.
 
 **The reading mode cannot generate.** `read_ph_unit` takes a subject and a unit and
 nothing else — no length, no style, no audience. There is no parameter through which
@@ -620,9 +564,14 @@ only two mechanical differences from the printed page (removed running headers a
 folio numbers, removed indexing overlap).
 
 **Unit resolution refuses to guess.** When a typed heading matches two units closely,
-`find_ph_unit` reports `confident: false` and the generation tools refuse rather than
-picking one — generating from the wrong unit produces a correct-looking script about
-the wrong topic.
+`find_ph_unit` reports `confident: false` and the flow asks which was meant rather
+than picking one — reading out the wrong unit answers a question nobody asked.
+
+**Generation is two calls, deliberately.** Every MCP round trip re-sends the tool list
+and the whole conversation and buys back one answer, so a feature that fetches a spec,
+then the source, then submits, then validates, then renders, then exports costs six
+times what a 90-second video needs. Everything the writer needs travels with the plan,
+and everything the server does with the result happens inside the submit.
 
 ## Known gaps
 
@@ -655,7 +604,7 @@ template applies to what the renderer wrote, before this runs -- which is what t
 suite asserts, with the refresh switched off.
 
 **Orientation has documents but no crosswalk.** All four Orientation subjects have
-their PDFs on disk, so the video and reading flows serve them today. A storyboard
+their PDFs on disk, so the reading flow serves them today. A storyboard
 additionally needs a reviewed crosswalk and chapter-title map in
 [`src/courses/course-config.ts`](src/courses/course-config.ts), which is left empty
 for them rather than guessed at: an inferred crosswalk produces a storyboard about
@@ -669,18 +618,12 @@ on-disk filenames. `src/cdr/master-file.ts` still expects the previous shape and
 finds no module headings at all, so the CDR track cannot build and its generation
 tests are skipped with that reason. Nothing else depends on it.
 
-**Video pace is one number.** Read time is estimated at a single words-per-minute
-figure (140 by default, overridable per plan). It does not model pauses, B-roll,
-on-screen reading time or a narrator who speeds up. Treat the estimate as a budget,
-not a stopwatch.
-
 ## Development
 
 ```bash
 npm run typecheck
-npm test                       # 118 tests
+npm test                       # 143 tests
 npm run flow                   # walk the guided flow by hand in the terminal
-npm run verify-pptx -- <file>   # open a generated deck in the real PowerPoint
 npm run flow -- "<heading>"    # the shortcut flow, from a unit heading
 npm run parse-timing -- biofuels
 npm run analyze-template
@@ -691,10 +634,13 @@ npx tsx scripts/render-skeleton.ts biofuels
 escaping, run-preserving paragraph replacement, course isolation, crosswalk
 scoping, citation validation, question-bank numbering and rejection rules, version
 conflicts, rollback, and byte-identical preservation of the template's formatting
-parts. The video suite covers duration parsing, scene-plan arithmetic (seconds and
-word budgets summing exactly, contiguous timecodes, full unit coverage in document
-order), overlap-free unit reassembly, heading resolution and its refusal to guess,
-the guided flow's step machine, and rejection of citations from the wrong unit.
+parts. The handbook suite covers overlap-free unit reassembly, heading resolution
+and its refusal to guess, and the guided flow's step machine. The video suite covers
+the scene arithmetic (seconds summing exactly, contiguous timecodes, word bands
+derived from seconds, every unit allocated in handbook order), each validation rule
+against a script written to break it, the identity of the presenter block across
+every composed prompt, and the flow's five questions including the five-in-one
+presenter answer.
 
 ## Layout
 
@@ -703,26 +649,27 @@ src/
   mcp/server.ts          stdio MCP server
   mcp/tools/index.ts     the registry: assembles the lists below and dispatches
   mcp/tools/flow.ts      start_flow, flow_choose, get_flow -- the entry point
-  mcp/tools/module.ts    feature 2, the module content package tools (video + deck)
   mcp/tools/storyboard.ts  feature 1, the storyboard's course, timing and render tools
   mcp/tools/storyboard-build.ts  feature 1's build loop: one module out, one back
+  mcp/tools/video-script.ts  feature 2, the 1-1.5 minute info video: plan and submit
   mcp/tools/reading.ts   feature 3, read_ph_unit
-  mcp/tools/catalog.ts   handbook navigation shared by features 2 and 3
+  mcp/tools/catalog.ts   handbook navigation
   catalog/               course types, subjects, and their readiness
   courses/               course registry, crosswalk, chapter titles
   documents/             PDF extraction, chunking, ingestion, BM25 retrieval
   documents/ph-outline   handbook structure, verbatim reading, heading resolution
-  documents/learning-outcomes  the outcomes the handbook states, per module and unit
   flow/                  the guided step machine, persisted per session
   timing/                timing parser and arithmetic validator
   docx/                  OOXML helpers, template analyzer, renderer
   storyboard/            skeleton builder, module work order, three-level validator
-  video/                 module planning, story beats, continuity, package store
-  pptx/                  PowerPoint writer, design system, diagrams, package validator
+  videoscript/           profile and character lock, scene planning, prompt
+                         composition, validation, rendering, store
+  reading/               plain-text rendering of a handbook unit
   storage/               SQLite schema, artifact and version store
 courses/<track>/<subject>/   qp.pdf ph.pdf fg.pdf timing.pdf
 templates/<track>/           that track's storyboard template
 scripts/timing/              author a Timing Allocation Document for a new course
 scripts/cdr/                 regenerate the CDR course definitions from a master file
 artifacts/<course_id>/       the finished storyboard, one document per subject
+artifacts/video-scripts/<script_id>/   the finished video script, one file per version
 ```
