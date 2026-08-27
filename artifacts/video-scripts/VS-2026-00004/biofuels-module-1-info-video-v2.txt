@@ -1,0 +1,636 @@
+============================================================================
+2.5-3 MINUTE AI INFO VIDEO
+Bio-Energy Micro Entrepreneur  |  Module 1 - Entrepreneurship and Basics of Biomass Energy
+15 scenes x 10s  |  150 seconds  |  Entrepreneur
+VS-2026-00004  v2
+============================================================================
+
+PRESENTER (identical in every scene)
+----------------------------------------------------------------------------
+  An Indian woman aged 25 to 30, with light-medium skin and North Indian features, neatly groomed, warm and approachable, presenting as a professional instructor
+  Wearing a neatly draped cotton saree with a plain blouse.
+  Speaks Indian English with a natural Indian accent, clear articulation, warm and professional, measured and confident.
+
+SETTING
+----------------------------------------------------------------------------
+  Rural: An Indian rural setting: open fields, farm equipment, mud or brick structures and village paths, natural daylight
+
+DELIVERY (identical in every scene)
+----------------------------------------------------------------------------
+  Pace: about 150 words per minute -- measured and clearly articulated, never rushed, but with no dead air
+  Between sentences: a natural breath of about 0.3-0.5 seconds
+  End of every scene: about 0.5 seconds of silence
+  Every sentence begins and ends inside its own scene.
+
+============================================================================
+SCENE 1  |  OPENING  |  00:00-00:10 (10s)
+============================================================================
+PURPOSE   : Greet the learner and name the module
+LOCATION  : A village path beside open fields, with a small brick storage shed behind
+VISUAL    : The presenter stands facing camera on the village path, fields and a stack of crop residue behind her. The module title appears as clean on-screen text at the lower third as she says it.
+CAMERA    : medium shot, presenter centre, chest up, residue stack visible right / locked off
+TEACHING  : Lower-third title card reading: Entrepreneurship and Basics of Biomass Energy; A stack of dry crop residue beside the path
+ON SCREEN : Entrepreneurship and Basics of Biomass Energy
+
+VOICEOVER (25 words, complete within this scene):
+  Namastey, and welcome. This module is called Entrepreneurship and Basics of Biomass Energy. It introduces biomass fuels and the business you can build from them.
+
+AI VIDEO PROMPT:
+  SHOT: one continuous 10-second take. Scene 1 of an educational explainer video. Single unbroken shot -- no cuts, no jump cuts, no montage.
+  PRESENTER: An Indian woman aged 25 to 30, with light-medium skin and North Indian features, neatly groomed, warm and approachable, presenting as a professional instructor. Wearing a neatly draped cotton saree with a plain blouse. Exactly the same person as in every other scene of this video: identical face, identical hairstyle, identical clothing, identical voice. Do not restyle, re-age or re-dress the presenter.
+  VOICE: Speaks Indian English with a natural Indian accent, clear articulation, warm and professional, measured and confident.
+  SETTING: A village path beside open fields, with a small brick storage shed behind. An Indian rural setting: open fields, farm equipment, mud or brick structures and village paths, natural daylight.
+  PRESENTER ACTION: Faces the learner directly and gestures once, open-handed, towards the residue stack behind her as she names the module.
+  WHAT IS ON SCREEN: The presenter stands facing camera on the village path, fields and a stack of crop residue behind her. The module title appears as clean on-screen text at the lower third as she says it.
+  CAMERA: medium shot, presenter centre, chest up, residue stack visible right. Movement: locked off. The presenter stays fully in frame for the whole take.
+  TEACHING VISUALS: Lower-third title card reading: Entrepreneurship and Basics of Biomass Energy; A stack of dry crop residue beside the path. These must be sharp, legible, and must match what is being said at the moment it is said. Any label on them must be a correctly spelled real word, taken from the terms named here.
+  ON-SCREEN TEXT: render exactly this string and nothing else -- "Entrepreneurship and Basics of Biomass Energy" -- copied character for character, clean sans-serif, appearing as it is spoken.
+  ACCURACY -- this is critical:
+    1. The only text anywhere in the frame is the caption "Entrepreneurship and Basics of Biomass Energy", exactly as written, and the labels on the teaching visual named above, exactly as named. Render it character for character: correctly spelled, in full, not re-worded, not abbreviated, not translated, not pluralised, not auto-corrected.
+    2. Add no other text of any kind -- no extra captions, titles, subtitles, signage, watermarks or logos, and no decorative, placeholder, dummy, garbled or nonsense lettering on walls, screens, packaging, boards, clothing or equipment anywhere in the background.
+    3. Every number, unit, symbol and measurement shown must be exactly the value given here. Do not round it, change it, or substitute a similar-looking one.
+    4. Everything shown must be factually correct and must match what is being said at that moment: the equipment, the quantities, the steps and the order they happen in.
+    5. If any piece of text cannot be rendered cleanly, legibly and correctly spelled, show no text at all. Missing text is acceptable; misspelled text is not.
+  AUDIO -- follow every point:
+    1. The presenter starts speaking within 0.5-1 second of the clip starting. No silent opening beat.
+    2. The spoken audio is exactly and only this, word for word: "Namastey, and welcome. This module is called Entrepreneurship and Basics of Biomass Energy. It introduces biomass fuels and the business you can build from them."
+    3. Speak that line once. Do not repeat it, do not repeat any word or phrase inside it, do not stutter, do not restart a phrase, and do not add, drop, reorder or paraphrase any word.
+    4. Say nothing else. No greeting, no sign-off, no bridging line, no improvised words, no filler sounds.
+    5. There are 3 sentences. Leave a natural breath of about 0.3-0.5 seconds between them -- a real breath, not a hard cut.
+    6. The line begins and ends inside these 10 seconds. It is complete: it does not continue from the previous clip and it is not finished by the next one.
+    7. End with about 0.5 seconds of silence after the final word, before the clip ends. Do not cut on the last syllable.
+    8. Delivery pace: about 150 words per minute -- measured and clearly articulated, never rushed, but with no dead air.
+  STYLE: realistic Indian educational video. Natural daylight or practical lighting, natural expressions, professional but approachable. The subject being taught is the focus; the presenter is the teacher, not the story.
+  DO NOT: misspell any word on screen; render garbled, nonsense or invented lettering anywhere in the frame; add text, captions, subtitles, signage, watermarks or logos beyond what is specified above; change any number or unit shown; change the presenter's face, age, build, hairstyle or clothing; add a second person or a voice other than the presenter's; add background music; use slow motion, speed ramping, film grain, lens flare or dramatic colour grading; cut away from the presenter; leave the clip silent at either end beyond the pauses specified.
+
+============================================================================
+SCENE 2  |  TOPIC INTRODUCTION  |  00:10-00:20 (10s)
+============================================================================
+PURPOSE   : Establish what the topic is and why it matters
+LOCATION  : At the edge of a harvested field where loose straw lies in rows
+VISUAL    : The presenter crouches at the field edge holding a handful of dry straw, letting it fall through her fingers. Behind her the harvested field runs to the horizon in natural daylight.
+CAMERA    : medium close shot, presenter centre-left, waist up, straw in hand clearly visible / slow push in
+TEACHING  : A handful of dry crop straw held in the hand; Rows of harvested crop residue lying in the field
+
+VOICEOVER (24 words, complete within this scene):
+  Biofuels are made from plants, algae and waste materials. For you, that means the crop residue around your village can become fuel you sell.
+
+AI VIDEO PROMPT:
+  SHOT: one continuous 10-second take. Scene 2 of an educational explainer video. Single unbroken shot -- no cuts, no jump cuts, no montage.
+  PRESENTER: An Indian woman aged 25 to 30, with light-medium skin and North Indian features, neatly groomed, warm and approachable, presenting as a professional instructor. Wearing a neatly draped cotton saree with a plain blouse. Exactly the same person as in every other scene of this video: identical face, identical hairstyle, identical clothing, identical voice. Do not restyle, re-age or re-dress the presenter.
+  VOICE: Speaks Indian English with a natural Indian accent, clear articulation, warm and professional, measured and confident.
+  SETTING: At the edge of a harvested field where loose straw lies in rows. An Indian rural setting: open fields, farm equipment, mud or brick structures and village paths, natural daylight.
+  PRESENTER ACTION: Picks up a handful of straw, holds it up towards camera, and indicates the field behind her.
+  WHAT IS ON SCREEN: The presenter crouches at the field edge holding a handful of dry straw, letting it fall through her fingers. Behind her the harvested field runs to the horizon in natural daylight.
+  CAMERA: medium close shot, presenter centre-left, waist up, straw in hand clearly visible. Movement: slow push in. The presenter stays fully in frame for the whole take.
+  TEACHING VISUALS: A handful of dry crop straw held in the hand; Rows of harvested crop residue lying in the field. These must be sharp, legible, and must match what is being said at the moment it is said. Any label on them must be a correctly spelled real word, taken from the terms named here.
+  ACCURACY -- this is critical:
+    1. The only text anywhere in the frame is the labels on the teaching visual named above, exactly as named. Render it character for character: correctly spelled, in full, not re-worded, not abbreviated, not translated, not pluralised, not auto-corrected.
+    2. Add no other text of any kind -- no extra captions, titles, subtitles, signage, watermarks or logos, and no decorative, placeholder, dummy, garbled or nonsense lettering on walls, screens, packaging, boards, clothing or equipment anywhere in the background.
+    3. Every number, unit, symbol and measurement shown must be exactly the value given here. Do not round it, change it, or substitute a similar-looking one.
+    4. Everything shown must be factually correct and must match what is being said at that moment: the equipment, the quantities, the steps and the order they happen in.
+    5. If any piece of text cannot be rendered cleanly, legibly and correctly spelled, show no text at all. Missing text is acceptable; misspelled text is not.
+  CONTINUITY: the same presenter, the same clothing and the same world as the previous scene, continuing naturally from it.
+  AUDIO -- follow every point:
+    1. The presenter starts speaking within 0.5-1 second of the clip starting. No silent opening beat.
+    2. The spoken audio is exactly and only this, word for word: "Biofuels are made from plants, algae and waste materials. For you, that means the crop residue around your village can become fuel you sell."
+    3. Speak that line once. Do not repeat it, do not repeat any word or phrase inside it, do not stutter, do not restart a phrase, and do not add, drop, reorder or paraphrase any word.
+    4. Say nothing else. No greeting, no sign-off, no bridging line, no improvised words, no filler sounds.
+    5. There are 2 sentences. Leave a natural breath of about 0.3-0.5 seconds between them -- a real breath, not a hard cut.
+    6. The line begins and ends inside these 10 seconds. It is complete: it does not continue from the previous clip and it is not finished by the next one.
+    7. End with about 0.5 seconds of silence after the final word, before the clip ends. Do not cut on the last syllable.
+    8. Delivery pace: about 150 words per minute -- measured and clearly articulated, never rushed, but with no dead air.
+  STYLE: realistic Indian educational video. Natural daylight or practical lighting, natural expressions, professional but approachable. The subject being taught is the focus; the presenter is the teacher, not the story.
+  DO NOT: misspell any word on screen; render garbled, nonsense or invented lettering anywhere in the frame; add text, captions, subtitles, signage, watermarks or logos beyond what is specified above; change any number or unit shown; change the presenter's face, age, build, hairstyle or clothing; add a second person or a voice other than the presenter's; add background music; use slow motion, speed ramping, film grain, lens flare or dramatic colour grading; cut away from the presenter; leave the clip silent at either end beyond the pauses specified.
+
+============================================================================
+SCENE 3  |  TOPIC INTRODUCTION  |  00:20-00:30 (10s)
+============================================================================
+PURPOSE   : Establish what the topic is and why it matters
+LOCATION  : Beside the field, at a simple wooden table with two labelled sample trays
+VISUAL    : Two open trays sit on a wooden table: one holding black coal lumps, one holding golden crop residue. The presenter stands behind the table with the field beyond.
+CAMERA    : medium shot, presenter centre, chest up, both trays visible in the lower frame / gentle pan right to follow the hand from one tray to the other
+TEACHING  : Tray of coal labelled: Coal; Tray of crop residue labelled: Biomass
+ON SCREEN : Renewable
+
+VOICEOVER (25 words, complete within this scene):
+  Unlike coal and oil, which take millions of years to form, biofuels can be produced quickly. That renewal is what makes a bioenergy business possible.
+
+AI VIDEO PROMPT:
+  SHOT: one continuous 10-second take. Scene 3 of an educational explainer video. Single unbroken shot -- no cuts, no jump cuts, no montage.
+  PRESENTER: An Indian woman aged 25 to 30, with light-medium skin and North Indian features, neatly groomed, warm and approachable, presenting as a professional instructor. Wearing a neatly draped cotton saree with a plain blouse. Exactly the same person as in every other scene of this video: identical face, identical hairstyle, identical clothing, identical voice. Do not restyle, re-age or re-dress the presenter.
+  VOICE: Speaks Indian English with a natural Indian accent, clear articulation, warm and professional, measured and confident.
+  SETTING: Beside the field, at a simple wooden table with two labelled sample trays. An Indian rural setting: open fields, farm equipment, mud or brick structures and village paths, natural daylight.
+  PRESENTER ACTION: Points at the coal tray, then moves her hand to the residue tray as she contrasts the two.
+  WHAT IS ON SCREEN: Two open trays sit on a wooden table: one holding black coal lumps, one holding golden crop residue. The presenter stands behind the table with the field beyond.
+  CAMERA: medium shot, presenter centre, chest up, both trays visible in the lower frame. Movement: gentle pan right to follow the hand from one tray to the other. The presenter stays fully in frame for the whole take.
+  TEACHING VISUALS: Tray of coal labelled: Coal; Tray of crop residue labelled: Biomass. These must be sharp, legible, and must match what is being said at the moment it is said. Any label on them must be a correctly spelled real word, taken from the terms named here.
+  ON-SCREEN TEXT: render exactly this string and nothing else -- "Renewable" -- copied character for character, clean sans-serif, appearing as it is spoken.
+  ACCURACY -- this is critical:
+    1. The only text anywhere in the frame is the caption "Renewable", exactly as written, and the labels on the teaching visual named above, exactly as named. Render it character for character: correctly spelled, in full, not re-worded, not abbreviated, not translated, not pluralised, not auto-corrected.
+    2. Add no other text of any kind -- no extra captions, titles, subtitles, signage, watermarks or logos, and no decorative, placeholder, dummy, garbled or nonsense lettering on walls, screens, packaging, boards, clothing or equipment anywhere in the background.
+    3. Every number, unit, symbol and measurement shown must be exactly the value given here. Do not round it, change it, or substitute a similar-looking one.
+    4. Everything shown must be factually correct and must match what is being said at that moment: the equipment, the quantities, the steps and the order they happen in.
+    5. If any piece of text cannot be rendered cleanly, legibly and correctly spelled, show no text at all. Missing text is acceptable; misspelled text is not.
+  CONTINUITY: the same presenter, the same clothing and the same world as the previous scene, continuing naturally from it.
+  AUDIO -- follow every point:
+    1. The presenter starts speaking within 0.5-1 second of the clip starting. No silent opening beat.
+    2. The spoken audio is exactly and only this, word for word: "Unlike coal and oil, which take millions of years to form, biofuels can be produced quickly. That renewal is what makes a bioenergy business possible."
+    3. Speak that line once. Do not repeat it, do not repeat any word or phrase inside it, do not stutter, do not restart a phrase, and do not add, drop, reorder or paraphrase any word.
+    4. Say nothing else. No greeting, no sign-off, no bridging line, no improvised words, no filler sounds.
+    5. There are 2 sentences. Leave a natural breath of about 0.3-0.5 seconds between them -- a real breath, not a hard cut.
+    6. The line begins and ends inside these 10 seconds. It is complete: it does not continue from the previous clip and it is not finished by the next one.
+    7. End with about 0.5 seconds of silence after the final word, before the clip ends. Do not cut on the last syllable.
+    8. Delivery pace: about 150 words per minute -- measured and clearly articulated, never rushed, but with no dead air.
+  STYLE: realistic Indian educational video. Natural daylight or practical lighting, natural expressions, professional but approachable. The subject being taught is the focus; the presenter is the teacher, not the story.
+  DO NOT: misspell any word on screen; render garbled, nonsense or invented lettering anywhere in the frame; add text, captions, subtitles, signage, watermarks or logos beyond what is specified above; change any number or unit shown; change the presenter's face, age, build, hairstyle or clothing; add a second person or a voice other than the presenter's; add background music; use slow motion, speed ramping, film grain, lens flare or dramatic colour grading; cut away from the presenter; leave the clip silent at either end beyond the pauses specified.
+
+============================================================================
+SCENE 4  |  LEARNING TRANSITION  |  00:30-00:40 (10s)
+============================================================================
+PURPOSE   : Turn towards what the learner will be able to do
+LOCATION  : Beside a mud-brick wall on which a simple four-step chart is mounted
+VISUAL    : A plain chart on the wall shows four boxes in a row. The presenter stands beside it, the village path visible behind her.
+CAMERA    : medium wide shot, presenter left, chart right, full chart legible / locked off
+TEACHING  : Wall chart with four boxes labelled: Fuels, Start, Run, Supply
+
+VOICEOVER (25 words, complete within this scene):
+  So what will you gain here? You will learn the fuels, how to start a venture, how to run it, and how to secure biomass.
+
+AI VIDEO PROMPT:
+  SHOT: one continuous 10-second take. Scene 4 of an educational explainer video. Single unbroken shot -- no cuts, no jump cuts, no montage.
+  PRESENTER: An Indian woman aged 25 to 30, with light-medium skin and North Indian features, neatly groomed, warm and approachable, presenting as a professional instructor. Wearing a neatly draped cotton saree with a plain blouse. Exactly the same person as in every other scene of this video: identical face, identical hairstyle, identical clothing, identical voice. Do not restyle, re-age or re-dress the presenter.
+  VOICE: Speaks Indian English with a natural Indian accent, clear articulation, warm and professional, measured and confident.
+  SETTING: Beside a mud-brick wall on which a simple four-step chart is mounted. An Indian rural setting: open fields, farm equipment, mud or brick structures and village paths, natural daylight.
+  PRESENTER ACTION: Turns to the chart and touches each of the four boxes in turn as she names them.
+  WHAT IS ON SCREEN: A plain chart on the wall shows four boxes in a row. The presenter stands beside it, the village path visible behind her.
+  CAMERA: medium wide shot, presenter left, chart right, full chart legible. Movement: locked off. The presenter stays fully in frame for the whole take.
+  TEACHING VISUALS: Wall chart with four boxes labelled: Fuels, Start, Run, Supply. These must be sharp, legible, and must match what is being said at the moment it is said. Any label on them must be a correctly spelled real word, taken from the terms named here.
+  ACCURACY -- this is critical:
+    1. The only text anywhere in the frame is the labels on the teaching visual named above, exactly as named. Render it character for character: correctly spelled, in full, not re-worded, not abbreviated, not translated, not pluralised, not auto-corrected.
+    2. Add no other text of any kind -- no extra captions, titles, subtitles, signage, watermarks or logos, and no decorative, placeholder, dummy, garbled or nonsense lettering on walls, screens, packaging, boards, clothing or equipment anywhere in the background.
+    3. Every number, unit, symbol and measurement shown must be exactly the value given here. Do not round it, change it, or substitute a similar-looking one.
+    4. Everything shown must be factually correct and must match what is being said at that moment: the equipment, the quantities, the steps and the order they happen in.
+    5. If any piece of text cannot be rendered cleanly, legibly and correctly spelled, show no text at all. Missing text is acceptable; misspelled text is not.
+  CONTINUITY: Same village setting and daylight as the previous scene.
+  AUDIO -- follow every point:
+    1. The presenter starts speaking within 0.5-1 second of the clip starting. No silent opening beat.
+    2. The spoken audio is exactly and only this, word for word: "So what will you gain here? You will learn the fuels, how to start a venture, how to run it, and how to secure biomass."
+    3. Speak that line once. Do not repeat it, do not repeat any word or phrase inside it, do not stutter, do not restart a phrase, and do not add, drop, reorder or paraphrase any word.
+    4. Say nothing else. No greeting, no sign-off, no bridging line, no improvised words, no filler sounds.
+    5. There are 2 sentences. Leave a natural breath of about 0.3-0.5 seconds between them -- a real breath, not a hard cut.
+    6. The line begins and ends inside these 10 seconds. It is complete: it does not continue from the previous clip and it is not finished by the next one.
+    7. End with about 0.5 seconds of silence after the final word, before the clip ends. Do not cut on the last syllable.
+    8. Delivery pace: about 150 words per minute -- measured and clearly articulated, never rushed, but with no dead air.
+  STYLE: realistic Indian educational video. Natural daylight or practical lighting, natural expressions, professional but approachable. The subject being taught is the focus; the presenter is the teacher, not the story.
+  DO NOT: misspell any word on screen; render garbled, nonsense or invented lettering anywhere in the frame; add text, captions, subtitles, signage, watermarks or logos beyond what is specified above; change any number or unit shown; change the presenter's face, age, build, hairstyle or clothing; add a second person or a voice other than the presenter's; add background music; use slow motion, speed ramping, film grain, lens flare or dramatic colour grading; cut away from the presenter; leave the clip silent at either end beyond the pauses specified.
+
+============================================================================
+SCENE 5  |  ROADMAP  |  00:40-00:50 (10s)
+============================================================================
+PURPOSE   : Open the first learning area and land a concrete fact from it
+LOCATION  : At the wooden table, now holding three labelled sample jars
+VISUAL    : Three jars stand on the table: wood pellets, a clear liquid, and a small gas cylinder. The presenter stands behind them with the field beyond.
+CAMERA    : medium shot, presenter centre-left, chest up, all three samples visible on the table / slow push in
+TEACHING  : Jar of wood pellets labelled: Solid; Jar of clear liquid fuel labelled: Liquid; Small gas cylinder labelled: Gaseous
+ON SCREEN : Solid  Liquid  Gaseous
+
+VOICEOVER (23 words, complete within this scene):
+  First, the fundamentals of biofuels and biomass energy. Biofuels come in three forms: solid, liquid and gaseous. All are made from organic material.
+
+AI VIDEO PROMPT:
+  SHOT: one continuous 10-second take. Scene 5 of an educational explainer video. Single unbroken shot -- no cuts, no jump cuts, no montage.
+  PRESENTER: An Indian woman aged 25 to 30, with light-medium skin and North Indian features, neatly groomed, warm and approachable, presenting as a professional instructor. Wearing a neatly draped cotton saree with a plain blouse. Exactly the same person as in every other scene of this video: identical face, identical hairstyle, identical clothing, identical voice. Do not restyle, re-age or re-dress the presenter.
+  VOICE: Speaks Indian English with a natural Indian accent, clear articulation, warm and professional, measured and confident.
+  SETTING: At the wooden table, now holding three labelled sample jars. An Indian rural setting: open fields, farm equipment, mud or brick structures and village paths, natural daylight.
+  PRESENTER ACTION: Lifts each of the three samples in turn and sets it down as she names the form it represents.
+  WHAT IS ON SCREEN: Three jars stand on the table: wood pellets, a clear liquid, and a small gas cylinder. The presenter stands behind them with the field beyond.
+  CAMERA: medium shot, presenter centre-left, chest up, all three samples visible on the table. Movement: slow push in. The presenter stays fully in frame for the whole take.
+  TEACHING VISUALS: Jar of wood pellets labelled: Solid; Jar of clear liquid fuel labelled: Liquid; Small gas cylinder labelled: Gaseous. These must be sharp, legible, and must match what is being said at the moment it is said. Any label on them must be a correctly spelled real word, taken from the terms named here.
+  ON-SCREEN TEXT: render exactly this string and nothing else -- "Solid  Liquid  Gaseous" -- copied character for character, clean sans-serif, appearing as it is spoken.
+  ACCURACY -- this is critical:
+    1. The only text anywhere in the frame is the caption "Solid  Liquid  Gaseous", exactly as written, and the labels on the teaching visual named above, exactly as named. Render it character for character: correctly spelled, in full, not re-worded, not abbreviated, not translated, not pluralised, not auto-corrected.
+    2. Add no other text of any kind -- no extra captions, titles, subtitles, signage, watermarks or logos, and no decorative, placeholder, dummy, garbled or nonsense lettering on walls, screens, packaging, boards, clothing or equipment anywhere in the background.
+    3. Every number, unit, symbol and measurement shown must be exactly the value given here. Do not round it, change it, or substitute a similar-looking one.
+    4. Everything shown must be factually correct and must match what is being said at that moment: the equipment, the quantities, the steps and the order they happen in.
+    5. If any piece of text cannot be rendered cleanly, legibly and correctly spelled, show no text at all. Missing text is acceptable; misspelled text is not.
+  CONTINUITY: the same presenter, the same clothing and the same world as the previous scene, continuing naturally from it.
+  AUDIO -- follow every point:
+    1. The presenter starts speaking within 0.5-1 second of the clip starting. No silent opening beat.
+    2. The spoken audio is exactly and only this, word for word: "First, the fundamentals of biofuels and biomass energy. Biofuels come in three forms: solid, liquid and gaseous. All are made from organic material."
+    3. Speak that line once. Do not repeat it, do not repeat any word or phrase inside it, do not stutter, do not restart a phrase, and do not add, drop, reorder or paraphrase any word.
+    4. Say nothing else. No greeting, no sign-off, no bridging line, no improvised words, no filler sounds.
+    5. There are 3 sentences. Leave a natural breath of about 0.3-0.5 seconds between them -- a real breath, not a hard cut.
+    6. The line begins and ends inside these 10 seconds. It is complete: it does not continue from the previous clip and it is not finished by the next one.
+    7. End with about 0.5 seconds of silence after the final word, before the clip ends. Do not cut on the last syllable.
+    8. Delivery pace: about 150 words per minute -- measured and clearly articulated, never rushed, but with no dead air.
+  STYLE: realistic Indian educational video. Natural daylight or practical lighting, natural expressions, professional but approachable. The subject being taught is the focus; the presenter is the teacher, not the story.
+  DO NOT: misspell any word on screen; render garbled, nonsense or invented lettering anywhere in the frame; add text, captions, subtitles, signage, watermarks or logos beyond what is specified above; change any number or unit shown; change the presenter's face, age, build, hairstyle or clothing; add a second person or a voice other than the presenter's; add background music; use slow motion, speed ramping, film grain, lens flare or dramatic colour grading; cut away from the presenter; leave the clip silent at either end beyond the pauses specified.
+
+============================================================================
+SCENE 6  |  ROADMAP  |  00:50-01:00 (10s)
+============================================================================
+PURPOSE   : Close the first learning area on what the learner should take from it
+LOCATION  : Beside the table, in front of a mounted panel showing three product images
+VISUAL    : A panel on the wall shows three labelled images: a fuel pump nozzle, a tractor engine, and a covered digester dome. The presenter stands to one side of it.
+CAMERA    : medium shot, presenter left, panel right, all three labels legible / gentle pan left to right across the panel
+TEACHING  : Panel image labelled: Ethanol; Panel image labelled: Biodiesel; Panel image labelled: Biogas
+
+VOICEOVER (25 words, complete within this scene):
+  Ethanol blends with petrol, biodiesel runs diesel engines, and biogas comes from anaerobic digestion of waste. Knowing these products tells you what you can sell.
+
+AI VIDEO PROMPT:
+  SHOT: one continuous 10-second take. Scene 6 of an educational explainer video. Single unbroken shot -- no cuts, no jump cuts, no montage.
+  PRESENTER: An Indian woman aged 25 to 30, with light-medium skin and North Indian features, neatly groomed, warm and approachable, presenting as a professional instructor. Wearing a neatly draped cotton saree with a plain blouse. Exactly the same person as in every other scene of this video: identical face, identical hairstyle, identical clothing, identical voice. Do not restyle, re-age or re-dress the presenter.
+  VOICE: Speaks Indian English with a natural Indian accent, clear articulation, warm and professional, measured and confident.
+  SETTING: Beside the table, in front of a mounted panel showing three product images. An Indian rural setting: open fields, farm equipment, mud or brick structures and village paths, natural daylight.
+  PRESENTER ACTION: Indicates each image on the panel in turn as she names the product it shows.
+  WHAT IS ON SCREEN: A panel on the wall shows three labelled images: a fuel pump nozzle, a tractor engine, and a covered digester dome. The presenter stands to one side of it.
+  CAMERA: medium shot, presenter left, panel right, all three labels legible. Movement: gentle pan left to right across the panel. The presenter stays fully in frame for the whole take.
+  TEACHING VISUALS: Panel image labelled: Ethanol; Panel image labelled: Biodiesel; Panel image labelled: Biogas. These must be sharp, legible, and must match what is being said at the moment it is said. Any label on them must be a correctly spelled real word, taken from the terms named here.
+  ACCURACY -- this is critical:
+    1. The only text anywhere in the frame is the labels on the teaching visual named above, exactly as named. Render it character for character: correctly spelled, in full, not re-worded, not abbreviated, not translated, not pluralised, not auto-corrected.
+    2. Add no other text of any kind -- no extra captions, titles, subtitles, signage, watermarks or logos, and no decorative, placeholder, dummy, garbled or nonsense lettering on walls, screens, packaging, boards, clothing or equipment anywhere in the background.
+    3. Every number, unit, symbol and measurement shown must be exactly the value given here. Do not round it, change it, or substitute a similar-looking one.
+    4. Everything shown must be factually correct and must match what is being said at that moment: the equipment, the quantities, the steps and the order they happen in.
+    5. If any piece of text cannot be rendered cleanly, legibly and correctly spelled, show no text at all. Missing text is acceptable; misspelled text is not.
+  CONTINUITY: The three sample jars remain on the table in the foreground.
+  AUDIO -- follow every point:
+    1. The presenter starts speaking within 0.5-1 second of the clip starting. No silent opening beat.
+    2. The spoken audio is exactly and only this, word for word: "Ethanol blends with petrol, biodiesel runs diesel engines, and biogas comes from anaerobic digestion of waste. Knowing these products tells you what you can sell."
+    3. Speak that line once. Do not repeat it, do not repeat any word or phrase inside it, do not stutter, do not restart a phrase, and do not add, drop, reorder or paraphrase any word.
+    4. Say nothing else. No greeting, no sign-off, no bridging line, no improvised words, no filler sounds.
+    5. There are 2 sentences. Leave a natural breath of about 0.3-0.5 seconds between them -- a real breath, not a hard cut.
+    6. The line begins and ends inside these 10 seconds. It is complete: it does not continue from the previous clip and it is not finished by the next one.
+    7. End with about 0.5 seconds of silence after the final word, before the clip ends. Do not cut on the last syllable.
+    8. Delivery pace: about 150 words per minute -- measured and clearly articulated, never rushed, but with no dead air.
+  STYLE: realistic Indian educational video. Natural daylight or practical lighting, natural expressions, professional but approachable. The subject being taught is the focus; the presenter is the teacher, not the story.
+  DO NOT: misspell any word on screen; render garbled, nonsense or invented lettering anywhere in the frame; add text, captions, subtitles, signage, watermarks or logos beyond what is specified above; change any number or unit shown; change the presenter's face, age, build, hairstyle or clothing; add a second person or a voice other than the presenter's; add background music; use slow motion, speed ramping, film grain, lens flare or dramatic colour grading; cut away from the presenter; leave the clip silent at either end beyond the pauses specified.
+
+============================================================================
+SCENE 7  |  ROADMAP  |  01:00-01:10 (10s)
+============================================================================
+PURPOSE   : Open the second learning area and land a concrete fact from it
+LOCATION  : In the yard of a small village enterprise, sacks of residue stacked against a brick wall
+VISUAL    : The presenter stands in a working yard. Filled sacks are stacked behind her and two workers move a sack in the background.
+CAMERA    : medium wide shot, presenter centre-right, waist up, stacked sacks filling the left frame / locked off
+TEACHING  : Stacked sacks of biomass residue in a working yard
+
+VOICEOVER (25 words, complete within this scene):
+  Next, entrepreneurship in the biomass energy sector. Ventures here range from biofuels and biogas to biomass-powered electricity and heat, creating local jobs and rural development.
+
+AI VIDEO PROMPT:
+  SHOT: one continuous 10-second take. Scene 7 of an educational explainer video. Single unbroken shot -- no cuts, no jump cuts, no montage.
+  PRESENTER: An Indian woman aged 25 to 30, with light-medium skin and North Indian features, neatly groomed, warm and approachable, presenting as a professional instructor. Wearing a neatly draped cotton saree with a plain blouse. Exactly the same person as in every other scene of this video: identical face, identical hairstyle, identical clothing, identical voice. Do not restyle, re-age or re-dress the presenter.
+  VOICE: Speaks Indian English with a natural Indian accent, clear articulation, warm and professional, measured and confident.
+  SETTING: In the yard of a small village enterprise, sacks of residue stacked against a brick wall. An Indian rural setting: open fields, farm equipment, mud or brick structures and village paths, natural daylight.
+  PRESENTER ACTION: Rests a hand on a stacked sack and gestures across the yard as she describes the range of ventures.
+  WHAT IS ON SCREEN: The presenter stands in a working yard. Filled sacks are stacked behind her and two workers move a sack in the background.
+  CAMERA: medium wide shot, presenter centre-right, waist up, stacked sacks filling the left frame. Movement: locked off. The presenter stays fully in frame for the whole take.
+  TEACHING VISUALS: Stacked sacks of biomass residue in a working yard. These must be sharp, legible, and must match what is being said at the moment it is said. Any label on them must be a correctly spelled real word, taken from the terms named here.
+  ACCURACY -- this is critical:
+    1. The only text anywhere in the frame is the labels on the teaching visual named above, exactly as named. Render it character for character: correctly spelled, in full, not re-worded, not abbreviated, not translated, not pluralised, not auto-corrected.
+    2. Add no other text of any kind -- no extra captions, titles, subtitles, signage, watermarks or logos, and no decorative, placeholder, dummy, garbled or nonsense lettering on walls, screens, packaging, boards, clothing or equipment anywhere in the background.
+    3. Every number, unit, symbol and measurement shown must be exactly the value given here. Do not round it, change it, or substitute a similar-looking one.
+    4. Everything shown must be factually correct and must match what is being said at that moment: the equipment, the quantities, the steps and the order they happen in.
+    5. If any piece of text cannot be rendered cleanly, legibly and correctly spelled, show no text at all. Missing text is acceptable; misspelled text is not.
+  CONTINUITY: the same presenter, the same clothing and the same world as the previous scene, continuing naturally from it.
+  AUDIO -- follow every point:
+    1. The presenter starts speaking within 0.5-1 second of the clip starting. No silent opening beat.
+    2. The spoken audio is exactly and only this, word for word: "Next, entrepreneurship in the biomass energy sector. Ventures here range from biofuels and biogas to biomass-powered electricity and heat, creating local jobs and rural development."
+    3. Speak that line once. Do not repeat it, do not repeat any word or phrase inside it, do not stutter, do not restart a phrase, and do not add, drop, reorder or paraphrase any word.
+    4. Say nothing else. No greeting, no sign-off, no bridging line, no improvised words, no filler sounds.
+    5. There are 2 sentences. Leave a natural breath of about 0.3-0.5 seconds between them -- a real breath, not a hard cut.
+    6. The line begins and ends inside these 10 seconds. It is complete: it does not continue from the previous clip and it is not finished by the next one.
+    7. End with about 0.5 seconds of silence after the final word, before the clip ends. Do not cut on the last syllable.
+    8. Delivery pace: about 150 words per minute -- measured and clearly articulated, never rushed, but with no dead air.
+  STYLE: realistic Indian educational video. Natural daylight or practical lighting, natural expressions, professional but approachable. The subject being taught is the focus; the presenter is the teacher, not the story.
+  DO NOT: misspell any word on screen; render garbled, nonsense or invented lettering anywhere in the frame; add text, captions, subtitles, signage, watermarks or logos beyond what is specified above; change any number or unit shown; change the presenter's face, age, build, hairstyle or clothing; add a second person or a voice other than the presenter's; add background music; use slow motion, speed ramping, film grain, lens flare or dramatic colour grading; cut away from the presenter; leave the clip silent at either end beyond the pauses specified.
+
+============================================================================
+SCENE 8  |  ROADMAP  |  01:10-01:20 (10s)
+============================================================================
+PURPOSE   : Close the second learning area on the steps of the entrepreneurial process
+LOCATION  : At a table in the same yard, a step chart propped upright on it
+VISUAL    : A chart on the table lists five steps in a vertical column. The presenter stands beside the table, sacks visible behind.
+CAMERA    : medium shot, presenter left, chart right, all five lines legible / slow push in on the chart
+TEACHING  : Chart with five lines: Assess Demand, Check Resources, Study Competitors, Check Feasibility, Business Plan
+
+VOICEOVER (25 words, complete within this scene):
+  The process begins with spotting an opportunity: assess demand, check local biomass, study competitors, test feasibility. Then you write a business plan before spending anything.
+
+AI VIDEO PROMPT:
+  SHOT: one continuous 10-second take. Scene 8 of an educational explainer video. Single unbroken shot -- no cuts, no jump cuts, no montage.
+  PRESENTER: An Indian woman aged 25 to 30, with light-medium skin and North Indian features, neatly groomed, warm and approachable, presenting as a professional instructor. Wearing a neatly draped cotton saree with a plain blouse. Exactly the same person as in every other scene of this video: identical face, identical hairstyle, identical clothing, identical voice. Do not restyle, re-age or re-dress the presenter.
+  VOICE: Speaks Indian English with a natural Indian accent, clear articulation, warm and professional, measured and confident.
+  SETTING: At a table in the same yard, a step chart propped upright on it. An Indian rural setting: open fields, farm equipment, mud or brick structures and village paths, natural daylight.
+  PRESENTER ACTION: Points to each of the first four steps in turn, then rests her finger on the fifth as she names the business plan.
+  WHAT IS ON SCREEN: A chart on the table lists five steps in a vertical column. The presenter stands beside the table, sacks visible behind.
+  CAMERA: medium shot, presenter left, chart right, all five lines legible. Movement: slow push in on the chart. The presenter stays fully in frame for the whole take.
+  TEACHING VISUALS: Chart with five lines: Assess Demand, Check Resources, Study Competitors, Check Feasibility, Business Plan. These must be sharp, legible, and must match what is being said at the moment it is said. Any label on them must be a correctly spelled real word, taken from the terms named here.
+  ACCURACY -- this is critical:
+    1. The only text anywhere in the frame is the labels on the teaching visual named above, exactly as named. Render it character for character: correctly spelled, in full, not re-worded, not abbreviated, not translated, not pluralised, not auto-corrected.
+    2. Add no other text of any kind -- no extra captions, titles, subtitles, signage, watermarks or logos, and no decorative, placeholder, dummy, garbled or nonsense lettering on walls, screens, packaging, boards, clothing or equipment anywhere in the background.
+    3. Every number, unit, symbol and measurement shown must be exactly the value given here. Do not round it, change it, or substitute a similar-looking one.
+    4. Everything shown must be factually correct and must match what is being said at that moment: the equipment, the quantities, the steps and the order they happen in.
+    5. If any piece of text cannot be rendered cleanly, legibly and correctly spelled, show no text at all. Missing text is acceptable; misspelled text is not.
+  CONTINUITY: Same yard and stacked sacks as the previous scene.
+  AUDIO -- follow every point:
+    1. The presenter starts speaking within 0.5-1 second of the clip starting. No silent opening beat.
+    2. The spoken audio is exactly and only this, word for word: "The process begins with spotting an opportunity: assess demand, check local biomass, study competitors, test feasibility. Then you write a business plan before spending anything."
+    3. Speak that line once. Do not repeat it, do not repeat any word or phrase inside it, do not stutter, do not restart a phrase, and do not add, drop, reorder or paraphrase any word.
+    4. Say nothing else. No greeting, no sign-off, no bridging line, no improvised words, no filler sounds.
+    5. There are 2 sentences. Leave a natural breath of about 0.3-0.5 seconds between them -- a real breath, not a hard cut.
+    6. The line begins and ends inside these 10 seconds. It is complete: it does not continue from the previous clip and it is not finished by the next one.
+    7. End with about 0.5 seconds of silence after the final word, before the clip ends. Do not cut on the last syllable.
+    8. Delivery pace: about 150 words per minute -- measured and clearly articulated, never rushed, but with no dead air.
+  STYLE: realistic Indian educational video. Natural daylight or practical lighting, natural expressions, professional but approachable. The subject being taught is the focus; the presenter is the teacher, not the story.
+  DO NOT: misspell any word on screen; render garbled, nonsense or invented lettering anywhere in the frame; add text, captions, subtitles, signage, watermarks or logos beyond what is specified above; change any number or unit shown; change the presenter's face, age, build, hairstyle or clothing; add a second person or a voice other than the presenter's; add background music; use slow motion, speed ramping, film grain, lens flare or dramatic colour grading; cut away from the presenter; leave the clip silent at either end beyond the pauses specified.
+
+============================================================================
+SCENE 9  |  ROADMAP  |  01:20-01:30 (10s)
+============================================================================
+PURPOSE   : Open the third learning area and land a concrete fact from it
+LOCATION  : Inside a small brick office at the enterprise, a ledger open on the desk
+VISUAL    : The presenter stands at a desk with an open ledger and a simple four-box chart pinned to the wall behind. Daylight comes through a window.
+CAMERA    : medium shot, presenter centre, chest up, wall chart legible behind her / locked off
+TEACHING  : Wall chart with four boxes labelled: Finance, People, Products, Operations; An open accounts ledger on the desk
+
+VOICEOVER (23 words, complete within this scene):
+  Third, managing a biomass-based enterprise. You will handle finance, people, products and operations. Securing funding and controlling costs keeps the business financially sustainable.
+
+AI VIDEO PROMPT:
+  SHOT: one continuous 10-second take. Scene 9 of an educational explainer video. Single unbroken shot -- no cuts, no jump cuts, no montage.
+  PRESENTER: An Indian woman aged 25 to 30, with light-medium skin and North Indian features, neatly groomed, warm and approachable, presenting as a professional instructor. Wearing a neatly draped cotton saree with a plain blouse. Exactly the same person as in every other scene of this video: identical face, identical hairstyle, identical clothing, identical voice. Do not restyle, re-age or re-dress the presenter.
+  VOICE: Speaks Indian English with a natural Indian accent, clear articulation, warm and professional, measured and confident.
+  SETTING: Inside a small brick office at the enterprise, a ledger open on the desk. An Indian rural setting: open fields, farm equipment, mud or brick structures and village paths, natural daylight.
+  PRESENTER ACTION: Places a hand on the open ledger, then indicates the four boxes on the wall chart.
+  WHAT IS ON SCREEN: The presenter stands at a desk with an open ledger and a simple four-box chart pinned to the wall behind. Daylight comes through a window.
+  CAMERA: medium shot, presenter centre, chest up, wall chart legible behind her. Movement: locked off. The presenter stays fully in frame for the whole take.
+  TEACHING VISUALS: Wall chart with four boxes labelled: Finance, People, Products, Operations; An open accounts ledger on the desk. These must be sharp, legible, and must match what is being said at the moment it is said. Any label on them must be a correctly spelled real word, taken from the terms named here.
+  ACCURACY -- this is critical:
+    1. The only text anywhere in the frame is the labels on the teaching visual named above, exactly as named. Render it character for character: correctly spelled, in full, not re-worded, not abbreviated, not translated, not pluralised, not auto-corrected.
+    2. Add no other text of any kind -- no extra captions, titles, subtitles, signage, watermarks or logos, and no decorative, placeholder, dummy, garbled or nonsense lettering on walls, screens, packaging, boards, clothing or equipment anywhere in the background.
+    3. Every number, unit, symbol and measurement shown must be exactly the value given here. Do not round it, change it, or substitute a similar-looking one.
+    4. Everything shown must be factually correct and must match what is being said at that moment: the equipment, the quantities, the steps and the order they happen in.
+    5. If any piece of text cannot be rendered cleanly, legibly and correctly spelled, show no text at all. Missing text is acceptable; misspelled text is not.
+  CONTINUITY: the same presenter, the same clothing and the same world as the previous scene, continuing naturally from it.
+  AUDIO -- follow every point:
+    1. The presenter starts speaking within 0.5-1 second of the clip starting. No silent opening beat.
+    2. The spoken audio is exactly and only this, word for word: "Third, managing a biomass-based enterprise. You will handle finance, people, products and operations. Securing funding and controlling costs keeps the business financially sustainable."
+    3. Speak that line once. Do not repeat it, do not repeat any word or phrase inside it, do not stutter, do not restart a phrase, and do not add, drop, reorder or paraphrase any word.
+    4. Say nothing else. No greeting, no sign-off, no bridging line, no improvised words, no filler sounds.
+    5. There are 3 sentences. Leave a natural breath of about 0.3-0.5 seconds between them -- a real breath, not a hard cut.
+    6. The line begins and ends inside these 10 seconds. It is complete: it does not continue from the previous clip and it is not finished by the next one.
+    7. End with about 0.5 seconds of silence after the final word, before the clip ends. Do not cut on the last syllable.
+    8. Delivery pace: about 150 words per minute -- measured and clearly articulated, never rushed, but with no dead air.
+  STYLE: realistic Indian educational video. Natural daylight or practical lighting, natural expressions, professional but approachable. The subject being taught is the focus; the presenter is the teacher, not the story.
+  DO NOT: misspell any word on screen; render garbled, nonsense or invented lettering anywhere in the frame; add text, captions, subtitles, signage, watermarks or logos beyond what is specified above; change any number or unit shown; change the presenter's face, age, build, hairstyle or clothing; add a second person or a voice other than the presenter's; add background music; use slow motion, speed ramping, film grain, lens flare or dramatic colour grading; cut away from the presenter; leave the clip silent at either end beyond the pauses specified.
+
+============================================================================
+SCENE 10  |  ROADMAP  |  01:30-01:40 (10s)
+============================================================================
+PURPOSE   : Close the third learning area on managing people safely
+LOCATION  : On the enterprise floor, beside a rack of protective equipment
+VISUAL    : A rack holds helmets, gloves and dust masks. Two workers in the background wear the same equipment while handling residue.
+CAMERA    : medium shot, presenter centre-left, waist up, equipment rack visible right / gentle pan left to follow the hand to the rack
+TEACHING  : Rack of safety gloves, dust masks and helmets; Workers in the background wearing the same protective equipment
+ON SCREEN : Train  Retain  Protect
+
+VOICEOVER (23 words, complete within this scene):
+  Skilled workers are scarce, so train your team, keep them motivated, follow labour laws, and provide safety equipment. Good people keep production steady.
+
+AI VIDEO PROMPT:
+  SHOT: one continuous 10-second take. Scene 10 of an educational explainer video. Single unbroken shot -- no cuts, no jump cuts, no montage.
+  PRESENTER: An Indian woman aged 25 to 30, with light-medium skin and North Indian features, neatly groomed, warm and approachable, presenting as a professional instructor. Wearing a neatly draped cotton saree with a plain blouse. Exactly the same person as in every other scene of this video: identical face, identical hairstyle, identical clothing, identical voice. Do not restyle, re-age or re-dress the presenter.
+  VOICE: Speaks Indian English with a natural Indian accent, clear articulation, warm and professional, measured and confident.
+  SETTING: On the enterprise floor, beside a rack of protective equipment. An Indian rural setting: open fields, farm equipment, mud or brick structures and village paths, natural daylight.
+  PRESENTER ACTION: Lifts a pair of gloves and a dust mask from the rack and holds them up to camera.
+  WHAT IS ON SCREEN: A rack holds helmets, gloves and dust masks. Two workers in the background wear the same equipment while handling residue.
+  CAMERA: medium shot, presenter centre-left, waist up, equipment rack visible right. Movement: gentle pan left to follow the hand to the rack. The presenter stays fully in frame for the whole take.
+  TEACHING VISUALS: Rack of safety gloves, dust masks and helmets; Workers in the background wearing the same protective equipment. These must be sharp, legible, and must match what is being said at the moment it is said. Any label on them must be a correctly spelled real word, taken from the terms named here.
+  ON-SCREEN TEXT: render exactly this string and nothing else -- "Train  Retain  Protect" -- copied character for character, clean sans-serif, appearing as it is spoken.
+  ACCURACY -- this is critical:
+    1. The only text anywhere in the frame is the caption "Train  Retain  Protect", exactly as written, and the labels on the teaching visual named above, exactly as named. Render it character for character: correctly spelled, in full, not re-worded, not abbreviated, not translated, not pluralised, not auto-corrected.
+    2. Add no other text of any kind -- no extra captions, titles, subtitles, signage, watermarks or logos, and no decorative, placeholder, dummy, garbled or nonsense lettering on walls, screens, packaging, boards, clothing or equipment anywhere in the background.
+    3. Every number, unit, symbol and measurement shown must be exactly the value given here. Do not round it, change it, or substitute a similar-looking one.
+    4. Everything shown must be factually correct and must match what is being said at that moment: the equipment, the quantities, the steps and the order they happen in.
+    5. If any piece of text cannot be rendered cleanly, legibly and correctly spelled, show no text at all. Missing text is acceptable; misspelled text is not.
+  CONTINUITY: the same presenter, the same clothing and the same world as the previous scene, continuing naturally from it.
+  AUDIO -- follow every point:
+    1. The presenter starts speaking within 0.5-1 second of the clip starting. No silent opening beat.
+    2. The spoken audio is exactly and only this, word for word: "Skilled workers are scarce, so train your team, keep them motivated, follow labour laws, and provide safety equipment. Good people keep production steady."
+    3. Speak that line once. Do not repeat it, do not repeat any word or phrase inside it, do not stutter, do not restart a phrase, and do not add, drop, reorder or paraphrase any word.
+    4. Say nothing else. No greeting, no sign-off, no bridging line, no improvised words, no filler sounds.
+    5. There are 2 sentences. Leave a natural breath of about 0.3-0.5 seconds between them -- a real breath, not a hard cut.
+    6. The line begins and ends inside these 10 seconds. It is complete: it does not continue from the previous clip and it is not finished by the next one.
+    7. End with about 0.5 seconds of silence after the final word, before the clip ends. Do not cut on the last syllable.
+    8. Delivery pace: about 150 words per minute -- measured and clearly articulated, never rushed, but with no dead air.
+  STYLE: realistic Indian educational video. Natural daylight or practical lighting, natural expressions, professional but approachable. The subject being taught is the focus; the presenter is the teacher, not the story.
+  DO NOT: misspell any word on screen; render garbled, nonsense or invented lettering anywhere in the frame; add text, captions, subtitles, signage, watermarks or logos beyond what is specified above; change any number or unit shown; change the presenter's face, age, build, hairstyle or clothing; add a second person or a voice other than the presenter's; add background music; use slow motion, speed ramping, film grain, lens flare or dramatic colour grading; cut away from the presenter; leave the clip silent at either end beyond the pauses specified.
+
+============================================================================
+SCENE 11  |  ROADMAP  |  01:40-01:50 (10s)
+============================================================================
+PURPOSE   : Open the fourth learning area and land a concrete fact from it
+LOCATION  : Back at the field edge, beside a heap of mixed crop residue
+VISUAL    : The presenter stands at a heap of straw, husks and stalks, with the harvested field and a village track behind her.
+CAMERA    : medium close shot, presenter centre, waist up, residue heap in the lower frame / slow push in
+TEACHING  : Separated samples of straw, husks and stalks laid side by side
+ON SCREEN : Agro-residue
+
+VOICEOVER (25 words, complete within this scene):
+  Finally, biomass resource management and procurement. Your raw material is agro-residue: straw, husks and stalks. Sourcing it steadily and cheaply decides whether your plant runs.
+
+AI VIDEO PROMPT:
+  SHOT: one continuous 10-second take. Scene 11 of an educational explainer video. Single unbroken shot -- no cuts, no jump cuts, no montage.
+  PRESENTER: An Indian woman aged 25 to 30, with light-medium skin and North Indian features, neatly groomed, warm and approachable, presenting as a professional instructor. Wearing a neatly draped cotton saree with a plain blouse. Exactly the same person as in every other scene of this video: identical face, identical hairstyle, identical clothing, identical voice. Do not restyle, re-age or re-dress the presenter.
+  VOICE: Speaks Indian English with a natural Indian accent, clear articulation, warm and professional, measured and confident.
+  SETTING: Back at the field edge, beside a heap of mixed crop residue. An Indian rural setting: open fields, farm equipment, mud or brick structures and village paths, natural daylight.
+  PRESENTER ACTION: Separates three types of residue from the heap with her hands, holding each up briefly as she names it.
+  WHAT IS ON SCREEN: The presenter stands at a heap of straw, husks and stalks, with the harvested field and a village track behind her.
+  CAMERA: medium close shot, presenter centre, waist up, residue heap in the lower frame. Movement: slow push in. The presenter stays fully in frame for the whole take.
+  TEACHING VISUALS: Separated samples of straw, husks and stalks laid side by side. These must be sharp, legible, and must match what is being said at the moment it is said. Any label on them must be a correctly spelled real word, taken from the terms named here.
+  ON-SCREEN TEXT: render exactly this string and nothing else -- "Agro-residue" -- copied character for character, clean sans-serif, appearing as it is spoken.
+  ACCURACY -- this is critical:
+    1. The only text anywhere in the frame is the caption "Agro-residue", exactly as written, and the labels on the teaching visual named above, exactly as named. Render it character for character: correctly spelled, in full, not re-worded, not abbreviated, not translated, not pluralised, not auto-corrected.
+    2. Add no other text of any kind -- no extra captions, titles, subtitles, signage, watermarks or logos, and no decorative, placeholder, dummy, garbled or nonsense lettering on walls, screens, packaging, boards, clothing or equipment anywhere in the background.
+    3. Every number, unit, symbol and measurement shown must be exactly the value given here. Do not round it, change it, or substitute a similar-looking one.
+    4. Everything shown must be factually correct and must match what is being said at that moment: the equipment, the quantities, the steps and the order they happen in.
+    5. If any piece of text cannot be rendered cleanly, legibly and correctly spelled, show no text at all. Missing text is acceptable; misspelled text is not.
+  CONTINUITY: the same presenter, the same clothing and the same world as the previous scene, continuing naturally from it.
+  AUDIO -- follow every point:
+    1. The presenter starts speaking within 0.5-1 second of the clip starting. No silent opening beat.
+    2. The spoken audio is exactly and only this, word for word: "Finally, biomass resource management and procurement. Your raw material is agro-residue: straw, husks and stalks. Sourcing it steadily and cheaply decides whether your plant runs."
+    3. Speak that line once. Do not repeat it, do not repeat any word or phrase inside it, do not stutter, do not restart a phrase, and do not add, drop, reorder or paraphrase any word.
+    4. Say nothing else. No greeting, no sign-off, no bridging line, no improvised words, no filler sounds.
+    5. There are 3 sentences. Leave a natural breath of about 0.3-0.5 seconds between them -- a real breath, not a hard cut.
+    6. The line begins and ends inside these 10 seconds. It is complete: it does not continue from the previous clip and it is not finished by the next one.
+    7. End with about 0.5 seconds of silence after the final word, before the clip ends. Do not cut on the last syllable.
+    8. Delivery pace: about 150 words per minute -- measured and clearly articulated, never rushed, but with no dead air.
+  STYLE: realistic Indian educational video. Natural daylight or practical lighting, natural expressions, professional but approachable. The subject being taught is the focus; the presenter is the teacher, not the story.
+  DO NOT: misspell any word on screen; render garbled, nonsense or invented lettering anywhere in the frame; add text, captions, subtitles, signage, watermarks or logos beyond what is specified above; change any number or unit shown; change the presenter's face, age, build, hairstyle or clothing; add a second person or a voice other than the presenter's; add background music; use slow motion, speed ramping, film grain, lens flare or dramatic colour grading; cut away from the presenter; leave the clip silent at either end beyond the pauses specified.
+
+============================================================================
+SCENE 12  |  ROADMAP  |  01:50-02:00 (10s)
+============================================================================
+PURPOSE   : Continue the fourth learning area with procurement challenges and mechanisation
+LOCATION  : Beside a village track where a tractor-drawn baler stands loaded with residue bales
+VISUAL    : A loaded baler and stacked bales stand on the track. A small chart mounted on the machine lists three challenges.
+CAMERA    : medium wide shot, presenter left, baler and bales right, chart legible / gentle pan right from the chart to the machine
+TEACHING  : Chart with three lines: Seasonal Supply, Transport Cost, Quality; A tractor-drawn baler with finished residue bales
+
+VOICEOVER (23 words, complete within this scene):
+  Procurement has real challenges: seasonal availability, transport costs and quality control. Modern machines for harvesting and pelletising make collection and storage far faster.
+
+AI VIDEO PROMPT:
+  SHOT: one continuous 10-second take. Scene 12 of an educational explainer video. Single unbroken shot -- no cuts, no jump cuts, no montage.
+  PRESENTER: An Indian woman aged 25 to 30, with light-medium skin and North Indian features, neatly groomed, warm and approachable, presenting as a professional instructor. Wearing a neatly draped cotton saree with a plain blouse. Exactly the same person as in every other scene of this video: identical face, identical hairstyle, identical clothing, identical voice. Do not restyle, re-age or re-dress the presenter.
+  VOICE: Speaks Indian English with a natural Indian accent, clear articulation, warm and professional, measured and confident.
+  SETTING: Beside a village track where a tractor-drawn baler stands loaded with residue bales. An Indian rural setting: open fields, farm equipment, mud or brick structures and village paths, natural daylight.
+  PRESENTER ACTION: Indicates the three lines on the chart, then places a hand on a finished bale.
+  WHAT IS ON SCREEN: A loaded baler and stacked bales stand on the track. A small chart mounted on the machine lists three challenges.
+  CAMERA: medium wide shot, presenter left, baler and bales right, chart legible. Movement: gentle pan right from the chart to the machine. The presenter stays fully in frame for the whole take.
+  TEACHING VISUALS: Chart with three lines: Seasonal Supply, Transport Cost, Quality; A tractor-drawn baler with finished residue bales. These must be sharp, legible, and must match what is being said at the moment it is said. Any label on them must be a correctly spelled real word, taken from the terms named here.
+  ACCURACY -- this is critical:
+    1. The only text anywhere in the frame is the labels on the teaching visual named above, exactly as named. Render it character for character: correctly spelled, in full, not re-worded, not abbreviated, not translated, not pluralised, not auto-corrected.
+    2. Add no other text of any kind -- no extra captions, titles, subtitles, signage, watermarks or logos, and no decorative, placeholder, dummy, garbled or nonsense lettering on walls, screens, packaging, boards, clothing or equipment anywhere in the background.
+    3. Every number, unit, symbol and measurement shown must be exactly the value given here. Do not round it, change it, or substitute a similar-looking one.
+    4. Everything shown must be factually correct and must match what is being said at that moment: the equipment, the quantities, the steps and the order they happen in.
+    5. If any piece of text cannot be rendered cleanly, legibly and correctly spelled, show no text at all. Missing text is acceptable; misspelled text is not.
+  CONTINUITY: Same harvested field and daylight as the previous scene.
+  AUDIO -- follow every point:
+    1. The presenter starts speaking within 0.5-1 second of the clip starting. No silent opening beat.
+    2. The spoken audio is exactly and only this, word for word: "Procurement has real challenges: seasonal availability, transport costs and quality control. Modern machines for harvesting and pelletising make collection and storage far faster."
+    3. Speak that line once. Do not repeat it, do not repeat any word or phrase inside it, do not stutter, do not restart a phrase, and do not add, drop, reorder or paraphrase any word.
+    4. Say nothing else. No greeting, no sign-off, no bridging line, no improvised words, no filler sounds.
+    5. There are 2 sentences. Leave a natural breath of about 0.3-0.5 seconds between them -- a real breath, not a hard cut.
+    6. The line begins and ends inside these 10 seconds. It is complete: it does not continue from the previous clip and it is not finished by the next one.
+    7. End with about 0.5 seconds of silence after the final word, before the clip ends. Do not cut on the last syllable.
+    8. Delivery pace: about 150 words per minute -- measured and clearly articulated, never rushed, but with no dead air.
+  STYLE: realistic Indian educational video. Natural daylight or practical lighting, natural expressions, professional but approachable. The subject being taught is the focus; the presenter is the teacher, not the story.
+  DO NOT: misspell any word on screen; render garbled, nonsense or invented lettering anywhere in the frame; add text, captions, subtitles, signage, watermarks or logos beyond what is specified above; change any number or unit shown; change the presenter's face, age, build, hairstyle or clothing; add a second person or a voice other than the presenter's; add background music; use slow motion, speed ramping, film grain, lens flare or dramatic colour grading; cut away from the presenter; leave the clip silent at either end beyond the pauses specified.
+
+============================================================================
+SCENE 13  |  ROADMAP  |  02:00-02:10 (10s)
+============================================================================
+PURPOSE   : Close the fourth learning area on surveying farmers for residue supply
+LOCATION  : In a farmer's field, with a survey form, weighing scale and moisture meter on a low stool
+VISUAL    : A moisture meter, a weighing scale and a printed survey form sit on a stool. A farmer stands nearby beside his crop residue.
+CAMERA    : medium close shot, presenter centre-right, waist up, meter and form clearly visible / slow push in on the meter
+TEACHING  : A handheld moisture meter held against a residue sample; A weighing scale and a printed survey form on a stool
+
+VOICEOVER (23 words, complete within this scene):
+  You will survey farms yourself: map residue locations, weigh samples, check moisture, and ask farmers about crop cycles and whether they will sell.
+
+AI VIDEO PROMPT:
+  SHOT: one continuous 10-second take. Scene 13 of an educational explainer video. Single unbroken shot -- no cuts, no jump cuts, no montage.
+  PRESENTER: An Indian woman aged 25 to 30, with light-medium skin and North Indian features, neatly groomed, warm and approachable, presenting as a professional instructor. Wearing a neatly draped cotton saree with a plain blouse. Exactly the same person as in every other scene of this video: identical face, identical hairstyle, identical clothing, identical voice. Do not restyle, re-age or re-dress the presenter.
+  VOICE: Speaks Indian English with a natural Indian accent, clear articulation, warm and professional, measured and confident.
+  SETTING: In a farmer's field, with a survey form, weighing scale and moisture meter on a low stool. An Indian rural setting: open fields, farm equipment, mud or brick structures and village paths, natural daylight.
+  PRESENTER ACTION: Holds the moisture meter against a sample of residue and shows its reading to camera, then indicates the survey form.
+  WHAT IS ON SCREEN: A moisture meter, a weighing scale and a printed survey form sit on a stool. A farmer stands nearby beside his crop residue.
+  CAMERA: medium close shot, presenter centre-right, waist up, meter and form clearly visible. Movement: slow push in on the meter. The presenter stays fully in frame for the whole take.
+  TEACHING VISUALS: A handheld moisture meter held against a residue sample; A weighing scale and a printed survey form on a stool. These must be sharp, legible, and must match what is being said at the moment it is said. Any label on them must be a correctly spelled real word, taken from the terms named here.
+  ACCURACY -- this is critical:
+    1. The only text anywhere in the frame is the labels on the teaching visual named above, exactly as named. Render it character for character: correctly spelled, in full, not re-worded, not abbreviated, not translated, not pluralised, not auto-corrected.
+    2. Add no other text of any kind -- no extra captions, titles, subtitles, signage, watermarks or logos, and no decorative, placeholder, dummy, garbled or nonsense lettering on walls, screens, packaging, boards, clothing or equipment anywhere in the background.
+    3. Every number, unit, symbol and measurement shown must be exactly the value given here. Do not round it, change it, or substitute a similar-looking one.
+    4. Everything shown must be factually correct and must match what is being said at that moment: the equipment, the quantities, the steps and the order they happen in.
+    5. If any piece of text cannot be rendered cleanly, legibly and correctly spelled, show no text at all. Missing text is acceptable; misspelled text is not.
+  CONTINUITY: the same presenter, the same clothing and the same world as the previous scene, continuing naturally from it.
+  AUDIO -- follow every point:
+    1. The presenter starts speaking within 0.5-1 second of the clip starting. No silent opening beat.
+    2. The spoken audio is exactly and only this, word for word: "You will survey farms yourself: map residue locations, weigh samples, check moisture, and ask farmers about crop cycles and whether they will sell."
+    3. Speak that line once. Do not repeat it, do not repeat any word or phrase inside it, do not stutter, do not restart a phrase, and do not add, drop, reorder or paraphrase any word.
+    4. Say nothing else. No greeting, no sign-off, no bridging line, no improvised words, no filler sounds.
+    5. This is one sentence, delivered without an internal break.
+    6. The line begins and ends inside these 10 seconds. It is complete: it does not continue from the previous clip and it is not finished by the next one.
+    7. End with about 0.5 seconds of silence after the final word, before the clip ends. Do not cut on the last syllable.
+    8. Delivery pace: about 150 words per minute -- measured and clearly articulated, never rushed, but with no dead air.
+  STYLE: realistic Indian educational video. Natural daylight or practical lighting, natural expressions, professional but approachable. The subject being taught is the focus; the presenter is the teacher, not the story.
+  DO NOT: misspell any word on screen; render garbled, nonsense or invented lettering anywhere in the frame; add text, captions, subtitles, signage, watermarks or logos beyond what is specified above; change any number or unit shown; change the presenter's face, age, build, hairstyle or clothing; add a second person or a voice other than the presenter's; add background music; use slow motion, speed ramping, film grain, lens flare or dramatic colour grading; cut away from the presenter; leave the clip silent at either end beyond the pauses specified.
+
+============================================================================
+SCENE 14  |  CONSOLIDATION  |  02:10-02:20 (10s)
+============================================================================
+PURPOSE   : Show how the learning areas fit together
+LOCATION  : Back on the village path, beside the four-step wall chart from earlier
+VISUAL    : The same four-box chart is on the mud-brick wall. The presenter stands beside it with the fields behind her.
+CAMERA    : medium wide shot, presenter left, chart right, all four labels legible / slow pull back
+TEACHING  : Wall chart with four boxes labelled: Fuels, Start, Run, Supply
+
+VOICEOVER (25 words, complete within this scene):
+  See how these fit together. You learn the fuel, then the opportunity, then how to manage the enterprise, and finally how to keep material flowing.
+
+AI VIDEO PROMPT:
+  SHOT: one continuous 10-second take. Scene 14 of an educational explainer video. Single unbroken shot -- no cuts, no jump cuts, no montage.
+  PRESENTER: An Indian woman aged 25 to 30, with light-medium skin and North Indian features, neatly groomed, warm and approachable, presenting as a professional instructor. Wearing a neatly draped cotton saree with a plain blouse. Exactly the same person as in every other scene of this video: identical face, identical hairstyle, identical clothing, identical voice. Do not restyle, re-age or re-dress the presenter.
+  VOICE: Speaks Indian English with a natural Indian accent, clear articulation, warm and professional, measured and confident.
+  SETTING: Back on the village path, beside the four-step wall chart from earlier. An Indian rural setting: open fields, farm equipment, mud or brick structures and village paths, natural daylight.
+  PRESENTER ACTION: Traces her hand across the four boxes from left to right, connecting them in order.
+  WHAT IS ON SCREEN: The same four-box chart is on the mud-brick wall. The presenter stands beside it with the fields behind her.
+  CAMERA: medium wide shot, presenter left, chart right, all four labels legible. Movement: slow pull back. The presenter stays fully in frame for the whole take.
+  TEACHING VISUALS: Wall chart with four boxes labelled: Fuels, Start, Run, Supply. These must be sharp, legible, and must match what is being said at the moment it is said. Any label on them must be a correctly spelled real word, taken from the terms named here.
+  ACCURACY -- this is critical:
+    1. The only text anywhere in the frame is the labels on the teaching visual named above, exactly as named. Render it character for character: correctly spelled, in full, not re-worded, not abbreviated, not translated, not pluralised, not auto-corrected.
+    2. Add no other text of any kind -- no extra captions, titles, subtitles, signage, watermarks or logos, and no decorative, placeholder, dummy, garbled or nonsense lettering on walls, screens, packaging, boards, clothing or equipment anywhere in the background.
+    3. Every number, unit, symbol and measurement shown must be exactly the value given here. Do not round it, change it, or substitute a similar-looking one.
+    4. Everything shown must be factually correct and must match what is being said at that moment: the equipment, the quantities, the steps and the order they happen in.
+    5. If any piece of text cannot be rendered cleanly, legibly and correctly spelled, show no text at all. Missing text is acceptable; misspelled text is not.
+  CONTINUITY: Returns to the village path and the chart shown in scene four.
+  AUDIO -- follow every point:
+    1. The presenter starts speaking within 0.5-1 second of the clip starting. No silent opening beat.
+    2. The spoken audio is exactly and only this, word for word: "See how these fit together. You learn the fuel, then the opportunity, then how to manage the enterprise, and finally how to keep material flowing."
+    3. Speak that line once. Do not repeat it, do not repeat any word or phrase inside it, do not stutter, do not restart a phrase, and do not add, drop, reorder or paraphrase any word.
+    4. Say nothing else. No greeting, no sign-off, no bridging line, no improvised words, no filler sounds.
+    5. There are 2 sentences. Leave a natural breath of about 0.3-0.5 seconds between them -- a real breath, not a hard cut.
+    6. The line begins and ends inside these 10 seconds. It is complete: it does not continue from the previous clip and it is not finished by the next one.
+    7. End with about 0.5 seconds of silence after the final word, before the clip ends. Do not cut on the last syllable.
+    8. Delivery pace: about 150 words per minute -- measured and clearly articulated, never rushed, but with no dead air.
+  STYLE: realistic Indian educational video. Natural daylight or practical lighting, natural expressions, professional but approachable. The subject being taught is the focus; the presenter is the teacher, not the story.
+  DO NOT: misspell any word on screen; render garbled, nonsense or invented lettering anywhere in the frame; add text, captions, subtitles, signage, watermarks or logos beyond what is specified above; change any number or unit shown; change the presenter's face, age, build, hairstyle or clothing; add a second person or a voice other than the presenter's; add background music; use slow motion, speed ramping, film grain, lens flare or dramatic colour grading; cut away from the presenter; leave the clip silent at either end beyond the pauses specified.
+
+============================================================================
+SCENE 15  |  CLOSING  |  02:20-02:30 (10s)
+============================================================================
+PURPOSE   : Hand over to the detailed module content
+LOCATION  : On the village path, fields and the residue stack behind
+VISUAL    : The presenter stands facing camera in the opening location, the residue stack behind her in natural daylight.
+CAMERA    : medium shot, presenter centre, chest up / locked off
+TEACHING  : The residue stack and open fields of the opening location
+
+VOICEOVER (25 words, complete within this scene):
+  Now let us go through each of these areas step by step, slowly and carefully, so you can build your own biomass enterprise with confidence.
+
+AI VIDEO PROMPT:
+  SHOT: one continuous 10-second take. Scene 15 of an educational explainer video. Single unbroken shot -- no cuts, no jump cuts, no montage.
+  PRESENTER: An Indian woman aged 25 to 30, with light-medium skin and North Indian features, neatly groomed, warm and approachable, presenting as a professional instructor. Wearing a neatly draped cotton saree with a plain blouse. Exactly the same person as in every other scene of this video: identical face, identical hairstyle, identical clothing, identical voice. Do not restyle, re-age or re-dress the presenter.
+  VOICE: Speaks Indian English with a natural Indian accent, clear articulation, warm and professional, measured and confident.
+  SETTING: On the village path, fields and the residue stack behind. An Indian rural setting: open fields, farm equipment, mud or brick structures and village paths, natural daylight.
+  PRESENTER ACTION: Faces the learner directly and opens a hand towards camera in a steady inviting gesture.
+  WHAT IS ON SCREEN: The presenter stands facing camera in the opening location, the residue stack behind her in natural daylight.
+  CAMERA: medium shot, presenter centre, chest up. Movement: locked off. The presenter stays fully in frame for the whole take.
+  TEACHING VISUALS: The residue stack and open fields of the opening location. These must be sharp, legible, and must match what is being said at the moment it is said. Any label on them must be a correctly spelled real word, taken from the terms named here.
+  ACCURACY -- this is critical:
+    1. The only text anywhere in the frame is the labels on the teaching visual named above, exactly as named. Render it character for character: correctly spelled, in full, not re-worded, not abbreviated, not translated, not pluralised, not auto-corrected.
+    2. Add no other text of any kind -- no extra captions, titles, subtitles, signage, watermarks or logos, and no decorative, placeholder, dummy, garbled or nonsense lettering on walls, screens, packaging, boards, clothing or equipment anywhere in the background.
+    3. Every number, unit, symbol and measurement shown must be exactly the value given here. Do not round it, change it, or substitute a similar-looking one.
+    4. Everything shown must be factually correct and must match what is being said at that moment: the equipment, the quantities, the steps and the order they happen in.
+    5. If any piece of text cannot be rendered cleanly, legibly and correctly spelled, show no text at all. Missing text is acceptable; misspelled text is not.
+  CONTINUITY: Returns to the exact location and framing of scene one.
+  AUDIO -- follow every point:
+    1. The presenter starts speaking within 0.5-1 second of the clip starting. No silent opening beat.
+    2. The spoken audio is exactly and only this, word for word: "Now let us go through each of these areas step by step, slowly and carefully, so you can build your own biomass enterprise with confidence."
+    3. Speak that line once. Do not repeat it, do not repeat any word or phrase inside it, do not stutter, do not restart a phrase, and do not add, drop, reorder or paraphrase any word.
+    4. Say nothing else. No greeting, no sign-off, no bridging line, no improvised words, no filler sounds.
+    5. This is one sentence, delivered without an internal break.
+    6. The line begins and ends inside these 10 seconds. It is complete: it does not continue from the previous clip and it is not finished by the next one.
+    7. End with about 0.5 seconds of silence after the final word, before the clip ends. Do not cut on the last syllable.
+    8. Delivery pace: about 150 words per minute -- measured and clearly articulated, never rushed, but with no dead air.
+  STYLE: realistic Indian educational video. Natural daylight or practical lighting, natural expressions, professional but approachable. The subject being taught is the focus; the presenter is the teacher, not the story.
+  DO NOT: misspell any word on screen; render garbled, nonsense or invented lettering anywhere in the frame; add text, captions, subtitles, signage, watermarks or logos beyond what is specified above; change any number or unit shown; change the presenter's face, age, build, hairstyle or clothing; add a second person or a voice other than the presenter's; add background music; use slow motion, speed ramping, film grain, lens flare or dramatic colour grading; cut away from the presenter; leave the clip silent at either end beyond the pauses specified.
+
+============================================================================
+END OF SCRIPT  |  15 scenes  |  364 spoken words  |  150s
+============================================================================
