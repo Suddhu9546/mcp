@@ -8,3 +8,7 @@ artifacts-test/
 .env.local
 *.log
 .tmp/
+
+# Worktrees created by Claude Code sessions. Each is a full second checkout
+# of this repository; none of it belongs in the repository itself.
+.claude/worktrees/
