@@ -1,0 +1,57 @@
+# Render blueprint -- free plan.
+#
+# The free plan has no persistent disk, so there is nowhere to keep a database
+# between runs. That is workable here only because the index is derived data:
+# every chunk comes from a document in `courses/`, all of which are in the
+# repository. `npm run ingest:all` rebuilds it in about 20 seconds, and running
+# that at BUILD time rather than at start time is the whole trick -- the file
+# lands in the built image, so it is present on every spin-up without being
+# rebuilt, and a cold start is just Node booting.
+#
+# What that costs, and it is not nothing: anything written while the service is
+# running -- flow sessions, storyboard drafts, rendered .docx files -- lives on
+# the ephemeral filesystem and is lost when the service spins down (15 minutes
+# without traffic) or is redeployed. Finish a storyboard in one sitting and
+# download the file when it is offered. See README for the detail.
+
+services:
+  - type: web
+    name: cvc-storyboard-mcp
+    runtime: node
+    plan: free
+    # A free service spins down when idle, so a health check that keeps it awake
+    # would burn the 750 monthly instance hours for nothing. Left unset
+    # deliberately; /healthz is still served for manual checks.
+    buildCommand: npm ci && npm run build && npm run ingest:all
+    startCommand: node dist/src/mcp/server.js --http
+    envVars:
+      # node:sqlite requires 22.13+; pinned so a platform default cannot move
+      # under the deployment.
+      - key: NODE_VERSION
+        value: 22.18.0
+      - key: MCP_TRANSPORT
+        value: http
+      # PORT is injected by Render and is read in preference to MCP_PORT.
+      - key: MCP_PATH
+        value: /mcp
+      # Render generates this on first deploy; read it from the service's
+      # Environment tab and give it to each client. The service refuses to start
+      # if it is absent, so the endpoint cannot end up open by accident.
+      - key: MCP_AUTH_TOKEN
+        generateValue: true
+      - key: LOG_LEVEL
+        value: info
+      # The address this service is reached by, which the process cannot work
+      # out for itself from behind Render's router. Without it the file-returning
+      # tools give a local path that means nothing to whoever asked for the
+      # document. Set this to the service's own URL after the first deploy names
+      # it -- https://<service>.onrender.com.
+      - key: MCP_PUBLIC_URL
+        sync: false
+      # Resolving the table of contents' page numbers drives Word over COM,
+      # which a Linux container has not got. The renderer already detects that
+      # and skips it without failing, so this only makes the intent explicit
+      # rather than fixing anything. The .docx is correct either way -- its page
+      # numbers appear the first time it is opened in Word.
+      - key: REFRESH_FIELDS
+        value: 'false'

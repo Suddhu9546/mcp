@@ -50,6 +50,7 @@ import { composeScenePrompt } from '../../videoscript/prompt.js';
 import { VIDEO_SCRIPT_SPEC } from '../../videoscript/spec.js';
 import { validateVideoScript } from '../../videoscript/validator.js';
 import { renderVideoScript, writeVideoScriptFile } from '../../videoscript/render.js';
+import { downloadLinkFor } from '../../storage/download-url.js';
 import {
   commitScenes,
   getVideoScript,
@@ -383,6 +384,9 @@ const submitTool: ToolDefinition = {
     );
     const body = renderVideoScript(committed);
     const file = writeVideoScriptFile(committed, body);
+    // script_text carries the whole script inline, so a remote client is not
+    // stuck without it; the link is for handing over the file itself.
+    const link = downloadLinkFor(file.path);
 
     return ok({
       script_id: scriptId,
@@ -393,6 +397,7 @@ const submitTool: ToolDefinition = {
       spoken_words: finals.reduce((a, s) => a + s.narration_word_count, 0),
       scenes: finals,
       file,
+      ...(link ? { download_url: link.url, download_expires_at: link.expires_at } : {}),
       script_text: body,
       next_action:
         'The script is finished and saved. Give the user the file and the scene prompts -- each ' +

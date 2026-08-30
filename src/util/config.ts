@@ -33,6 +33,16 @@ function bool(key: string, fallback: boolean): boolean {
   return !['false', '0', 'no', 'off'].includes(v.toLowerCase());
 }
 
+/** Reads a comma-separated list. Blank entries are dropped. */
+function list(key: string): string[] {
+  const v = process.env[key];
+  if (v === undefined || v === '') return [];
+  return v
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s !== '');
+}
+
 const root = process.cwd();
 const abs = (p: string) => (path.isAbsolute(p) ? p : path.resolve(root, p));
 
@@ -97,6 +107,84 @@ export const config = {
      * document is correct either way.
      */
     refreshFields: bool('REFRESH_FIELDS', true),
+  },
+  transport: {
+    /**
+     * How clients reach this server.
+     *
+     * "stdio" is the local case: the client spawns the process and speaks the
+     * protocol over its pipes. "http" is the hosted case: the process listens
+     * and any number of clients connect to one URL. The default is stdio, so an
+     * existing local configuration keeps working with no environment set.
+     */
+    mode: str('MCP_TRANSPORT', 'stdio') as 'stdio' | 'http',
+    /**
+     * Port to listen on in http mode.
+     *
+     * PORT is read first because that is the variable a platform assigns
+     * (Render, Fly, Heroku all inject it), and a hosted service that ignores it
+     * is unreachable.
+     */
+    port: num('PORT', num('MCP_PORT', 8080)),
+    /**
+     * Interface to bind.
+     *
+     * 0.0.0.0 rather than localhost, because a container's health check and
+     * router reach it from outside the container.
+     */
+    host: str('MCP_HOST', '0.0.0.0'),
+    /** Path serving the MCP endpoint. */
+    path: str('MCP_PATH', '/mcp'),
+    /**
+     * Host and Origin values accepted when DNS-rebinding protection is on.
+     *
+     * Left empty the protection is off, which is correct behind a platform
+     * router that already terminates and validates the hostname. Set them when
+     * the process is exposed directly.
+     */
+    allowedHosts: list('MCP_ALLOWED_HOSTS'),
+    allowedOrigins: list('MCP_ALLOWED_ORIGINS'),
+    /**
+     * Bearer tokens accepted on the HTTP endpoint.
+     *
+     * A list rather than one value so a token can be rotated without a window
+     * where nobody can connect, and so a client can be given its own token and
+     * later revoked alone. MCP_AUTH_TOKEN is the singular spelling of the same
+     * setting; both are read and merged.
+     *
+     * Tokens are irrelevant under stdio, where the client owns the process and
+     * a secret in its argv would be worse than none.
+     */
+    authTokens: [...list('MCP_AUTH_TOKENS'), ...list('MCP_AUTH_TOKEN')],
+    /**
+     * Serve HTTP with no authentication at all.
+     *
+     * Must be set explicitly, because the failure mode it guards is silent: an
+     * unauthenticated public URL hands every tool, and the whole course corpus,
+     * to anyone who finds it. Convenient for a loopback dev run, never right for
+     * a deployment.
+     */
+    allowAnonymous: bool('MCP_ALLOW_ANONYMOUS', false),
+    /**
+     * Public base URL of this service, e.g. https://cvc-mcp.onrender.com.
+     *
+     * Needed because the process cannot know the hostname it is reached by --
+     * it sits behind a router that terminates TLS. Left empty, tools return
+     * only local file paths, which is right for stdio: the file is already on
+     * the user's own machine.
+     */
+    publicUrl: str('MCP_PUBLIC_URL', '').replace(/\/+$/, ''),
+    /** Path prefix serving generated files. */
+    downloadPath: str('MCP_DOWNLOAD_PATH', '/files'),
+    /**
+     * How long a download link stays valid, in seconds.
+     *
+     * Links are signed and expire, so one pasted into a chat log does not stay
+     * usable forever. A day by default: long enough to come back to the
+     * document tomorrow, short enough that an old link is not a standing key to
+     * the file.
+     */
+    downloadTtlSeconds: num('MCP_DOWNLOAD_TTL_SECONDS', 86_400),
   },
   logLevel: str('LOG_LEVEL', 'info'),
 } as const;

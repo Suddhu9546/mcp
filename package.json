@@ -10,8 +10,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/src/mcp/server.js",
+    "start:http": "node dist/src/mcp/server.js --http",
     "dev": "tsx src/mcp/server.ts",
+    "dev:http": "tsx src/mcp/server.ts --http",
     "ingest": "tsx scripts/ingest.ts",
+    "ingest:all": "tsx scripts/ingest-all.ts",
     "flow": "tsx scripts/try-flow.mjs",
     "analyze-template": "tsx scripts/analyze-template.ts",
     "parse-timing": "tsx scripts/parse-timing.ts",

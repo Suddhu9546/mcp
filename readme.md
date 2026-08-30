@@ -208,6 +208,97 @@ For a compiled server, run `npm run build` and use
 The same config works for Gemini CLI and Claude Code — all three speak MCP over
 stdio.
 
+### Run over HTTP instead
+
+The same server also speaks **Streamable HTTP**, for the case where it is hosted
+once and connected to from anywhere rather than spawned per client:
+
+```bash
+npm run build
+npm run start:http
+```
+
+That serves the protocol at `POST/GET/DELETE /mcp` and a `/healthz` endpoint
+that reports the listener without touching the database. `npm run dev:http` does
+the same from source. Setting `MCP_TRANSPORT=http` is equivalent to the `--http`
+flag; `PORT` (or `MCP_PORT`), `MCP_HOST` and `MCP_PATH` control where it listens.
+
+Both transports expose exactly the same 35 tools — `src/mcp/build-server.ts`
+builds the server and the entrypoint only picks how it is reached. Sessions hold
+protocol state only: flows, drafts and artifacts live in the database, so a
+client that reconnects finds its work where it left it and a restart costs
+nothing but the open connections.
+
+
+### Authentication
+
+Under stdio there is nothing to authenticate — the client spawned the process.
+Over HTTP the endpoint is public, and behind it are all 35 tools and the whole
+indexed corpus, so a bearer token is required:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+Set it as `MCP_AUTH_TOKEN` (minimum 16 characters). **HTTP mode refuses to
+start** with neither that nor `MCP_ALLOW_ANONYMOUS=true` set, so an open
+endpoint cannot result from a forgotten variable. `MCP_AUTH_TOKENS` takes a
+comma-separated list, which is how a token is rotated without a gap or issued
+per client so it can be revoked alone.
+
+Clients send it as a header:
+
+```bash
+claude mcp add --transport http storyboard https://YOUR-SERVICE.onrender.com/mcp \
+  --header "Authorization: Bearer YOUR_TOKEN"
+```
+
+Authentication is checked before the body is read and before a session is
+looked up, so a leaked `mcp-session-id` is not on its own usable. `/healthz`
+stays unauthenticated — a platform health check cannot carry a token — and
+reports only that the process is up; the session count is added for a caller
+that has authenticated.
+
+This is a shared secret, not OAuth. OAuth would mean persisting registered
+clients and issued tokens, and on a free host with an ephemeral filesystem that
+store is erased on every spin-down, which would break every connected client
+whenever the service idled. A consequence worth knowing: the **claude.ai custom
+connector UI expects OAuth**, so this server connects from header-capable
+clients — Claude Code, Antigravity, Gemini CLI — rather than from that UI.
+
+### Getting the generated files
+
+Locally this is a non-question: `render_storyboard_docx` returns `docx_path` and
+the file is on the same machine. Hosted, it is on the server's filesystem and
+the person who asked is somewhere else, so set `MCP_PUBLIC_URL` to the service's
+own address and the file-returning tools add a link beside the path:
+
+```json
+{
+  "docx_path": "/opt/render/project/src/artifacts/solar-pv/...docx",
+  "download_url": "https://YOUR-SERVICE.onrender.com/files/solar-pv/...docx?expires=...&sig=...",
+  "download_expires_at": "2026-08-28T13:31:35.000Z"
+}
+```
+
+The link is signed and expires (`MCP_DOWNLOAD_TTL_SECONDS`, a day by default)
+rather than requiring the bearer token, because what finally opens it is a
+browser and a link cannot be told to send an `Authorization` header. The
+signature covers both the path and the expiry, so neither can be edited, and it
+is derived from the auth token rather than being it. A bearer token is also
+accepted on the same route, for a caller fetching what it just generated.
+
+Worth being explicit about the trade: a download link is a credential for that
+one file while it lives, and it will end up in browser history and in whatever
+chat it was pasted into. That is what the expiry is for.
+
+Video scripts need none of this — `submit_video_script` returns the whole
+script inline as `script_text`, and its file gets a link only for convenience.
+
+**On free hosting, download the file when it is offered.** Generated files live
+on the ephemeral filesystem and are gone after a spin-down or a redeploy; the
+route says so rather than returning a bare 404.
+
 ## Tools
 
 **Courses and documents**

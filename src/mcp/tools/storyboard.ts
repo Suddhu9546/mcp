@@ -61,6 +61,7 @@ import {
 } from '../../storage/artifact-store.js';
 import { config, templateFile } from '../../util/config.js';
 import { computeSourceFingerprint } from '../../storage/source-fingerprint.js';
+import { downloadLinkFor } from '../../storage/download-url.js';
 import { describeExisting, findReusableStoryboard } from '../../storyboard/reuse.js';
 import { preparedStoryboard } from '../../cdr/prepared.js';
 
@@ -566,25 +567,31 @@ const createDraftTool: ToolDefinition = {
     // must not replace with one it did.
     const supplied = preparedStoryboard(courseId);
     if (supplied) {
+      const link = downloadLinkFor(supplied.docx_path);
       return ok({
         status: 'SUPPLIED_STORYBOARD' as const,
         course_id: courseId,
         docx_path: supplied.docx_path,
+        ...(link ? { download_url: link.url, download_expires_at: link.expires_at } : {}),
         bytes: supplied.bytes,
         message:
           `The ${supplied.name} storyboard is supplied as a finished, reviewed document rather ` +
-          'than generated. Give the user the file at docx_path. No draft was created and none ' +
-          'should be: there is nothing here to build.',
+          `than generated. Give the user the file at ${link ? 'download_url' : 'docx_path'}. No ` +
+          'draft was created and none should be: there is nothing here to build.',
       });
     }
 
     if (args.regenerate !== true) {
       const existing = findReusableStoryboard(courseId, templateVersion);
       if (existing) {
+        const existingLink = downloadLinkFor(existing.docx_path);
         return ok({
           status: 'ALREADY_EXISTS' as const,
           course_id: courseId,
           docx_path: existing.docx_path,
+          ...(existingLink
+            ? { download_url: existingLink.url, download_expires_at: existingLink.expires_at }
+            : {}),
           filename: existing.filename,
           rendered_at: existing.rendered_at,
           known_locally: existing.known_locally,
@@ -597,7 +604,8 @@ const createDraftTool: ToolDefinition = {
             : {}),
           message:
             `This course already has a finished storyboard (${describeExisting(existing)}). No ` +
-            'draft was created. Give the user the file at docx_path. Only if they ask for a NEW ' +
+            `draft was created. Give the user the file at ${existingLink ? 'download_url' : 'docx_path'}. ` +
+            'Only if they ask for a NEW ' +
             'storyboard, call this tool again with regenerate: true -- writing one costs a ' +
             'hundred or more model calls, so it is not something to do because a document ' +
             'already existed.' +
@@ -813,10 +821,16 @@ const renderTool: ToolDefinition = {
       ? await refreshDocxFields(file)
       : { refreshed: false, reason: 'Field refresh is switched off (REFRESH_FIELDS).' };
 
+    // A hosted server's local path means nothing to whoever asked for the
+    // document, so a signed link is included when one can be built. Under
+    // stdio there is no public URL and the path is the better answer.
+    const download = downloadLinkFor(file);
+
     return ok({
       artifact_id: artifactId,
       version,
       docx_path: file,
+      ...(download ? { download_url: download.url, download_expires_at: download.expires_at } : {}),
       bytes: bytes.length,
       validation_passed: report.passed,
       errors: report.summary.errors,
